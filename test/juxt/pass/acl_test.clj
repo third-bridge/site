@@ -212,9 +212,9 @@
       [::xt/put
        {:xt/id "urn:site:session:alice"
         :juxt.pass.jwt/sub "alice"
-        ::pass/scope #{"read:index" "read:document"
-                       "write:document" "read:directory-contents"
-                       "write:create-new-document"}}]
+        ::pass/scope #{"read:index"
+                       "read:document" "write:document"
+                       "read:directory-contents" "write:create-new-document"}}]
 
       ;; An access-token
       [::xt/put
