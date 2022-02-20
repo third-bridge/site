@@ -194,13 +194,13 @@
      [::xt/put
       {:xt/id "urn:site:session:alice"
        :juxt.pass.jwt/sub "alice"
-       ::pass/scope #{"read:index" "read:documents"}}]
+       ::pass/scope #{"read:index" "read:documents" "write:documents"}}]
 
      ;; An access-token
      [::xt/put
-      {:xt/id "urn:site:access-token:alice-without-read-index-scope"
+      {:xt/id "urn:site:access-token:alice-without-write-documents-scope"
        :juxt.pass.jwt/sub "alice"
-       ::pass/scope #{}}]
+       ::pass/scope #{"read:index" "read:documents"}}]
 
      [::xt/put
       {:xt/id "urn:site:session:bob"
@@ -230,7 +230,7 @@
      (when-not (= subject "https://example.org/people/alice") (fail {:subject subject}))
 
      (check db subject session "read:index" "https://example.org/index" 1)
-     (check db subject "urn:site:access-token:alice-without-read-index-scope" "read:index" "https://example.org/index" 0)
+
 
      ;; Fuzz each of the parameters to check that the ACL fails
      (check db nil nil "read:index" "https://example.org/index" 0)
@@ -249,8 +249,18 @@
      ;; TODO: Alice sets up her own home-page, complete with an API for a test project
      ;; she's working on.
 
-     ;; Check Alice can read her own documents, on account of ::pass/owner
+     ;; Alice can read her own documents, on account of ::pass/owner
      (check db subject session "read:documents" "https://example.org/alice-docs/document-1" 1)
+
+     ;; Alice can write her own documents, on account of ::pass/owner
+     (check db subject session "write:documents" "https://example.org/alice-docs/document-1" 1)
+
+     ;; When Alice authorizes an application to use an access-token with
+     ;; read:documents scope, the application can read the document.
+     (check db subject "urn:site:access-token:alice-without-write-documents-scope" "read:documents" "https://example.org/alice-docs/document-1" 1)
+     ;; But when the application attempts to overwrite a document belonging to
+     ;; Alice, it is denied.
+     (check db subject "urn:site:access-token:alice-without-write-documents-scope" "write:documents" "https://example.org/alice-docs/document-1" 0)
 
      ;; Alice accesses her own documents. A rule exists that automatically
      ;; grants full access to your own documents.
