@@ -135,7 +135,15 @@
         ::site/description "A document owned by Alice, to be shared with Bob"
         ::http/methods #{:get :put}
         ::http/content-type "text/html;charset=utf-8"
-        ::http/content "My Document"
+        ::http/content "My First Document"
+        ::pass/ruleset "https://example.org/ruleset"}]
+
+      [::xt/put
+       {:xt/id "https://example.org/alice-docs/document-2"
+        ::site/description "A document owned by Alice, not shared with anyone"
+        ::http/methods #{:get :put}
+        ::http/content-type "text/plain;charset=utf-8"
+        ::http/content "My Second Document"
         ::pass/ruleset "https://example.org/ruleset"}]
 
       ;; An ACL that grants Alice ownership of a document
@@ -147,6 +155,15 @@
         ::pass/owner "https://example.org/people/alice"
         ::pass/scope #{"read:document" "write:document"}
         }]
+
+      ;; An ACL that grants Bob read access to Alice's document.
+      [::xt/put
+       {:xt/id "https://example.org/grants/bob-can-read-document-1"
+        ::site/description "Bob is granted read access to Alice's document."
+        ::site/type "ACL"
+        ::pass/subject "https://example.org/people/bob"
+        ::pass/resource #{"https://example.org/alice-docs/document-1"}
+        ::pass/scope #{"read:document"}}]
 
       ;; Alice owns this whole directory
       [::xt/put
@@ -216,7 +233,8 @@
                        "read:document" "write:document"
                        "read:directory-contents" "write:create-new-document"}}]
 
-      ;; An access-token
+      ;; An access-token granted to an application on Alice's behalf, but
+      ;; without as much scope.
       [::xt/put
        {:xt/id "urn:site:access-token:alice-without-write-document-scope"
         :juxt.pass.jwt/sub "alice"
@@ -225,14 +243,16 @@
       [::xt/put
        {:xt/id "urn:site:session:bob"
         :juxt.pass.jwt/sub "bob"
-        ::pass/scope #{"read:index"}}]
+        ::pass/scope #{"read:index"
+                       "read:document" "write:document"
+                       "read:directory-contents" "write:create-new-document"}}]
 
       [::xt/put
        {:xt/id "urn:site:session:carl"
         :juxt.pass.jwt/sub "carl"
-        ::pass/scope #{"read:index"}}]
-
-      ])
+        ::pass/scope #{"read:index"
+                       "read:document" "write:document"
+                       "read:directory-contents" "write:create-new-document"}}]])
 
     ;; Is subject allowed to do action to resource?
     ;; ACLs involved will include any limitations on actions
@@ -288,7 +308,11 @@
       ;; directory, which should exist and be owned by Alice.
       (check db subject session "write:create-new-document" "https://example.org/alice-docs/" 1)
 
-      ;; Bob lists Alice's documents.
+      ;; Bob accesses Alice's documents.
+      (let [subject "https://example.org/people/bob"
+            session "urn:site:session:bob"]
+        (check db subject session "read:document" "https://example.org/alice-docs/document-1" 1)
+        (check db subject session "read:document" "https://example.org/alice-docs/document-2" 0))
 
       ;; This means that Alice should be able to create an ACL for Bob, which see
       ;; owns. But she can only create an ACL that references documents she owns.
@@ -303,7 +327,7 @@
 ;; characters and rulesets.
 
 ;; TODO: INTERNAL classification
-;; TODO: User content
+;; TODO: User content: e.g. https://example.org/~alice
 ;; TODO: Consent-based access control
 ;; TODO: Extend to GraphQL
 
