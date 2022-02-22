@@ -176,9 +176,9 @@
        (->
         (authz/check req "create:user" "https://example.org/people")
         (expect (comp not zero? count)))
-
-
        )
+
+     ;; Now to call create-user!
 
      ;; Perf: The actual scope should be determined at request time and bound to
      ;; the request.
@@ -209,7 +209,4 @@
 
      ;; Commands must just be EDN.
 
-
-
-     ))
- )
+)))

@@ -84,6 +84,12 @@
                            subject]
               } action resource]
 
+  (assert db)
+  (assert access-token-effective-scope)
+  (assert subject)
+  (assert action)
+  (assert resource)
+
   ;; First, an easy check to see if the action is allowed with respect to the
   ;; scope on the application client and, if applicable, any scope on the
   ;; access-token itself.
