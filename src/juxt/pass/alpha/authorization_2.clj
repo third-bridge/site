@@ -94,33 +94,16 @@
       {:action action
        :access-token-effective-scope access-token-effective-scope})))
 
-  :todo
-
   ;; TODO:
 
-  #_(let [lookup #(xt/entity db %)
-        access-token (lookup access-token)
-        client (some-> access-token ::pass/client lookup)
-
-        _ (when-not (contains? (::pass/scope client) action)
-            (throw
-             (ex-info
-              (format "Application client scope doesn't allow '%s'" action)
-              {:action action
-               :scope (::pass/scope client)
-               :client-id (::pass/client-id client)
-               :client-name (::pass/name client)})))]
-
-    )
-
-  #_(let [rules (when-let [ruleset (::pass/ruleset (xt/entity db resource))]
+  (let [rules (when-let [ruleset (::pass/ruleset (xt/entity db resource))]
                 (rules db ruleset))
         query {:find ['(pull acl [*])]
                :where '[[acl ::site/type "ACL"]
-                        (check acl access-token action resource)]
+                        (check acl subject action resource)]
                :rules rules
                :in '[access-token action resource]}]
     (if (seq rules)
-      (map first (xt/q db query access-token action resource))
+      (map first (xt/q db query subject action resource))
       ;; else return empty list
       ())))

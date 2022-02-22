@@ -48,15 +48,9 @@
       {:xt/id "https://example.org/rules/1"
        ::site/description "Allow read access of resources to granted subjects"
        ::pass/rule-content
-       (pr-str '[[(check acl access-token action resource)
+       (pr-str '[[(check acl subject action resource)
                   [acl ::site/type "ACL"]
                   [acl ::pass/resource resource]
-
-                  ;; Determine subject
-                  [subject :juxt.pass.jwt/iss iss]
-                  [subject :juxt.pass.jwt/sub sub]
-                  [access-token :juxt.pass.jwt/iss iss]
-                  [access-token :juxt.pass.jwt/sub sub]
 
                   ;; Ensure client application has scope
                   #_[access-token ::pass/client client]
@@ -130,7 +124,7 @@
           (authz/make-access-token
            (:xt/id subject)
            (:xt/id admin-client)
-           #{"read:document"}
+           ;;#{"read:document"}
            ))
 
          ;; An access token must exist in the database, linking to the application,
@@ -147,9 +141,10 @@
      access-token
 
      ;; A new request arrives
-     (let [req {}
+     (let [db (xt/db *xt-node*)
 
-           db (xt/db *xt-node*)
+           req {::site/db db}
+
            ;; Establish the access-token (TODO), either via bearer token or
            ;; cookie session
            access-token-id (:xt/id access-token)
