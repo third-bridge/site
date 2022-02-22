@@ -112,12 +112,22 @@
 
 (defn make-application
   ;; Create a new application, return the app-details with :xt/id
-  [app {::site/keys [base-uri]}]
-  (let [app-id (subs (as-hex-str (sha (uuid-bytes))) 0 10)
-        app-secret (as-b64-str (random-bytes 24))]
-    (into app {:xt/id (str base-uri "/_site/apps/" app-id)
-               ::pass/application-id app-id
-               ::pass/application-secret app-secret})))
+  [{::site/keys [base-uri]}]
+  (let [client-id (subs (as-hex-str (sha (uuid-bytes))) 0 10)
+        client-secret (as-b64-str (random-bytes 24))]
+    {:xt/id (str base-uri "/_site/apps/" client-id)
+     ::pass/client-id client-id
+     ::pass/client-secret client-secret}))
 
 (comment
-  (make-application {} {::site/base-uri "https://example.org"}))
+  (make-application {::site/base-uri "https://example.org"}))
+
+(defn make-access-token
+  "Returns a map representing an access token. Can be augmented
+  with :juxt.pass.alpha/scope and other entries."
+  [client]
+  (let [tok (as-hex-str (random-bytes 20))]
+    {:xt/id (format "urn:site:access-token:%s" tok)
+     ;; TODO: We may harmonize these keywords with openid_connect if we decide
+     ;; OAuth2 is the standard default.
+     :pass/client client}))

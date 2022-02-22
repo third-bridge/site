@@ -389,15 +389,34 @@
      ;; TODO: Need a ruleset to allow Sue to create Alice
      ])
 
-   (let [admin-app (authz/make-application
-                    {::pass/name "Site Admininistration"}
-                    {::site/base-uri "https://example.org"})]
-     (submit-and-await!
-      [
-       [::xt/put admin-app]]
-      )
+   (let [admin-client
+         (into
+          {::pass/name "Site Admininistration"
+           ::pass/scope
+           #{"read:index"
+             "read:document" "write:document"
+             "read:directory-contents" "write:create-new-document"}}
+          (authz/make-application {::site/base-uri "https://example.org"}))
 
-     ;; All access to any API is via an access-token.
+         guest-client
+         (into
+          {::pass/name "Guest Access"
+           ::pass/scope #{"read:index" "read:document"}}
+          (authz/make-application
+           {::site/base-uri "https://example.org"}))
+
+         _ (submit-and-await!
+            [
+             [::xt/put admin-client]
+             [::xt/put guest-client]])
+
+         ;; All access to any API is via an access-token.
+         ;; Having chosen the client application, we acquire an access-token.
+         access-token (into
+                       (authz/make-access-token (:xt/id admin-client))
+                       {::pass/scope #{"read:document"}})]
+
+     access-token
 
      ;; If using a traditional web-based server application via a browser, the
      ;; access-token is stored in the session.
@@ -408,7 +427,7 @@
 
      ;; The actual scope is determined at request time and bound to the request.
 
-     (let [db (xt/db *xt-node*)]
+     #_(let [db (xt/db *xt-node*)]
 
        ;;
 
@@ -424,7 +443,6 @@
 
        ;; Imagine site/bin/site is the application
 
-       admin-app
 
        ;; TODO: Sue creates Alice, with Alice's rights
 
