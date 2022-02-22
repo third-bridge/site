@@ -99,8 +99,13 @@
   (let [rules (when-let [ruleset (::pass/ruleset (xt/entity db resource))]
                 (rules db ruleset))
         query {:find ['(pull acl [*])]
-               :where '[[acl ::site/type "ACL"]
-                        (check acl subject action resource)]
+               :where '[
+                        ;; Site enforced
+                        [acl ::site/type "ACL"]
+                        [acl ::pass/scope action]
+                        ;; Custom
+                        (acl-applies-to-subject? acl subject)
+                        (acl-applies-to-resource? acl resource)]
                :rules rules
                :in '[access-token action resource]}]
     (if (seq rules)

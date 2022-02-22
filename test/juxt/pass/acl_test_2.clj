@@ -40,31 +40,17 @@
       {:xt/id "https://example.org/acls/sue-can-create-users"
        ::site/type "ACL"
        ::pass/subject "https://example.org/people/sue"
-       ::pass/scope "create:user"
-       ::pass/resource "https://example.org/people"
-       }]
+       ::pass/scope #{"create:user"}
+       ::pass/resource "https://example.org/people"}]
 
      [::xt/put
       {:xt/id "https://example.org/rules/1"
        ::site/description "Allow read access of resources to granted subjects"
        ::pass/rule-content
-       (pr-str '[[(check acl subject action resource)
-                  [acl ::site/type "ACL"]
-                  [acl ::pass/resource resource]
-
-                  ;; Ensure client application has scope
-                  #_[access-token ::pass/client client]
-                  #_[client ::pass/scope action]
-
-                  ;; Join on action
-                  #_[access-token ::pass/scope action]
-                  #_[acl ::pass/scope action]
-
-                  #_[acl ::pass/resource resource]
-
-                  #_[access-token ::pass/scope action]]
-
-                 ])}]
+       (pr-str '[[(acl-applies-to-subject? acl subject)
+                  [acl ::pass/subject subject]]
+                 [(acl-applies-to-resource? acl subject)
+                  [acl ::pass/resource resource]]])}]
 
      ;; We can now define the ruleset
      [::xt/put
