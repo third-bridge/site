@@ -1,6 +1,7 @@
 ;; Copyright © 2022, JUXT LTD.
 
 (ns juxt.pass.alpha.util
+  (:require [juxt.site.alpha.util :refer [as-hex-str random-bytes]])
   (:import
    (java.util HexFormat)
    (java.security SecureRandom)))
@@ -11,7 +12,4 @@
   https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
   and similar. For the size parameter, try 12."
   [size]
-  (let [nonce (byte-array size)
-        hex-format (HexFormat/of)]
-    (.nextBytes (SecureRandom/getInstanceStrong) nonce)
-    (.formatHex hex-format nonce)))
+  (as-hex-str (random-bytes size)))

@@ -3,7 +3,7 @@
 (ns juxt.test.util
   (:require
    [juxt.site.alpha.handler :as h]
-   [xtdb.api :as x])
+   [xtdb.api :as xt])
   (:import
    (xtdb.api IXtdb)))
 
@@ -19,14 +19,14 @@
 (alias 'site (create-ns 'juxt.site.alpha))
 
 (defn with-xt [f]
-  (with-open [node (x/start-node *opts*)]
+  (with-open [node (xt/start-node *opts*)]
     (binding [*xt-node* node]
       (f))))
 
 (defn submit-and-await! [transactions]
   (->>
-   (x/submit-tx *xt-node* transactions)
-   (x/await-tx *xt-node*)))
+   (xt/submit-tx *xt-node* transactions)
+   (xt/await-tx *xt-node*)))
 
 
 (defn make-handler [opts]
@@ -52,11 +52,11 @@
      :duration-µs (/ (- t1 t0) 1000.0)}))
 
 (defn with-db [f]
-  (binding [*db* (x/db *xt-node*)]
+  (binding [*db* (xt/db *xt-node*)]
     (f)))
 
 (defn with-open-db [f]
-  (with-open [db (x/open-db *xt-node*)]
+  (with-open [db (xt/open-db *xt-node*)]
     (binding [*db* db]
       (f))))
 

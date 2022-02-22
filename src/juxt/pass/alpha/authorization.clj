@@ -3,6 +3,7 @@
 (ns juxt.pass.alpha.authorization
   (:require
    [xtdb.api :as xt]
+   [juxt.site.alpha.util :refer [sha random-bytes as-hex-str as-b64-str uuid-bytes]]
    [clojure.tools.logging :as log]))
 
 (alias 'http (create-ns 'juxt.http.alpha))
@@ -108,3 +109,15 @@
       (seq acls) (assoc-in [::site/resource ::pass/authorization ::pass/acls] acls)
       ;;true (assoc-in [::site/resource ::pass/authorization] {:debug true})
       )))
+
+(defn make-application
+  ;; Create a new application, return the app-details with :xt/id
+  [app {::site/keys [base-uri]}]
+  (let [app-id (subs (as-hex-str (sha (uuid-bytes))) 0 10)
+        app-secret (as-b64-str (random-bytes 24))]
+    (into app {:xt/id (str base-uri "/_site/apps/" app-id)
+               ::pass/application-id app-id
+               ::pass/application-secret app-secret})))
+
+(comment
+  (make-application {} {::site/base-uri "https://example.org"}))
