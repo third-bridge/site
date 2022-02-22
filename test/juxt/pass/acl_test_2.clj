@@ -14,6 +14,21 @@
 (alias 'pass (create-ns 'juxt.pass.alpha))
 (alias 'site (create-ns 'juxt.site.alpha))
 
+(t/use-fixtures :each with-xt with-handler)
+
+(defn fail [ex-data] (throw (ex-info "FAIL" ex-data)))
+
+(defn expect
+  ([result pred ex-info]
+   (is (pred result))
+   (when-not (pred result)
+     (fail (into ex-info {:pred pred :result result})))
+   result)
+  ([result pred]
+   (expect result pred {})))
+
+
+
 ;; As above but building up from a smaller seed.
 ((t/join-fixtures [with-xt with-handler])
  (fn []
@@ -90,8 +105,6 @@
              [::xt/put admin-client]
              [::xt/put guest-client]])
 
-         ;;claims
-
          db (xt/db *xt-node*)
 
          ;; Having chosen the client application, we acquire a new access-token.
@@ -156,10 +169,14 @@
                   ::pass/access-token-effective-scope (authz/access-token-effective-scope access-token client)
                   ::pass/access-token access-token)]
 
-       req
+       (->
+        (authz/check req "create:user" "https://example.org/")
+        (expect (comp zero? count)))
 
-       (authz/check
-        req "create:user" "https://example.org/people")
+       (->
+        (authz/check req "create:user" "https://example.org/people")
+        (expect (comp not zero? count)))
+
 
        )
 
@@ -194,4 +211,5 @@
 
 
 
-     )))
+     ))
+ )
