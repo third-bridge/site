@@ -125,9 +125,10 @@
 (defn make-access-token
   "Returns a map representing an access token. Can be augmented
   with :juxt.pass.alpha/scope and other entries."
-  [client]
+  [client-id]
   (let [tok (as-hex-str (random-bytes 20))]
     {:xt/id (format "urn:site:access-token:%s" tok)
+     ::pass/token tok
      ;; TODO: We may harmonize these keywords with openid_connect if we decide
      ;; OAuth2 is the standard default.
-     :pass/client client}))
+     ::pass/client client-id}))

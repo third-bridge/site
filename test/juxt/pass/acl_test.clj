@@ -23,8 +23,6 @@
 
 (defn fail [ex-data] (throw (ex-info "FAIL" ex-data)))
 
-(deftest scenario-1-test)
-
 (defn check [db subject session action resource expected-count]
   (let [acls (authz/acls db subject session action resource)]
     (is (= expected-count (count acls)))
@@ -44,9 +42,10 @@
              :expected-resources expected-resources
              :actual-resources actual-resources}))))
 
-
 (defn get-subject [db session]
   (authz/get-subject-from-session db "https://example.org/ruleset" session))
+
+(deftest scenario-1-test)
 
 ((t/join-fixtures [with-xt with-handler])
  (fn []
@@ -64,12 +63,15 @@
      [::xt/put
       {:xt/id "https://example.org/people/alice"
        ::type "User"
-       :juxt.pass.jwt/sub "alice"}]
+       :juxt.pass.jwt/iss "https://example.org"
+       :juxt.pass.jwt/sub "alice"
+       }]
 
      ;; This is Bob.
      [::xt/put
       {:xt/id "https://example.org/people/bob"
        ::type "User"
+       :juxt.pass.jwt/iss "https://example.org"
        :juxt.pass.jwt/sub "bob"}]
 
      [::xt/put
@@ -87,6 +89,7 @@
      [::xt/put
       {:xt/id "https://example.org/people/carl"
        ::type "User"
+       :juxt.pass.jwt/iss "https://example.org"
        :juxt.pass.jwt/sub "carl"}]
 
      ;; A note on cacheing - each token can cache the resources it has access
@@ -217,7 +220,9 @@
                  [(get-subject-from-session session subject)
                   [subject ::type "User"]
                   [subject :juxt.pass.jwt/sub sub]
-                  [session :juxt.pass.jwt/sub sub]]])}]
+                  [subject :juxt.pass.jwt/iss iss]
+                  [session :juxt.pass.jwt/sub sub]
+                  [session :juxt.pass.jwt/iss iss]]])}]
 
      ;; We can now define the ruleset
      [::xt/put
@@ -228,6 +233,7 @@
      [::xt/put
       {:xt/id "urn:site:session:alice"
        :juxt.pass.jwt/sub "alice"
+       :juxt.pass.jwt/iss "https://example.org"
        ::pass/scope #{"read:index"
                       "read:document" "write:document"
                       "read:directory-contents" "write:create-new-document"}}]
@@ -237,11 +243,13 @@
      [::xt/put
       {:xt/id "urn:site:access-token:alice-without-write-document-scope"
        :juxt.pass.jwt/sub "alice"
+       :juxt.pass.jwt/iss "https://example.org"
        ::pass/scope #{"read:index" "read:document"}}]
 
      [::xt/put
       {:xt/id "urn:site:session:bob"
        :juxt.pass.jwt/sub "bob"
+       :juxt.pass.jwt/iss "https://example.org"
        ::pass/scope #{"read:index"
                       "read:document" "write:document"
                       "read:directory-contents" "write:create-new-document"}}]
@@ -249,6 +257,7 @@
      [::xt/put
       {:xt/id "urn:site:session:carl"
        :juxt.pass.jwt/sub "carl"
+       :juxt.pass.jwt/iss "https://example.org"
        ::pass/scope #{"read:index"
                       "read:document" "write:document"
                       "read:directory-contents" "write:create-new-document"}}]])
@@ -331,122 +340,3 @@
 ;; TODO: Extend to GraphQL
 
 ;; TODO: A subject using an application that is scope constrained
-
-
-;; As above but building up from a smaller seed.
-((t/join-fixtures [with-xt with-handler])
- (fn []
-   (submit-and-await!
-    [
-     [::xt/put
-      {:xt/id "https://example.org/people/sue"
-       ::type "User"
-       :juxt.pass.jwt/sub "sue"}]
-
-     [::xt/put
-      {:xt/id "https://example.org/rules/1"
-       ::site/description "Allow read access of resources to granted subjects"
-       ::pass/rule-content
-       (pr-str '[[(check acl subject session action resource)
-                  [acl ::site/type "ACL"]
-                  [acl ::pass/resource resource]
-                  (granted? acl subject)
-                  [acl ::pass/scope action]
-                  [session ::pass/scope action]]
-
-                 ;; An ACL that establishes ownership
-                 [(granted? acl subject)
-                  [acl ::pass/owner subject]]
-
-                 ;; An ACL granted to the subject directly for a given action
-                 [(granted? acl subject)
-                  [acl ::pass/subject subject]]
-
-                 ;; An ACL granted on a role that the subject has
-                 [(granted? acl subject)
-                  [acl ::pass/role role]
-                  [role ::type "Role"]
-                  [role-membership ::site/type "ACL"]
-                  [role-membership ::pass/subject subject]
-                  [role-membership ::pass/role role]]
-
-                 [(list-resources acl subject session)
-                  [acl ::pass/resource resource]
-                  [acl ::pass/scope action]
-                  [session ::pass/scope action]
-                  (granted? acl subject)]
-
-                 [(get-subject-from-session session subject)
-                  [subject ::type "User"]
-                  [subject :juxt.pass.jwt/sub sub]
-                  [session :juxt.pass.jwt/sub sub]]])}]
-
-     ;; We can now define the ruleset
-     [::xt/put
-      {:xt/id "https://example.org/ruleset"
-       ::pass/rules ["https://example.org/rules/1"]}]
-
-     ;; TODO: Need a ruleset to allow Sue to create Alice
-     ])
-
-   (let [admin-client
-         (into
-          {::pass/name "Site Admininistration"
-           ::pass/scope
-           #{"read:index"
-             "read:document" "write:document"
-             "read:directory-contents" "write:create-new-document"}}
-          (authz/make-application {::site/base-uri "https://example.org"}))
-
-         guest-client
-         (into
-          {::pass/name "Guest Access"
-           ::pass/scope #{"read:index" "read:document"}}
-          (authz/make-application
-           {::site/base-uri "https://example.org"}))
-
-         _ (submit-and-await!
-            [
-             [::xt/put admin-client]
-             [::xt/put guest-client]])
-
-         ;; All access to any API is via an access-token.
-         ;; Having chosen the client application, we acquire an access-token.
-         access-token (into
-                       (authz/make-access-token (:xt/id admin-client))
-                       {::pass/scope #{"read:document"}})]
-
-     access-token
-
-     ;; If using a traditional web-based server application via a browser, the
-     ;; access-token is stored in the session.
-
-     ;; An access token must exist in the database, linking to the application,
-     ;; the subject and its own granted scopes. The actual scopes are the
-     ;; intersection of all three.
-
-     ;; The actual scope is determined at request time and bound to the request.
-
-     #_(let [db (xt/db *xt-node*)]
-
-       ;;
-
-       ;; TODO: Sue uses the admin application which asks for a token via /token
-       ;; The /token handler registers the session and returns the session-id to the client
-       ;; An access-token for the admin application is stored in the session
-
-       ;; The access-token links to the application, the subject and its own
-       ;; scopes. The overall scope of the request is ascertained at each and
-       ;; every request.
-
-       ;; Upon login the subject is determined,
-
-       ;; Imagine site/bin/site is the application
-
-
-       ;; TODO: Sue creates Alice, with Alice's rights
-
-       ;;(check db subject session "read:index" "https://example.org/index" 1)
-
-       ;;{:status :ok :message "All tests passed"}
-       ))))
