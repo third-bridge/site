@@ -3,7 +3,7 @@
 (ns juxt.pass.acl-test-2
   (:require
    [clojure.test :refer [deftest is are testing] :as t]
-   [juxt.pass.alpha.authorization :as authz]
+   [juxt.pass.alpha.authorization-2 :as authz]
    [juxt.test.util :refer [with-xt with-handler submit-and-await!
                            *xt-node* *handler*]]
    [xtdb.api :as xt]))
@@ -21,46 +21,56 @@
     [
      [::xt/put
       {:xt/id "https://example.org/people/sue"
-       ::type "User"
-       :juxt.pass.jwt/sub "sue"}]
+       ::pass/ruleset "https://example.org/ruleset"}]
+
+     ;; An person may have many identities
+     [::xt/put
+      {:xt/id "https://example.org/people/sue/identities/example"
+       ::site/type "Identity"
+       :juxt.pass.jwt/iss "https://example.org"
+       :juxt.pass.jwt/sub "sue"
+       ::pass/subject "https://example.org/people/sue"
+       ::pass/ruleset "https://example.org/ruleset"}]
+
+     [::xt/put
+      {:xt/id "https://example.org/people"
+       ::pass/ruleset "https://example.org/ruleset"}]
+
+     [::xt/put
+      {:xt/id "https://example.org/acls/sue-can-create-users"
+       ::site/type "ACL"
+       ::pass/subject "https://example.org/people/sue"
+       ::pass/scope "create:user"
+       ::pass/resource "https://example.org/people"
+       }]
 
      [::xt/put
       {:xt/id "https://example.org/rules/1"
        ::site/description "Allow read access of resources to granted subjects"
        ::pass/rule-content
-       (pr-str '[[(check acl subject session action resource)
+       (pr-str '[[(check acl access-token action resource)
                   [acl ::site/type "ACL"]
                   [acl ::pass/resource resource]
-                  (granted? acl subject)
-                  [acl ::pass/scope action]
-                  [session ::pass/scope action]]
 
-                 ;; An ACL that establishes ownership
-                 [(granted? acl subject)
-                  [acl ::pass/owner subject]]
-
-                 ;; An ACL granted to the subject directly for a given action
-                 [(granted? acl subject)
-                  [acl ::pass/subject subject]]
-
-                 ;; An ACL granted on a role that the subject has
-                 [(granted? acl subject)
-                  [acl ::pass/role role]
-                  [role ::type "Role"]
-                  [role-membership ::site/type "ACL"]
-                  [role-membership ::pass/subject subject]
-                  [role-membership ::pass/role role]]
-
-                 [(list-resources acl subject session)
-                  [acl ::pass/resource resource]
-                  [acl ::pass/scope action]
-                  [session ::pass/scope action]
-                  (granted? acl subject)]
-
-                 [(get-subject-from-session session subject)
-                  [subject ::type "User"]
+                  ;; Determine subject
+                  [subject :juxt.pass.jwt/iss iss]
                   [subject :juxt.pass.jwt/sub sub]
-                  [session :juxt.pass.jwt/sub sub]]])}]
+                  [access-token :juxt.pass.jwt/iss iss]
+                  [access-token :juxt.pass.jwt/sub sub]
+
+                  ;; Ensure client application has scope
+                  #_[access-token ::pass/client client]
+                  #_[client ::pass/scope action]
+
+                  ;; Join on action
+                  #_[access-token ::pass/scope action]
+                  #_[acl ::pass/scope action]
+
+                  #_[acl ::pass/resource resource]
+
+                  #_[access-token ::pass/scope action]]
+
+                 ])}]
 
      ;; We can now define the ruleset
      [::xt/put
@@ -70,6 +80,12 @@
      ;; TODO: Need a ruleset to allow Sue to create Alice
      ])
 
+   #_[::xt/put {:xt/id :create-user!
+                :xt/fn '(fn [ctx eid]
+                          (let [db (xtdb.api/db ctx)
+                                entity (xtdb.api/entity db eid)]
+                            [[::xt/put (update entity :age inc)]]))}]
+
    (let [admin-client
          (into
           {::pass/name "Site Admininistration"
@@ -78,7 +94,8 @@
            ::pass/scope
            #{"read:index"
              "read:document" "write:document"
-             "read:directory-contents" "write:create-new-document"}}
+             "read:directory-contents" "write:create-new-document"
+             "create:user"}}
           (authz/make-application {::site/base-uri "https://example.org"}))
 
          guest-client
@@ -93,33 +110,77 @@
              [::xt/put admin-client]
              [::xt/put guest-client]])
 
-         ;; All access to any API is via an access-token.
-         ;; Having chosen the client application, we acquire an access-token.
+         ;;claims
+
+         db (xt/db *xt-node*)
+
+         ;; Having chosen the client application, we acquire a new access-token.
+
+         ;; First we'll need the subject. We can put the subject into the access
+         ;; token rather than the claims, because we assume the claims can never
+         ;; apply to a different subject. However, this assertion needs to be
+         ;; written up and communicated. If claims were ever to be reassigned to
+         ;; a different subject, then all access-tokens would need to be made
+         ;; void (removed).
+         subject (-> {:claims {"iss" "https://example.org" "sub" "sue"}}
+                     (authz/id-token->subject db))
 
          access-token
          (into
-          (authz/make-access-token (:xt/id admin-client))
-          {
-           ;; We just merge in the id claims we know, keep this flat.
-           :juxt.pass.jwt/iss "https://example.org"
-           :juxt.pass.jwt/sub "sue"
-           ;; If specified (and it must be currently), ::pass/scope overrides
-           ;; the default application scope
-           ::pass/scope #{"read:document"}
-           })
+          (authz/make-access-token
+           (:xt/id subject)
+           (:xt/id admin-client)
+           #{"read:document"}
+           ))
 
          ;; An access token must exist in the database, linking to the application,
          ;; the subject and its own granted scopes. The actual scopes are the
          ;; intersection of all three.
 
          _ (submit-and-await!
-            [[::xt/put access-token]])]
-
+            [[::xt/put access-token]])
+         ]
 
      ;; The access-token links to the application, the subject and its own
      ;; scopes. The overall scope of the request is ascertained at each and
      ;; every request.
      access-token
+
+     ;; A new request arrives
+     (let [req {}
+
+           db (xt/db *xt-node*)
+           ;; Establish the access-token (TODO), either via bearer token or
+           ;; cookie session
+           access-token-id (:xt/id access-token)
+
+           ;; Establish subject and client
+           {:keys [subject client]}
+           (first
+            (xt/q
+             db
+             '{:find [(pull subject [*])
+                      (pull client [:xt/id ::pass/client-id ::pass/scope])]
+               :keys [subject client]
+               :where [[access-token ::pass/subject subject]
+                       [access-token ::pass/client client]]
+               :in [access-token]}
+             access-token-id))
+
+           ;; Bind onto the request
+           req
+           (assoc req
+                  ::pass/subject subject
+                  ::pass/client client
+                  ::pass/access-token-effective-scope (authz/access-token-effective-scope access-token client)
+                  ::pass/access-token access-token)]
+
+       req
+
+       (authz/check
+        req "create:user" "https://example.org/people")
+
+       )
 
      ;; Perf: The actual scope should be determined at request time and bound to
      ;; the request.
@@ -131,23 +192,25 @@
      ;; The bin/site tool might have to be configured with the client-id of the
      ;; 'Admin App'.
 
-     ;; Imagine
-
      ;; TODO: Sue creates Alice, with Alice's rights
+     ;; scope is 'create:user'
+
+     ;; Could we have an underlying 'DSL' that can be used by both OpenAPI and
+     ;; GraphQL? Rather than OpenAPI wrapping GraphQL (and therefore requiring
+     ;; it), could we have both call an underlying 'Site DSL' which integrates
+     ;; scope-based authorization?
+
+     ;; Consider a 'create-user' command. Might these be the events that jms
+     ;; likes to talk about? A command is akin to set of GraphQL mutations,
+     ;; often one per request.
+
+     ;; Commands can cause mutations and also side-effects.
+
+     ;; Consider a command: create-user - a command can be protected by a scope,
+     ;; e.g. write:admin
+
+     ;; Commands must just be EDN.
 
 
 
-     #_(let [db (xt/db *xt-node*)]
-
-         ;;
-
-
-
-
-
-
-
-         ;;(check db subject session "read:index" "https://example.org/index" 1)
-
-         ;;{:status :ok :message "All tests passed"}
-         ))))
+     )))

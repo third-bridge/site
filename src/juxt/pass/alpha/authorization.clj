@@ -3,7 +3,6 @@
 (ns juxt.pass.alpha.authorization
   (:require
    [xtdb.api :as xt]
-   [juxt.site.alpha.util :refer [sha random-bytes as-hex-str as-b64-str uuid-bytes]]
    [clojure.tools.logging :as log]))
 
 (alias 'http (create-ns 'juxt.http.alpha))
@@ -109,26 +108,3 @@
       (seq acls) (assoc-in [::site/resource ::pass/authorization ::pass/acls] acls)
       ;;true (assoc-in [::site/resource ::pass/authorization] {:debug true})
       )))
-
-(defn make-application
-  ;; Create a new application, return the app-details with :xt/id
-  [{::site/keys [base-uri]}]
-  (let [client-id (subs (as-hex-str (sha (uuid-bytes))) 0 10)
-        client-secret (as-b64-str (random-bytes 24))]
-    {:xt/id (str base-uri "/_site/apps/" client-id)
-     ::pass/client-id client-id
-     ::pass/client-secret client-secret}))
-
-(comment
-  (make-application {::site/base-uri "https://example.org"}))
-
-(defn make-access-token
-  "Returns a map representing an access token. Can be augmented
-  with :juxt.pass.alpha/scope and other entries."
-  [client-id]
-  (let [tok (as-hex-str (random-bytes 20))]
-    {:xt/id (format "urn:site:access-token:%s" tok)
-     ::pass/token tok
-     ;; TODO: We may harmonize these keywords with openid_connect if we decide
-     ;; OAuth2 is the standard default.
-     ::pass/client client-id}))
