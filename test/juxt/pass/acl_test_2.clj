@@ -54,7 +54,8 @@
        ::site/type "ACL"
        ::pass/subject "https://example.org/people/sue"
        ::pass/scope #{"create:user"}
-       ::pass/resource "https://example.org/people"}]
+       ::pass/resource "https://example.org/people/"
+       }]
 
      [::xt/put
       {:xt/id "https://example.org/rules/1"
@@ -62,7 +63,7 @@
        ::pass/rule-content
        (pr-str '[[(acl-applies-to-subject? acl subject)
                   [acl ::pass/subject subject]]
-                 [(acl-applies-to-resource? acl subject)
+                 [(acl-applies-to-resource? acl resource)
                   [acl ::pass/resource resource]]])}]
 
      ;; We can now define the ruleset
@@ -169,9 +170,10 @@
                   ::pass/client client
                   ::pass/access-token-effective-scope (authz/access-token-effective-scope access-token client)
                   ::pass/access-token access-token
-                  ::pass/ruleset "https://example.org/ruleset")]
+                  ::pass/ruleset "https://example.org/ruleset"
+                  ::site/uri "https://example.org/people/")]
 
-       #_(->
+       (->
         (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
         (expect (comp zero? count)))
 
