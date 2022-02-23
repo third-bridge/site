@@ -129,13 +129,25 @@
     (when (seq rules)
       (seq (map first (xt/q db query subject (first required-scope) uri))))))
 
-
-(defn check-fn [db auth required-scope]
+(defn authorizing-put [db auth required-scope doc]
   (try
     (let [acls (check db auth required-scope)]
-      (log/tracef "acls are %s" acls)
-      acls
-      )
+
+      (log/tracef "ACLs are %s" acls)
+
+      (when (nil? acls)
+        (let [msg "Transaction function call denied as no ACLs found that approve it."]
+          (log/warnf msg)
+          (throw (ex-info msg {}))))
+
+      (when-not (.startsWith (:xt/id doc) (::site/uri auth))
+        (let [msg ":xt/id of new document must be a sub-resource of ::site/uri"]
+          (log/warnf msg)
+          (throw (ex-info msg {:new-doc-id (:xt/id doc)
+                               ::site/uri auth}))))
+
+      (if acls [[::xt/put doc]] []))
+
     (catch Throwable e
       (log/error e "Failed authorization check")
       (throw e))))

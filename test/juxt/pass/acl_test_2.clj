@@ -54,8 +54,7 @@
        ::site/type "ACL"
        ::pass/subject "https://example.org/people/sue"
        ::pass/scope #{"create:user"}
-       ::pass/resource "https://example.org/people/"
-       }]
+       ::pass/resource "https://example.org/people/"}]
 
      [::xt/put
       {:xt/id "https://example.org/rules/1"
@@ -74,14 +73,10 @@
      ;; TODO: Need a ruleset to allow Sue to create Alice
 
      [::xt/put
-      {:xt/id ::pass/secure-put
+      {:xt/id ::pass/authorizing-put
        :xt/fn '(fn [ctx auth required-scope doc]
                  (let [db (xtdb.api/db ctx)]
-                   (if (juxt.pass.alpha.authorization-2/check-fn db auth required-scope)
-                       ;; TODO: Now to check the doc with respect to the acls found
-                     [[::xt/put doc]]
-                     []
-                     #_(throw (ex-info "Fail!" {})))))}]])
+                   (juxt.pass.alpha.authorization-2/authorizing-put db auth required-scope doc)))}]])
 
    (let [admin-client
          (into
@@ -206,13 +201,10 @@
 
              tx (xt/submit-tx
                  *xt-node*
-                 [[:xtdb.api/fn ::pass/secure-put auth #{"create:user"} new-user-doc]])
+                 [[:xtdb.api/fn ::pass/authorizing-put auth #{"create:user"} new-user-doc]])
              tx (xt/await-tx *xt-node* tx)]
 
-         (xt/tx-committed? *xt-node* tx)
-         )
-
-       )
+         (xt/tx-committed? *xt-node* tx)))
 
      ;; Perf: The actual scope should be determined at request time and bound to
      ;; the request.
