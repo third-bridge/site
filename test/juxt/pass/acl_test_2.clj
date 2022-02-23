@@ -27,8 +27,6 @@
   ([result pred]
    (expect result pred {})))
 
-
-
 ;; As above but building up from a smaller seed.
 ((t/join-fixtures [with-xt with-handler])
  (fn []
@@ -73,13 +71,16 @@
        ::pass/rules ["https://example.org/rules/1"]}]
 
      ;; TODO: Need a ruleset to allow Sue to create Alice
-     ])
 
-   #_[::xt/put {:xt/id :create-user!
-                :xt/fn '(fn [ctx eid]
-                          (let [db (xtdb.api/db ctx)
-                                entity (xtdb.api/entity db eid)]
-                            [[::xt/put (update entity :age inc)]]))}]
+     [::xt/put
+      {:xt/id ::pass/secure-put
+       :xt/fn '(fn [ctx auth required-scope doc]
+                 (let [db (xtdb.api/db ctx)]
+                   (if (juxt.pass.alpha.authorization-2/check-fn db auth required-scope)
+                       ;; TODO: Now to check the doc with respect to the acls found
+                     [[::xt/put doc]]
+                     []
+                     #_(throw (ex-info "Fail!" {})))))}]])
 
    (let [admin-client
          (into
@@ -142,7 +143,7 @@
      ;; A new request arrives
      (let [db (xt/db *xt-node*)
 
-           req {::site/db db}
+           req {}
 
            ;; Establish the access-token (TODO), either via bearer token or
            ;; cookie session
@@ -167,18 +168,49 @@
                   ::pass/subject subject
                   ::pass/client client
                   ::pass/access-token-effective-scope (authz/access-token-effective-scope access-token client)
-                  ::pass/access-token access-token)]
+                  ::pass/access-token access-token
+                  ::pass/ruleset "https://example.org/ruleset")]
 
-       (->
-        (authz/check req "create:user" "https://example.org/")
+       #_(->
+        (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
         (expect (comp zero? count)))
 
+       ;; create:user is a 'global' privilege, where the ACLs are restricted to
+       ;; a given URI.
        (->
-        (authz/check req "create:user" "https://example.org/people")
+        (authz/check db req #{"create:user"})
         (expect (comp not zero? count)))
-       )
 
-     ;; Now to call create-user!
+       ;; Now to call create-user!
+       (let [
+             ;; We construct an authentication/authorization 'context', which we
+             ;; pass to the function and name it simply 'auth'. Entries of this
+             ;; auth context will be used when determining whether access is
+             ;; approved or denied.
+             auth (-> req
+                      (select-keys
+                       [::pass/subject
+                        ::pass/client
+                        ::pass/access-token-effective-scope
+                        ::pass/ruleset
+                        ;; The URI may be used as part of the context, e.g. PUT to
+                        ;; /documents/abc may be allowed but PUT to /index may not
+                        ;; be.
+                        ::site/uri]))
+
+             new-user-doc
+             {:xt/id "https://example.org/people/alice"
+              ::pass/ruleset "https://example.org/ruleset"}
+
+             tx (xt/submit-tx
+                 *xt-node*
+                 [[:xtdb.api/fn ::pass/secure-put auth #{"create:user"} new-user-doc]])
+             tx (xt/await-tx *xt-node* tx)]
+
+         (xt/tx-committed? *xt-node* tx)
+         )
+
+       )
 
      ;; Perf: The actual scope should be determined at request time and bound to
      ;; the request.
@@ -209,4 +241,14 @@
 
      ;; Commands must just be EDN.
 
-)))
+     )))
+
+
+;; When mutating, use info in the ACL(s) to determine whether the document to
+;; 'put' meets the defined criteria. This can restrict the URI path to enforce a
+;; particular URI organisation. For example, a person writing an object might be
+;; restricted to write under their own area.
+
+;; Allowed methods reported in the Allow response header may be the intersection
+;; of methods defined on the resource and the methods allowed by the 'auth'
+;; context.

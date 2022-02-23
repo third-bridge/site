@@ -4,7 +4,8 @@
   (:require
    [juxt.site.alpha.util :refer [sha random-bytes as-hex-str as-b64-str uuid-bytes]]
    [xtdb.api :as xt]
-   [clojure.set :as set]))
+   [clojure.set :as set]
+   [clojure.tools.logging :as log]))
 
 (alias 'http (create-ns 'juxt.http.alpha))
 (alias 'pass (create-ns 'juxt.pass.alpha))
@@ -79,31 +80,42 @@
     (set/intersection access-token-scope (::pass/scope client))
     (::pass/scope client)))
 
-(defn check [{::site/keys [db]
-              ::pass/keys [access-token-effective-scope ; set
-                           subject]
-              } action resource]
+(defn check
+  [db {::site/keys [uri]
+       ::pass/keys [access-token-effective-scope subject ruleset]}
+   required-scope]
 
   (assert db)
   (assert access-token-effective-scope)
+  (assert (set? access-token-effective-scope))
   (assert subject)
-  (assert action)
-  (assert resource)
+  (assert ruleset)
+  (assert (string? ruleset))
+  (assert required-scope)
+  (assert (set? required-scope))
+  ;; Due to the way that XT treats sets as many-cardinality references, we avoid
+  ;; this issue by restricting required-scopes to single privilege. TODO: Is
+  ;; 'privilege' the right word here?
+  (assert (= (count required-scope) 1) "A required-scope can currently contain one privilege")
+
+  ;; uri can be nil
 
   ;; First, an easy check to see if the action is allowed with respect to the
   ;; scope on the application client and, if applicable, any scope on the
   ;; access-token itself.
-  (when-not (contains? access-token-effective-scope action)
+  (when-not (set/superset? access-token-effective-scope required-scope)
     (throw
      (ex-info
-      (format "Scope of access-token does not allow %s" action)
-      {:action action
+      (format "Scope of access-token does not allow %s" required-scope)
+      {:required-scope required-scope
        :access-token-effective-scope access-token-effective-scope})))
 
   ;; TODO:
 
-  (let [rules (when-let [ruleset (::pass/ruleset (xt/entity db resource))]
-                (rules db ruleset))
+  (let [rules (rules db ruleset)
+
+        _ (log/tracef "Rules are %s" rules)
+
         query {:find ['(pull acl [*])]
                :where '[
                         ;; Site enforced
@@ -114,7 +126,16 @@
                         (acl-applies-to-resource? acl resource)]
                :rules rules
                :in '[access-token action resource]}]
-    (if (seq rules)
-      (map first (xt/q db query subject action resource))
-      ;; else return empty list
-      ())))
+    (when (seq rules)
+      (seq (map first (xt/q db query subject (first required-scope) uri))))))
+
+
+(defn check-fn [db auth required-scope]
+  (try
+    (let [acls (check db auth required-scope)]
+      (log/tracef "acls are %s" acls)
+      acls
+      )
+    (catch Throwable e
+      (log/error e "Failed authorization check")
+      (throw e))))
