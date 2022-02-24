@@ -202,7 +202,6 @@
 ((t/join-fixtures [with-xt with-handler with-scenario])
  (fn []
 
-   ;; Sue creates a new user, Alice
    (let [
          ;; Access tokens for each sub/client pairing
          access-tokens
@@ -211,26 +210,34 @@
            "sue" "https://example.org/_site/apps/admin-client"
            (xt/db *xt-node*))}
 
-         db (xt/db *xt-node*)
-         req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]))
+         ;; Acquired access-tokens are put in the database, so new db snapshot
+         db (xt/db *xt-node*)]
 
-         new-user-doc
-         {:xt/id "https://example.org/people/alice"
-          ::pass/ruleset "https://example.org/ruleset"}]
-
-     (->
-      (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
-      (expect (comp zero? count)))
-
-     (->
-      (authz/check db req #{"create:user"})
-      (expect (comp not zero? count)))
+     ;; Sue creates a new user, Alice
 
      ;; Now to call create-user!
      ;; TODO: We should default the ruleset, you can only create users
      ;; in your own authorization scheme!
+     (let [req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]))]
 
-     (authorizing-put! req #{"create:user"} new-user-doc)
+       ;; These are just checks on this request that can be done elsewhere
+       ;; For example, wrong resource:
+       (->
+          (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
+          (expect (comp zero? count)))
+
+       ;; For example, right resource:
+       (->
+          (authz/check db req #{"create:user"})
+          (expect (comp not zero? count)))
+
+       (authorizing-put!
+        req
+        #{"create:user"}
+        ;; The request body would be transformed into this new doc
+        {:xt/id "https://example.org/people/alice"
+         ::pass/ruleset "https://example.org/ruleset"}))
+
      :ok
      )
 
