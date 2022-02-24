@@ -157,6 +157,16 @@
            ::pass/ruleset "https://example.org/ruleset"
            )))
 
+(defn make-request [uri db access-token-id]
+  (let [req {::site/db db
+             ::site/uri uri}
+
+
+
+        ]
+    (authorize-request req access-token-id))
+  )
+
 ;; As above but building up from a smaller seed.
 ((t/join-fixtures [with-xt with-handler with-scenario])
  (fn []
@@ -169,15 +179,14 @@
                          "sue" "https://example.org/_site/apps/admin-client"
                          (xt/db *xt-node*))}
 
-         db (xt/db *xt-node*)
-
-         req {::site/db db
-              ::site/uri "https://example.org/people/"}
-
          access-token-id (get access-tokens ["sue" "admin-client"])
          _ (assert access-token-id)
 
-         req (authorize-request req access-token-id)]
+         db (xt/db *xt-node*)
+
+         req (make-request "https://example.org/people/" db access-token-id)
+
+         ]
 
      (->
       (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
