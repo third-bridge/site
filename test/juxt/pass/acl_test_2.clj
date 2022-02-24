@@ -68,8 +68,6 @@
       {:xt/id "https://example.org/ruleset"
        ::pass/rules ["https://example.org/rules/1"]}]
 
-     ;; TODO: Need a ruleset to allow Sue to create Alice
-
      [::xt/put
       {:xt/id ::pass/authorizing-put
        :xt/fn '(fn [ctx auth required-scope doc]
@@ -90,7 +88,7 @@
              "read:document" "write:document"
              "read:directory-contents" "write:create-new-document"
              "create:user"}}
-          (authz/make-application {::site/base-uri "https://example.org"}))
+          (authz/make-oauth-client-doc {::site/base-uri "https://example.org"}))
 
          guest-client
          (into

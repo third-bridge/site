@@ -22,17 +22,19 @@
                 :in [iss sub]}
            iss sub))))
 
-(defn make-application
-  ;; Create a new application, return the app-details with :xt/id
-  [{::site/keys [base-uri]}]
-  (let [client-id (subs (as-hex-str (sha (uuid-bytes))) 0 10)
-        client-secret (as-b64-str (random-bytes 24))]
-    {:xt/id (str base-uri "/_site/apps/" client-id)
-     ::pass/client-id client-id
-     ::pass/client-secret client-secret}))
+(defn make-oauth-client-doc
+  "Return an XT doc representing an OAuth2 client (with a random client-id if not
+  given) and random client-secret. This must be added to the database."
+  ([{::site/keys [base-uri]} client-id]
+   (let [client-secret (as-b64-str (random-bytes 24))]
+     {:xt/id (str base-uri "/_site/apps/" client-id)
+      ::pass/client-id client-id
+      ::pass/client-secret client-secret}))
+  ([ctx]
+   (make-oauth-client-doc ctx (subs (as-hex-str (sha (uuid-bytes))) 0 10))))
 
 (comment
-  (make-application {::site/base-uri "https://example.org"}))
+  (make-oauth-client-doc {::site/base-uri "https://example.org"}))
 
 (defn token-id->xt-id [token-id]
   (format "urn:site:access-token:%s" token-id))
