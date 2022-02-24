@@ -115,7 +115,7 @@
          ;; a different subject, then all access-tokens would need to be made
          ;; void (removed).
          subject (-> {:claims {"iss" "https://example.org" "sub" "sue"}}
-                     (authz/id-token->subject db))
+                     (authz/lookup->subject db))
 
          access-token
          (into

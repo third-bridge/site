@@ -11,7 +11,7 @@
 (alias 'pass (create-ns 'juxt.pass.alpha))
 (alias 'site (create-ns 'juxt.site.alpha))
 
-(defn id-token->subject [id-token db]
+(defn lookup->subject [id-token db]
   (let [iss (get-in id-token [:claims "iss"])
         sub (get-in id-token [:claims "sub"])]
     (ffirst
