@@ -142,7 +142,7 @@
 
          ;; Having chosen the client application, we acquire a new access-token.
 
-         access-token-id (acquire-access-token "sue" "https://example.org/_site/apps/admin-client" db)
+         access-tokens {"sue" (acquire-access-token "sue" "https://example.org/_site/apps/admin-client" db)}
          ]
 
      ;; A new request arrives
@@ -150,6 +150,7 @@
 
            req {}
 
+           access-token-id (get access-tokens "sue")
            access-token (xt/entity db access-token-id)
 
            ;; Establish subject and client
