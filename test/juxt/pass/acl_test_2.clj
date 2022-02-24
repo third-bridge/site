@@ -163,6 +163,41 @@
              ::site/uri uri}]
     (authorize-request req access-token-id)))
 
+(defn authorizing-put! [req required-scope doc]
+  (let [
+        ;; We construct an authentication/authorization 'context', which we
+        ;; pass to the function and name it simply 'auth'. Entries of this
+        ;; auth context will be used when determining whether access is
+        ;; approved or denied.
+        auth (-> req
+                 (select-keys
+                  [::pass/subject
+                   ::pass/client
+                   ::pass/access-token-effective-scope
+                   ::pass/ruleset
+                   ;; The URI may be used as part of the context, e.g. PUT to
+                   ;; /documents/abc may be allowed but PUT to /index may not
+                   ;; be.
+                   ::site/uri]))
+
+
+
+        tx (xt/submit-tx
+            *xt-node*
+            [[:xtdb.api/fn ::pass/authorizing-put auth required-scope doc]])
+        tx (xt/await-tx *xt-node* tx)]
+
+    ;; Currently due to https://github.com/xtdb/xtdb/issues/1672 the only way of
+    ;; checking whether this tx was authorized is by checking it committed. We
+    ;; don't get any errors through, so all we can do is point at the logs.
+    (when-not (xt/tx-committed? *xt-node* tx)
+      (throw
+       (ex-info
+        "Failed to commit, check logs"
+        {:auth auth
+         :doc doc
+         :required-scope required-scope})))))
+
 ;; As above but building up from a smaller seed.
 ((t/join-fixtures [with-xt with-handler with-scenario])
  (fn []
@@ -177,7 +212,11 @@
            (xt/db *xt-node*))}
 
          db (xt/db *xt-node*)
-         req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]))]
+         req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]))
+
+         new-user-doc
+         {:xt/id "https://example.org/people/alice"
+          ::pass/ruleset "https://example.org/ruleset"}]
 
      (->
       (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
@@ -188,35 +227,12 @@
       (expect (comp not zero? count)))
 
      ;; Now to call create-user!
-     (let [
-           ;; We construct an authentication/authorization 'context', which we
-           ;; pass to the function and name it simply 'auth'. Entries of this
-           ;; auth context will be used when determining whether access is
-           ;; approved or denied.
-           auth (-> req
-                    (select-keys
-                     [::pass/subject
-                      ::pass/client
-                      ::pass/access-token-effective-scope
-                      ::pass/ruleset
-                      ;; The URI may be used as part of the context, e.g. PUT to
-                      ;; /documents/abc may be allowed but PUT to /index may not
-                      ;; be.
-                      ::site/uri]))
+     ;; TODO: We should default the ruleset, you can only create users
+     ;; in your own authorization scheme!
 
-           ;; TODO: We should default the ruleset, you can only create users
-           ;; in your own authorization scheme!
-
-           new-user-doc
-           {:xt/id "https://example.org/people/alice"
-            ::pass/ruleset "https://example.org/ruleset"}
-
-           tx (xt/submit-tx
-               *xt-node*
-               [[:xtdb.api/fn ::pass/authorizing-put auth #{"create:user"} new-user-doc]])
-           tx (xt/await-tx *xt-node* tx)]
-
-       (xt/tx-committed? *xt-node* tx)))
+     (authorizing-put! req #{"create:user"} new-user-doc)
+     :ok
+     )
 
    ;; If accessing the API directly with a browser, the access-token is
    ;; generated and stored in the session (accessed via the cookie rather than
