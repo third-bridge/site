@@ -477,7 +477,7 @@
       (h (cond-> req sub (assoc ::pass/subject sub))))))
 
 (defn wrap-authorize-with-acls [h]
-  (fn [{::pass/keys [session] ::site/keys [resource]}]
+  (fn [{::pass/keys [session] ::site/keys [resource] :as req}]
     (when (::pass/authorization resource)
       (log/trace "Already authorized")
       )
@@ -1247,7 +1247,8 @@
    wrap-negotiate-representation
 
    ;; Authorize
-   wrap-authorize-with-acls
+   ;; Not ready yet, being rewritten
+   #_wrap-authorize-with-acls
    wrap-authorize-with-pdp
 
    ;; 405

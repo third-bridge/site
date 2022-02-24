@@ -29,77 +29,78 @@
 
 (defn with-scenario [f]
   (submit-and-await!
-    [
-     [::xt/put
-      {:xt/id "https://example.org/people/sue"
-       ::pass/ruleset "https://example.org/ruleset"}]
+   [
+    [::xt/put
+     {:xt/id "https://example.org/people/sue"
+      ::pass/ruleset "https://example.org/ruleset"}]
 
-     ;; An person may have many identities
-     [::xt/put
-      {:xt/id "https://example.org/people/sue/identities/example"
-       ::site/type "Identity"
-       :juxt.pass.jwt/iss "https://example.org"
-       :juxt.pass.jwt/sub "sue"
-       ::pass/subject "https://example.org/people/sue"
-       ::pass/ruleset "https://example.org/ruleset"}]
+    ;; An person may have many identities
+    [::xt/put
+     {:xt/id "https://example.org/people/sue/identities/example"
+      ::site/type "Identity"
+      :juxt.pass.jwt/iss "https://example.org"
+      :juxt.pass.jwt/sub "sue"
+      ::pass/subject "https://example.org/people/sue"
+      ::pass/ruleset "https://example.org/ruleset"}]
 
-     [::xt/put
-      {:xt/id "https://example.org/people"
-       ::pass/ruleset "https://example.org/ruleset"}]
+    [::xt/put
+     {:xt/id "https://example.org/people"
+      ::pass/ruleset "https://example.org/ruleset"}]
 
-     [::xt/put
-      {:xt/id "https://example.org/acls/sue-can-create-users"
-       ::site/type "ACL"
-       ::pass/subject "https://example.org/people/sue"
-       ::pass/scope #{"create:user"}
-       ::pass/resource "https://example.org/people/"}]
+    [::xt/put
+     {:xt/id "https://example.org/acls/sue-can-create-users"
+      ::site/type "ACL"
+      ::pass/subject "https://example.org/people/sue"
+      ::pass/scope #{"create:user"}
+      ::pass/resource "https://example.org/people/"}]
 
-     [::xt/put
-      {:xt/id "https://example.org/rules/1"
-       ::site/description "Allow read access of resources to granted subjects"
-       ::pass/rule-content
-       (pr-str '[[(acl-applies-to-subject? acl subject)
-                  [acl ::pass/subject subject]]
-                 [(acl-applies-to-resource? acl resource)
-                  [acl ::pass/resource resource]]])}]
+    [::xt/put
+     {:xt/id "https://example.org/rules/1"
+      ::site/description "Allow read access of resources to granted subjects"
+      ::pass/rule-content
+      (pr-str '[[(acl-applies-to-subject? acl subject)
+                 [acl ::pass/subject subject]]
+                [(acl-applies-to-resource? acl resource)
+                 [acl ::pass/resource resource]]])}]
 
-     ;; We can now define the ruleset
-     [::xt/put
-      {:xt/id "https://example.org/ruleset"
-       ::pass/rules ["https://example.org/rules/1"]}]
+    ;; We can now define the ruleset
+    [::xt/put
+     {:xt/id "https://example.org/ruleset"
+      ::pass/rules ["https://example.org/rules/1"]}]
 
-     [::xt/put
-      {:xt/id ::pass/authorizing-put
-       :xt/fn '(fn [ctx auth required-scope doc]
-                 (let [db (xtdb.api/db ctx)]
-                   (juxt.pass.alpha.authorization-2/authorizing-put db auth required-scope doc)))}]])
+    [::xt/put
+     {:xt/id ::pass/authorizing-put
+      :xt/fn '(fn [ctx auth required-scope doc]
+                (let [db (xtdb.api/db ctx)]
+                  (juxt.pass.alpha.authorization-2/authorizing-put db auth required-scope doc)))}]
+
+    [::xt/put
+     (into
+      {::pass/name "Site Admininistration"
+       ;; If specified (and it must be currently), ::pass/scope overrides
+       ;; the subject's default scope.
+       ::pass/scope
+       #{"read:index"
+         "read:document" "write:document"
+         "read:directory-contents" "write:create-new-document"
+         "create:user"}}
+      (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "admin-client"))]])
   (f))
 
 ;; As above but building up from a smaller seed.
 ((t/join-fixtures [with-xt with-handler with-scenario])
  (fn []
-   (let [admin-client
-         (into
-          {::pass/name "Site Admininistration"
-           ;; If specified (and it must be currently), ::pass/scope overrides
-           ;; the subject's default scope.
-           ::pass/scope
-           #{"read:index"
-             "read:document" "write:document"
-             "read:directory-contents" "write:create-new-document"
-             "create:user"}}
-          (authz/make-oauth-client-doc {::site/base-uri "https://example.org"}))
+   (let [
 
          guest-client
          (into
           {::pass/name "Guest Access"
            ::pass/scope #{"read:index" "read:document"}}
-          (authz/make-application
+          (authz/make-oauth-client-doc
            {::site/base-uri "https://example.org"}))
 
          _ (submit-and-await!
             [
-             [::xt/put admin-client]
              [::xt/put guest-client]])
 
          db (xt/db *xt-node*)
@@ -121,7 +122,7 @@
          (into
           (authz/make-access-token
            (:xt/id subject)
-           (:xt/id admin-client)
+           "https://example.org/_site/apps/admin-client"
            ;;#{"read:document"}
            ))
 
