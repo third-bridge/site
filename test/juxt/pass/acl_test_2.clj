@@ -84,7 +84,19 @@
          "read:document" "write:document"
          "read:directory-contents" "write:create-new-document"
          "create:user"}}
-      (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "admin-client"))]])
+      (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "admin-client"))]
+
+    #_guest-client
+    #_(into
+       {::pass/name "Guest Access"
+        ::pass/scope #{"read:index" "read:document"}}
+       (authz/make-oauth-client-doc
+        {::site/base-uri "https://example.org"}))
+
+    #_#__ (submit-and-await!
+           [
+            [::xt/put guest-client]])
+    ])
   (f))
 
 (defn acquire-access-token [sub client-id db]
@@ -118,132 +130,121 @@
 
     (:xt/id access-token)))
 
+(defn authorize-request [{::site/keys [db] :as req} access-token-id]
+  (let [access-token (xt/entity db access-token-id)
+
+        ;; Establish subject and client
+        {:keys [subject client]}
+        (first
+         (xt/q
+          db
+          '{:find [(pull subject [*])
+                   (pull client [:xt/id ::pass/client-id ::pass/scope])]
+            :keys [subject client]
+            :where [[access-token ::pass/subject subject]
+                    [access-token ::pass/client client]]
+            :in [access-token]}
+          access-token-id))]
+
+    ;; Bind onto the request. For performance reasons, the actual scope
+    ;; is determined now, since the db is now a value.
+    (assoc req
+           ::pass/subject subject
+           ::pass/client client
+           ::pass/access-token-effective-scope
+           (authz/access-token-effective-scope access-token client)
+           ::pass/access-token access-token
+           ::pass/ruleset "https://example.org/ruleset"
+           )))
+
 ;; As above but building up from a smaller seed.
 ((t/join-fixtures [with-xt with-handler with-scenario])
  (fn []
 
-   ;; Sue acquires an access-token
-
-
+   ;; A new request arrives
    (let [
-
-         #_guest-client
-         #_(into
-            {::pass/name "Guest Access"
-             ::pass/scope #{"read:index" "read:document"}}
-            (authz/make-oauth-client-doc
-             {::site/base-uri "https://example.org"}))
-
-         #_#__ (submit-and-await!
-                [
-                 [::xt/put guest-client]])
+         ;; Access tokens for each sub/client pairing
+         access-tokens {["sue" "admin-client"]
+                        (acquire-access-token
+                         "sue" "https://example.org/_site/apps/admin-client"
+                         (xt/db *xt-node*))}
 
          db (xt/db *xt-node*)
 
-         ;; Having chosen the client application, we acquire a new access-token.
+         req {::site/db db
+              ::site/uri "https://example.org/people/"}
 
-         access-tokens {"sue" (acquire-access-token "sue" "https://example.org/_site/apps/admin-client" db)}
+         access-token-id (get access-tokens ["sue" "admin-client"])
+
+         req (authorize-request req access-token-id)
          ]
 
+     (->
+      (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
+      (expect (comp zero? count)))
 
-     ;; A new request arrives
-     (let [db (xt/db *xt-node*)
+     (->
+      (authz/check db req #{"create:user"})
+      (expect (comp not zero? count)))
 
-           req {::site/uri "https://example.org/people/"}
+     ;; Now to call create-user!
+     (let [
+           ;; We construct an authentication/authorization 'context', which we
+           ;; pass to the function and name it simply 'auth'. Entries of this
+           ;; auth context will be used when determining whether access is
+           ;; approved or denied.
+           auth (-> req
+                    (select-keys
+                     [::pass/subject
+                      ::pass/client
+                      ::pass/access-token-effective-scope
+                      ::pass/ruleset
+                      ;; The URI may be used as part of the context, e.g. PUT to
+                      ;; /documents/abc may be allowed but PUT to /index may not
+                      ;; be.
+                      ::site/uri]))
 
-           access-token-id (get access-tokens "sue")
-           access-token (xt/entity db access-token-id)
+           ;; TODO: We should default the ruleset, you can only create users
+           ;; in your own authorization scheme!
 
-           ;; Establish subject and client
-           {:keys [subject client]}
-           (first
-            (xt/q
-             db
-             '{:find [(pull subject [*])
-                      (pull client [:xt/id ::pass/client-id ::pass/scope])]
-               :keys [subject client]
-               :where [[access-token ::pass/subject subject]
-                       [access-token ::pass/client client]]
-               :in [access-token]}
-             access-token-id))
+           new-user-doc
+           {:xt/id "https://example.org/people/alice"
+            ::pass/ruleset "https://example.org/ruleset"}
 
-           ;; Bind onto the request. For performance reasons, the actual scope
-           ;; is determined now, since the db is now a value.
-           req
-           (assoc req
-                  ::pass/subject subject
-                  ::pass/client client
-                  ::pass/access-token-effective-scope (authz/access-token-effective-scope access-token client)
-                  ::pass/access-token access-token
-                  ::pass/ruleset "https://example.org/ruleset"
-                  )]
+           tx (xt/submit-tx
+               *xt-node*
+               [[:xtdb.api/fn ::pass/authorizing-put auth #{"create:user"} new-user-doc]])
+           tx (xt/await-tx *xt-node* tx)]
 
-       (->
-        (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
-        (expect (comp zero? count)))
+       (xt/tx-committed? *xt-node* tx)))
 
-       (->
-        (authz/check db req #{"create:user"})
-        (expect (comp not zero? count)))
+   ;; If accessing the API directly with a browser, the access-token is
+   ;; generated and stored in the session (accessed via the cookie rather than
+   ;; the Authorization header).
 
-       ;; Now to call create-user!
-       (let [
-             ;; We construct an authentication/authorization 'context', which we
-             ;; pass to the function and name it simply 'auth'. Entries of this
-             ;; auth context will be used when determining whether access is
-             ;; approved or denied.
-             auth (-> req
-                      (select-keys
-                       [::pass/subject
-                        ::pass/client
-                        ::pass/access-token-effective-scope
-                        ::pass/ruleset
-                        ;; The URI may be used as part of the context, e.g. PUT to
-                        ;; /documents/abc may be allowed but PUT to /index may not
-                        ;; be.
-                        ::site/uri]))
+   ;; The bin/site tool might have to be configured with the client-id of the
+   ;; 'Admin App'.
 
-             ;; TODO: We should default the ruleset, you can only create users
-             ;; in your own authorization scheme!
+   ;; TODO: Sue creates Alice, with Alice's rights
+   ;; scope is 'create:user'
 
-             new-user-doc
-             {:xt/id "https://example.org/people/alice"
-              ::pass/ruleset "https://example.org/ruleset"}
+   ;; Could we have an underlying 'DSL' that can be used by both OpenAPI and
+   ;; GraphQL? Rather than OpenAPI wrapping GraphQL (and therefore requiring
+   ;; it), could we have both call an underlying 'Site DSL' which integrates
+   ;; scope-based authorization?
 
-             tx (xt/submit-tx
-                 *xt-node*
-                 [[:xtdb.api/fn ::pass/authorizing-put auth #{"create:user"} new-user-doc]])
-             tx (xt/await-tx *xt-node* tx)]
+   ;; Consider a 'create-user' command. Might these be the events that jms
+   ;; likes to talk about? A command is akin to set of GraphQL mutations,
+   ;; often one per request.
 
-         (xt/tx-committed? *xt-node* tx)))
+   ;; Commands can cause mutations and also side-effects.
 
-     ;; If accessing the API directly with a browser, the access-token is
-     ;; generated and stored in the session (accessed via the cookie rather than
-     ;; the Authorization header).
+   ;; Consider a command: create-user - a command can be protected by a scope,
+   ;; e.g. write:admin
 
-     ;; The bin/site tool might have to be configured with the client-id of the
-     ;; 'Admin App'.
+   ;; Commands must just be EDN.
 
-     ;; TODO: Sue creates Alice, with Alice's rights
-     ;; scope is 'create:user'
-
-     ;; Could we have an underlying 'DSL' that can be used by both OpenAPI and
-     ;; GraphQL? Rather than OpenAPI wrapping GraphQL (and therefore requiring
-     ;; it), could we have both call an underlying 'Site DSL' which integrates
-     ;; scope-based authorization?
-
-     ;; Consider a 'create-user' command. Might these be the events that jms
-     ;; likes to talk about? A command is akin to set of GraphQL mutations,
-     ;; often one per request.
-
-     ;; Commands can cause mutations and also side-effects.
-
-     ;; Consider a command: create-user - a command can be protected by a scope,
-     ;; e.g. write:admin
-
-     ;; Commands must just be EDN.
-
-     )))
+   ))
 
 
 ;; When mutating, use info in the ACL(s) to determine whether the document to
