@@ -27,10 +27,8 @@
   ([result pred]
    (expect result pred {})))
 
-;; As above but building up from a smaller seed.
-((t/join-fixtures [with-xt with-handler])
- (fn []
-   (submit-and-await!
+(defn with-scenario [f]
+  (submit-and-await!
     [
      [::xt/put
       {:xt/id "https://example.org/people/sue"
@@ -77,7 +75,11 @@
        :xt/fn '(fn [ctx auth required-scope doc]
                  (let [db (xtdb.api/db ctx)]
                    (juxt.pass.alpha.authorization-2/authorizing-put db auth required-scope doc)))}]])
+  (f))
 
+;; As above but building up from a smaller seed.
+((t/join-fixtures [with-xt with-handler with-scenario])
+ (fn []
    (let [admin-client
          (into
           {::pass/name "Site Admininistration"
