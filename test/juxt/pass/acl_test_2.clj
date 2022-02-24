@@ -214,23 +214,22 @@
          db (xt/db *xt-node*)]
 
      ;; Sue creates a new user, Alice
-
-     ;; Now to call create-user!
-     ;; TODO: We should default the ruleset, you can only create users
-     ;; in your own authorization scheme!
      (let [req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]))]
 
        ;; These are just checks on this request that can be done elsewhere
        ;; For example, wrong resource:
        (->
-          (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
-          (expect (comp zero? count)))
+        (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
+        (expect (comp zero? count)))
 
        ;; For example, right resource:
        (->
-          (authz/check db req #{"create:user"})
-          (expect (comp not zero? count)))
+        (authz/check db req #{"create:user"})
+        (expect (comp not zero? count)))
 
+       ;; Now to call create-user!
+       ;; TODO: We should default the ruleset, you can only create users
+       ;; in your own authorization scheme!
        (authorizing-put!
         req
         #{"create:user"}
