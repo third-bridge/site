@@ -175,6 +175,7 @@
               ::site/uri "https://example.org/people/"}
 
          access-token-id (get access-tokens ["sue" "admin-client"])
+         _ (assert access-token-id)
 
          req (authorize-request req access-token-id)]
 
