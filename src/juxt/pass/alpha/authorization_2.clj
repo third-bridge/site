@@ -82,20 +82,9 @@
     (set/intersection access-token-scope (::pass/scope client))
     (::pass/scope client)))
 
-(defn check
-  [db {::site/keys [uri]
-       ::pass/keys [access-token-effective-scope subject ruleset]}
-   action]
-
-  (assert db)
-  (assert access-token-effective-scope)
+(defn check-scope [access-token-effective-scope action]
   (assert (set? access-token-effective-scope))
-  (assert subject)
-  (assert ruleset)
-  (assert (string? ruleset))
-  (assert action)
   (assert (string? action))
-
   ;; First, an easy check to see if the action is allowed with respect to the
   ;; scope on the application client and, if applicable, any scope on the
   ;; access-token itself.
@@ -104,7 +93,17 @@
      (ex-info
       (format "Scope of access-token does not allow %s" action)
       {:action action
-       :access-token-effective-scope access-token-effective-scope})))
+       :access-token-effective-scope access-token-effective-scope}))))
+
+(defn check-acls
+  [db {::site/keys [uri]
+       ::pass/keys [subject ruleset]}
+   action]
+
+  (assert db)
+  (assert subject)
+  (assert ruleset)
+  (assert (string? ruleset))
 
   ;; TODO:
 
@@ -125,9 +124,13 @@
     (when (seq rules)
       (seq (map first (xt/q db query subject action uri))))))
 
+(defn check [db auth action]
+  (check-scope (::pass/access-token-effective-scope auth) action)
+  (check-acls db auth action))
+
 (defn authorizing-put [db auth required-scope doc]
   (try
-    (let [acls (check db auth required-scope)]
+    (let [acls (check-acls db auth required-scope)]
 
       (log/tracef "ACLs are %s" acls)
 

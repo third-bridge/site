@@ -163,7 +163,15 @@
              ::site/uri uri}]
     (authorize-request req access-token-id)))
 
-(defn authorizing-put! [req action doc]
+(defn authorizing-put! [{::pass/keys [access-token-effective-scope] :as req}
+                        & action-docs]
+
+  ;; Check actions against scope now, since this doesn't require a database
+  ;; query.
+  (assert (set? access-token-effective-scope))
+  (doseq [[action _] action-docs]
+    (authz/check-scope access-token-effective-scope action))
+
   (let [
         ;; We construct an authentication/authorization 'context', which we
         ;; pass to the function and name it simply 'auth'. Entries of this
@@ -182,7 +190,10 @@
 
         tx (xt/submit-tx
             *xt-node*
-            [[:xtdb.api/fn ::pass/authorizing-put auth action doc]])
+            (mapv
+             (fn [[action doc]]
+               [:xtdb.api/fn ::pass/authorizing-put auth action doc])
+             action-docs))
         tx (xt/await-tx *xt-node* tx)]
 
     ;; Currently due to https://github.com/xtdb/xtdb/issues/1672 the only way of
@@ -193,8 +204,8 @@
        (ex-info
         "Failed to commit, check logs"
         {:auth auth
-         :doc doc
-         :action action})))))
+         :action-docs action-docs
+         })))))
 
 ;; As above but building up from a smaller seed.
 ((t/join-fixtures [with-xt with-handler with-scenario])
@@ -228,10 +239,10 @@
        ;; in your own authorization scheme!
        (authorizing-put!
         req
-        "create:user"
-        ;; The request body would be transformed into this new doc
-        {:xt/id "https://example.org/people/alice"
-         ::pass/ruleset "https://example.org/ruleset"})
+        ["create:user"
+         ;; The request body would be transformed into this new doc
+         {:xt/id "https://example.org/people/alice"
+          ::pass/ruleset "https://example.org/ruleset"}])
 
        ;; We need to create some ACLs for this user, ideally in the same tx
        )
