@@ -87,67 +87,70 @@
       (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "admin-client"))]])
   (f))
 
+(defn acquire-access-token [sub client-id db]
+  (let [
+        ;; First we'll need the subject. As a performance optimisation, we can
+        ;; associate the subject with the stored access token itself, rather
+        ;; than re-establish the subject on each request via the id-token
+        ;; claims, because we assume the claims can never apply to a different
+        ;; subject. However, this assertion needs to be written up and
+        ;; communicated. If claims were ever to be reassigned to a different
+        ;; subject, then all access-tokens would need to be made void
+        ;; (removed).
+        subject
+        (authz/lookup->subject {:claims {"iss" "https://example.org" "sub" sub}} db)
+
+        ;; The access-token links to the application, the subject and its own
+        ;; scopes. The overall scope of the request is ascertained at each and
+        ;; every request.
+        access-token
+        (into
+         (authz/make-access-token-doc
+          (:xt/id subject)
+          client-id
+          ;;#{"read:document"}
+          ))]
+
+    ;; An access token must exist in the database, linking to the application,
+    ;; the subject and its own granted scopes. The actual scopes are the
+    ;; intersection of all three.
+    (submit-and-await! [[::xt/put access-token]])
+
+    (:xt/id access-token)))
+
 ;; As above but building up from a smaller seed.
 ((t/join-fixtures [with-xt with-handler with-scenario])
  (fn []
+
+   ;; Sue acquires an access-token
+
+
    (let [
 
          #_guest-client
          #_(into
-          {::pass/name "Guest Access"
-           ::pass/scope #{"read:index" "read:document"}}
-          (authz/make-oauth-client-doc
-           {::site/base-uri "https://example.org"}))
+            {::pass/name "Guest Access"
+             ::pass/scope #{"read:index" "read:document"}}
+            (authz/make-oauth-client-doc
+             {::site/base-uri "https://example.org"}))
 
          #_#__ (submit-and-await!
-            [
-             [::xt/put guest-client]])
+                [
+                 [::xt/put guest-client]])
 
          db (xt/db *xt-node*)
 
          ;; Having chosen the client application, we acquire a new access-token.
 
-         ;; First we'll need the subject. As a performance optimisation, we can
-         ;; associate the subject with the stored access token itself, rather
-         ;; than re-establish the subject on each request via the id-token
-         ;; claims, because we assume the claims can never apply to a different
-         ;; subject. However, this assertion needs to be written up and
-         ;; communicated. If claims were ever to be reassigned to a different
-         ;; subject, then all access-tokens would need to be made void
-         ;; (removed).
-         subject
-         (authz/lookup->subject {:claims {"iss" "https://example.org" "sub" "sue"}} db)
-
-         access-token
-         (into
-          (authz/make-access-token-doc
-           (:xt/id subject)
-           "https://example.org/_site/apps/admin-client"
-           ;;#{"read:document"}
-           ))
-
-         ;; An access token must exist in the database, linking to the application,
-         ;; the subject and its own granted scopes. The actual scopes are the
-         ;; intersection of all three.
-
-         _ (submit-and-await!
-            [[::xt/put access-token]])
+         access-token-id (acquire-access-token "sue" "https://example.org/_site/apps/admin-client" db)
          ]
 
-     ;; The access-token links to the application, the subject and its own
-     ;; scopes. The overall scope of the request is ascertained at each and
-     ;; every request.
-     access-token
-
      ;; A new request arrives
-
      (let [db (xt/db *xt-node*)
 
            req {}
 
-           ;; Establish the access-token (TODO), either via bearer token or
-           ;; cookie session
-           access-token-id (:xt/id access-token)
+           access-token (xt/entity db access-token-id)
 
            ;; Establish subject and client
            {:keys [subject client]}
