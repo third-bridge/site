@@ -167,7 +167,7 @@
 ((t/join-fixtures [with-xt with-handler with-scenario])
  (fn []
 
-   ;; A new request arrives
+   ;; Sue creates a new user, Alice
    (let [
          ;; Access tokens for each sub/client pairing
          access-tokens
@@ -255,3 +255,22 @@
 ;; Allowed methods reported in the Allow response header may be the intersection
 ;; of methods defined on the resource and the methods allowed by the 'auth'
 ;; context.
+
+
+(false? true)
+
+(+ 2 2 8 2)
+
+(* (+ 2 2) 4)
+
+(or false false false)
+
+(or false true false)
+
+(and true true true)
+
+(true? (not false))
+
+(not true)
+
+;; Boolean logic - Named after a famous Irish mathematician called Boole
