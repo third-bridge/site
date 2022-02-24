@@ -53,11 +53,9 @@
    (-> (make-access-token-doc subject-id client-id)
        (assoc ::pass/scope scope))))
 
-
 (defn rules
   "Construct rules from a ruleset id"
   [db ruleset]
-  (assert ruleset)
   (assert (string? ruleset))
   (->>
    (xt/q
@@ -102,7 +100,6 @@
 
   (assert db)
   (assert subject)
-  (assert ruleset)
   (assert (string? ruleset))
 
   ;; TODO:
@@ -128,7 +125,9 @@
   (check-scope (::pass/access-token-effective-scope auth) action)
   (check-acls db auth action))
 
-(defn authorizing-put [db auth required-scope doc]
+(defn authorizing-put [db {::pass/keys [ruleset] :as auth} required-scope doc]
+  (assert ruleset)
+
   (try
     (let [acls (check-acls db auth required-scope)]
 
@@ -145,7 +144,14 @@
           (throw (ex-info msg {:new-doc-id (:xt/id doc)
                                ::site/uri auth}))))
 
-      (if acls [[::xt/put doc]] []))
+      (if acls
+        [[::xt/put
+          ;; Critically, the new doc inherits the ruleset of the auth
+          ;; context. This prevents documents from escaping their authorization
+          ;; scheme into another.
+          (let [doc (assoc doc ::pass/ruleset ruleset)]
+            doc)]]
+        []))
 
     (catch Throwable e
       (log/error e "Failed authorization check")

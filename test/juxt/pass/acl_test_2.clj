@@ -21,8 +21,9 @@
 (defn expect
   ([result pred ex-info]
    (is (pred result))
-   (when-not (pred result)
-     (fail (into ex-info {:pred pred :result result})))
+   (let [pred-result (pred result)]
+     (when-not pred-result
+       (fail (into ex-info {:pred pred :result result :pred-result pred-result}))))
    result)
   ([result pred]
    (expect result pred {})))
@@ -235,17 +236,19 @@
         (expect (comp not zero? count)))
 
        ;; Now to call create-user!
-       ;; TODO: We should default the ruleset, you can only create users
-       ;; in your own authorization scheme!
        (authorizing-put!
         req
         ["create:user"
          ;; The request body would be transformed into this new doc
-         {:xt/id "https://example.org/people/alice"
-          ::pass/ruleset "https://example.org/ruleset"}])
+         {:xt/id "https://example.org/people/alice"}])
 
        ;; We need to create some ACLs for this user, ideally in the same tx
        )
+
+     (let [db (xt/db *xt-node*)]
+       (expect
+        (xt/entity db "https://example.org/people/alice")
+        #(= (::pass/ruleset %) "https://example.org/ruleset")))
 
      :ok
      )
