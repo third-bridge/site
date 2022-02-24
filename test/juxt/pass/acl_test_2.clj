@@ -92,14 +92,14 @@
  (fn []
    (let [
 
-         guest-client
-         (into
+         #_guest-client
+         #_(into
           {::pass/name "Guest Access"
            ::pass/scope #{"read:index" "read:document"}}
           (authz/make-oauth-client-doc
            {::site/base-uri "https://example.org"}))
 
-         _ (submit-and-await!
+         #_#__ (submit-and-await!
             [
              [::xt/put guest-client]])
 
@@ -120,7 +120,7 @@
 
          access-token
          (into
-          (authz/make-access-token
+          (authz/make-access-token-doc
            (:xt/id subject)
            "https://example.org/_site/apps/admin-client"
            ;;#{"read:document"}

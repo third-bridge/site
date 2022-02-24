@@ -39,8 +39,8 @@
 (defn token-id->xt-id [token-id]
   (format "urn:site:access-token:%s" token-id))
 
-(defn make-access-token
-  "Returns a map representing an access token. Can be augmented
+(defn make-access-token-doc
+  "Returns an XT doc representing an access token. Can be augmented
   with :juxt.pass.alpha/scope and other entries."
   ([subject-id client-id]
    (let [token-id (as-hex-str (random-bytes 20))]
@@ -50,7 +50,7 @@
       ;; OAuth2 is the standard default.
       ::pass/client client-id}))
   ([subject-id client-id scope]
-   (-> (make-access-token subject-id client-id)
+   (-> (make-access-token-doc subject-id client-id)
        (assoc ::pass/scope scope))))
 
 
