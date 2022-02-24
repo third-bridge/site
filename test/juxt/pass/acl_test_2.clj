@@ -145,10 +145,11 @@
          access-tokens {"sue" (acquire-access-token "sue" "https://example.org/_site/apps/admin-client" db)}
          ]
 
+
      ;; A new request arrives
      (let [db (xt/db *xt-node*)
 
-           req {}
+           req {::site/uri "https://example.org/people/"}
 
            access-token-id (get access-tokens "sue")
            access-token (xt/entity db access-token-id)
@@ -175,14 +176,12 @@
                   ::pass/access-token-effective-scope (authz/access-token-effective-scope access-token client)
                   ::pass/access-token access-token
                   ::pass/ruleset "https://example.org/ruleset"
-                  ::site/uri "https://example.org/people/")]
+                  )]
 
        (->
         (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
         (expect (comp zero? count)))
 
-       ;; create:user is a 'global' privilege, where the ACLs are restricted to
-       ;; a given URI.
        (->
         (authz/check db req #{"create:user"})
         (expect (comp not zero? count)))
@@ -203,6 +202,9 @@
                         ;; /documents/abc may be allowed but PUT to /index may not
                         ;; be.
                         ::site/uri]))
+
+             ;; TODO: We should default the ruleset, you can only create users
+             ;; in your own authorization scheme!
 
              new-user-doc
              {:xt/id "https://example.org/people/alice"
