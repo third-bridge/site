@@ -176,8 +176,7 @@
 
          access-token-id (get access-tokens ["sue" "admin-client"])
 
-         req (authorize-request req access-token-id)
-         ]
+         req (authorize-request req access-token-id)]
 
      (->
       (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
