@@ -85,7 +85,7 @@
 (defn check
   [db {::site/keys [uri]
        ::pass/keys [access-token-effective-scope subject ruleset]}
-   required-scope]
+   action]
 
   (assert db)
   (assert access-token-effective-scope)
@@ -93,23 +93,17 @@
   (assert subject)
   (assert ruleset)
   (assert (string? ruleset))
-  (assert required-scope)
-  (assert (set? required-scope))
-  ;; Due to the way that XT treats sets as many-cardinality references, we avoid
-  ;; this issue by restricting required-scopes to single privilege. TODO: Is
-  ;; 'privilege' the right word here?
-  (assert (= (count required-scope) 1) "A required-scope can currently contain one privilege")
-
-  ;; uri can be nil
+  (assert action)
+  (assert (string? action))
 
   ;; First, an easy check to see if the action is allowed with respect to the
   ;; scope on the application client and, if applicable, any scope on the
   ;; access-token itself.
-  (when-not (set/superset? access-token-effective-scope required-scope)
+  (when-not (contains? access-token-effective-scope action)
     (throw
      (ex-info
-      (format "Scope of access-token does not allow %s" required-scope)
-      {:required-scope required-scope
+      (format "Scope of access-token does not allow %s" action)
+      {:action action
        :access-token-effective-scope access-token-effective-scope})))
 
   ;; TODO:
@@ -129,7 +123,7 @@
                :rules rules
                :in '[access-token action resource]}]
     (when (seq rules)
-      (seq (map first (xt/q db query subject (first required-scope) uri))))))
+      (seq (map first (xt/q db query subject action uri))))))
 
 (defn authorizing-put [db auth required-scope doc]
   (try

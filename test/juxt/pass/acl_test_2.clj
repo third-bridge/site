@@ -70,9 +70,9 @@
 
     [::xt/put
      {:xt/id ::pass/authorizing-put
-      :xt/fn '(fn [ctx auth required-scope doc]
+      :xt/fn '(fn [ctx auth action doc]
                 (let [db (xtdb.api/db ctx)]
-                  (juxt.pass.alpha.authorization-2/authorizing-put db auth required-scope doc)))}]
+                  (juxt.pass.alpha.authorization-2/authorizing-put db auth action doc)))}]
 
     [::xt/put
      (into
@@ -163,7 +163,7 @@
              ::site/uri uri}]
     (authorize-request req access-token-id)))
 
-(defn authorizing-put! [req required-scope doc]
+(defn authorizing-put! [req action doc]
   (let [
         ;; We construct an authentication/authorization 'context', which we
         ;; pass to the function and name it simply 'auth'. Entries of this
@@ -182,7 +182,7 @@
 
         tx (xt/submit-tx
             *xt-node*
-            [[:xtdb.api/fn ::pass/authorizing-put auth required-scope doc]])
+            [[:xtdb.api/fn ::pass/authorizing-put auth action doc]])
         tx (xt/await-tx *xt-node* tx)]
 
     ;; Currently due to https://github.com/xtdb/xtdb/issues/1672 the only way of
@@ -194,7 +194,7 @@
         "Failed to commit, check logs"
         {:auth auth
          :doc doc
-         :required-scope required-scope})))))
+         :action action})))))
 
 ;; As above but building up from a smaller seed.
 ((t/join-fixtures [with-xt with-handler with-scenario])
@@ -215,12 +215,12 @@
        ;; These are just checks on this request that can be done elsewhere
        ;; For example, wrong resource:
        (->
-        (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
+        (authz/check db (assoc req ::site/uri "https://example.org/") "create:user")
         (expect (comp zero? count)))
 
        ;; For example, right resource:
        (->
-        (authz/check db req #{"create:user"})
+        (authz/check db req "create:user")
         (expect (comp not zero? count)))
 
        ;; Now to call create-user!
@@ -228,15 +228,13 @@
        ;; in your own authorization scheme!
        (authorizing-put!
         req
-        #{"create:user"}
+        "create:user"
         ;; The request body would be transformed into this new doc
         {:xt/id "https://example.org/people/alice"
          ::pass/ruleset "https://example.org/ruleset"})
 
        ;; We need to create some ACLs for this user, ideally in the same tx
        )
-
-     ;; Now
 
      :ok
      )
