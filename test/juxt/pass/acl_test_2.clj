@@ -34,7 +34,7 @@
      {:xt/id "https://example.org/people/sue"
       ::pass/ruleset "https://example.org/ruleset"}]
 
-    ;; An person may have many identities
+    ;; A person may have many identities
     [::xt/put
      {:xt/id "https://example.org/people/sue/identities/example"
       ::site/type "Identity"
@@ -157,7 +157,7 @@
            ::pass/ruleset "https://example.org/ruleset"
            )))
 
-(defn make-request [uri db access-token-id]
+(defn new-request [uri db access-token-id]
   (assert access-token-id)
   (let [req {::site/db db
              ::site/uri uri}]
@@ -177,7 +177,7 @@
            (xt/db *xt-node*))}
 
          db (xt/db *xt-node*)
-         req (make-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]))]
+         req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]))]
 
      (->
       (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
@@ -255,22 +255,3 @@
 ;; Allowed methods reported in the Allow response header may be the intersection
 ;; of methods defined on the resource and the methods allowed by the 'auth'
 ;; context.
-
-
-(false? true)
-
-(+ 2 2 8 2)
-
-(* (+ 2 2) 4)
-
-(or false false false)
-
-(or false true false)
-
-(and true true true)
-
-(true? (not false))
-
-(not true)
-
-;; Boolean logic - Named after a famous Irish mathematician called Boole
