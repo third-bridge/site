@@ -180,8 +180,6 @@
                    ;; be.
                    ::site/uri]))
 
-
-
         tx (xt/submit-tx
             *xt-node*
             [[:xtdb.api/fn ::pass/authorizing-put auth required-scope doc]])
@@ -202,19 +200,17 @@
 ((t/join-fixtures [with-xt with-handler with-scenario])
  (fn []
 
-   (let [
+   (let [db (xt/db *xt-node*)
          ;; Access tokens for each sub/client pairing
          access-tokens
          {["sue" "admin-client"]
           (acquire-access-token
            "sue" "https://example.org/_site/apps/admin-client"
-           (xt/db *xt-node*))}
-
-         ;; Acquired access-tokens are put in the database, so new db snapshot
-         db (xt/db *xt-node*)]
+           db)}]
 
      ;; Sue creates a new user, Alice
-     (let [req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]))]
+     (let [db (xt/db *xt-node*)
+           req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]))]
 
        ;; These are just checks on this request that can be done elsewhere
        ;; For example, wrong resource:
@@ -235,7 +231,12 @@
         #{"create:user"}
         ;; The request body would be transformed into this new doc
         {:xt/id "https://example.org/people/alice"
-         ::pass/ruleset "https://example.org/ruleset"}))
+         ::pass/ruleset "https://example.org/ruleset"})
+
+       ;; We need to create some ACLs for this user, ideally in the same tx
+       )
+
+     ;; Now
 
      :ok
      )
