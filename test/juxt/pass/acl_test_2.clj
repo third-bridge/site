@@ -108,14 +108,16 @@
 
          ;; Having chosen the client application, we acquire a new access-token.
 
-         ;; First we'll need the subject. We can put the subject into the access
-         ;; token rather than the claims, because we assume the claims can never
-         ;; apply to a different subject. However, this assertion needs to be
-         ;; written up and communicated. If claims were ever to be reassigned to
-         ;; a different subject, then all access-tokens would need to be made
-         ;; void (removed).
-         subject (-> {:claims {"iss" "https://example.org" "sub" "sue"}}
-                     (authz/lookup->subject db))
+         ;; First we'll need the subject. As a performance optimisation, we can
+         ;; associate the subject with the stored access token itself, rather
+         ;; than re-establish the subject on each request via the id-token
+         ;; claims, because we assume the claims can never apply to a different
+         ;; subject. However, this assertion needs to be written up and
+         ;; communicated. If claims were ever to be reassigned to a different
+         ;; subject, then all access-tokens would need to be made void
+         ;; (removed).
+         subject
+         (authz/lookup->subject {:claims {"iss" "https://example.org" "sub" "sue"}} db)
 
          access-token
          (into
