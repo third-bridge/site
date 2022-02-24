@@ -33,11 +33,11 @@
     validation))
 
 
-(t/use-fixtures :each with-xt with-handler)
+#_(t/use-fixtures :each with-xt with-handler)
 
 ;; POST method operations
 
-(do
+#_(do
   (defn install-api [api]
     (let [body (json/write-value-as-bytes api)]
       (*handler*
@@ -68,5 +68,5 @@
    ))
 
 
-(defn post-method-operations []
+#_(defn post-method-operations []
   )
