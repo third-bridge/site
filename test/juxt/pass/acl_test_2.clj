@@ -174,10 +174,9 @@
          req {::site/db db
               ::site/uri "https://example.org/people/"}
 
-         access-token-id (get access-tokens ["sue" "admin-client"])
+         access-token-id (get access-tokens ["sue" "admin"])
 
-         req (authorize-request req access-token-id)
-         ]
+         req (authorize-request req access-token-id)]
 
      (->
       (authz/check db (assoc req ::site/uri "https://example.org/") #{"create:user"})
