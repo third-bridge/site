@@ -137,6 +137,7 @@
      access-token
 
      ;; A new request arrives
+
      (let [db (xt/db *xt-node*)
 
            req {}
@@ -158,7 +159,8 @@
                :in [access-token]}
              access-token-id))
 
-           ;; Bind onto the request
+           ;; Bind onto the request. For performance reasons, the actual scope
+           ;; is determined now, since the db is now a value.
            req
            (assoc req
                   ::pass/subject subject
@@ -205,9 +207,6 @@
              tx (xt/await-tx *xt-node* tx)]
 
          (xt/tx-committed? *xt-node* tx)))
-
-     ;; Perf: The actual scope should be determined at request time and bound to
-     ;; the request.
 
      ;; If accessing the API directly with a browser, the access-token is
      ;; generated and stored in the session (accessed via the cookie rather than
