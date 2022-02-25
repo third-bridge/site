@@ -283,27 +283,29 @@
      ;; First we test various combinations
      (let [db (xt/db *xt-node*)
            test-fn
-           (fn [{:keys [uri expected sub client error command] :as args}]
-             (try
-               (let [access-token (get access-tokens [sub client])
-                     _ (assert access-token)
-                     result
-                     (authz/authorizing-put-fn
-                      db
-                      (new-request
-                       uri db
-                       access-token
-                       {})
-                      command
-                      {:xt/id "https://example.org/people/alice"})]
-                 (if expected
-                   (expect result #(= expected %) args)
-                   (throw (ex-info "Expected to fail but didn't" {:args args}))))
-               (catch Exception e
-                 (when-not (= (.getMessage e) error)
-                   (throw (ex-info "Failed but with an unexpected error message"
-                                   {:expected-error error
-                                    :actual-error (.getMessage e)}))))))
+           (fn [{:keys [uri expected sub client error command access-token-scope] :as args}]
+             (let [access-token (if access-token-scope
+                                  (get access-tokens [sub client access-token-scope])
+                                  (get access-tokens [sub client]))]
+               (assert access-token)
+               (try
+                 (let [result
+                       (authz/authorizing-put-fn
+                        db
+                        (new-request
+                         uri db
+                         access-token
+                         {})
+                        command
+                        {:xt/id "https://example.org/people/alice"})]
+                   (if expected
+                     (expect result #(= expected %) args)
+                     (throw (ex-info "Expected to fail but didn't" {:args args}))))
+                 (catch Exception e
+                   (when-not (= (.getMessage e) error)
+                     (throw (ex-info "Failed but with an unexpected error message"
+                                     {:expected-error error
+                                      :actual-error (.getMessage e)})))))))
            base-args
            {:uri "https://example.org/people/"
             :sub "sue"
