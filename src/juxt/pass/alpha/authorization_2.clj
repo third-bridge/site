@@ -165,7 +165,7 @@
            :args-expected (count command-args)})))
 
       (when (nil? acls)
-        (let [msg "Transaction function call denied as no ACLs found that approve it."]
+        (let [msg (format "Command '%s' denied as no ACLs found that approve it." command-id)]
           ;; Depending on the command, we may want to log and alert
           (log/warnf msg)
           ;; TODO: Run some diagnostics to determine the reason

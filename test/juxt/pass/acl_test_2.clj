@@ -368,7 +368,7 @@
         {:access-token (get access-tokens ["sue" "example-client"])
          :command "https://example.org/commands/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
-         :error "Transaction function call denied as no ACLs found that approve it."})
+         :error "Command 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
 
        ;; She can't use these privileges to call a different command
        (test-fn
@@ -384,7 +384,7 @@
         {:access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
          :command "https://example.org/commands/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
-         :error "Transaction function call denied as no ACLs found that approve it."})
+         :error "Command 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
 
        ;; Terry should not be able to create-users, even with the admin-client
        (test-fn
@@ -392,7 +392,7 @@
         {:access-token (get access-tokens ["terry" "admin-client"])
          :command "https://example.org/commands/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
-         :error "Transaction function call denied as no ACLs found that approve it."})
+         :error "Command 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
 
 
        ;; In a GraphQL mutation, there will be no resource. Arguably, ACLs
@@ -464,12 +464,13 @@
                  :expected []})))
 
        ;; OK, let's create an identity for Alice!
-       (let [id-doc {:xt/id "https://example.org/people/sue/identities/example"
-                     ;;::site/type "Identity"
-                     :juxt.pass.jwt/iss "https://example.org"
-                     :juxt.pass.jwt/sub "alice"
-                     ::pass/subject "https://example.org/people/alice"
-                     }]
+       (let [id-doc
+             {:xt/id "https://example.org/people/sue/identities/example"
+              ;;::site/type "Identity"
+;;              :juxt.pass.jwt/iss "https://example.org"
+              :juxt.pass.jwt/sub "alice"
+              ::pass/subject "https://example.org/people/alice"
+              }]
          (test-fn
           db
           {:command "https://example.org/commands/create-identity"
