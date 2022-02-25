@@ -100,6 +100,7 @@
 
   (assert db)
   (assert subject)
+  (assert (string? subject))
   (assert (string? ruleset))
   (assert (string? command))
 
@@ -123,12 +124,9 @@
                       (acl-applies-to-subject? acl subject)
                       (acl-applies-to-resource? acl resource)]
              :rules rules
-             :in '[access-token action resource access-token-effective-scope]}]
-        (seq (map first (xt/q db query subject command uri access-token-effective-scope)))))))
-
-(defn check [db auth action]
-  #_(check-scope (::pass/access-token-effective-scope auth) action)
-  (check-acls db auth action))
+             :in '[subject command resource access-token-effective-scope]}]
+        (seq (map first (xt/q db query
+                              subject command uri access-token-effective-scope)))))))
 
 (defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} command doc]
   (assert ruleset)

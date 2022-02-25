@@ -86,11 +86,19 @@
        ;; If specified (and it must be currently), ::pass/scope overrides
        ;; the subject's default scope.
        ::pass/scope
+       #{"admin:write"}}
+      (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "admin-client"))]
+
+    [::xt/put
+     (into
+      {::pass/name "Example App"
+       ;; If specified (and it must be currently), ::pass/scope overrides
+       ;; the subject's default scope.
+       ::pass/scope
        #{"read:index"
          "read:document" "write:document"
-         "read:directory-contents" "write:create-new-document"
-         "admin:write"}}
-      (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "admin-client"))]
+         "read:directory-contents" "write:create-new-document"}}
+      (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "example-client"))]
 
     #_guest-client
     #_(into
@@ -144,7 +152,7 @@
         (first
          (xt/q
           db
-          '{:find [(pull subject [*])
+          '{:find [subject
                    (pull client [:xt/id ::pass/client-id ::pass/scope])]
             :keys [subject client]
             :where [[access-token ::pass/subject subject]
@@ -213,25 +221,39 @@
    (let [db (xt/db *xt-node*)
          ;; Access tokens for each sub/client pairing
          access-tokens
-         {["sue" "admin-client"]
-          (acquire-access-token
-           "sue" "https://example.org/_site/apps/admin-client"
-           db)}]
+         {["sue" "admin-client"] (acquire-access-token
+                                  "sue" "https://example.org/_site/apps/admin-client"
+                                  db)
+          ["sue" "example-client"] (acquire-access-token
+                                  "sue" "https://example.org/_site/apps/example-client"
+                                  db)}]
 
      ;; Sue creates a new user, Alice
      (let [db (xt/db *xt-node*)
-           req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]) {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
 
-       ;; These are just checks on this request that can be done elsewhere
-       ;; For example, wrong resource:
-       #_(->
-          (authz/check db (assoc req ::site/uri "https://example.org/") "create:user")
-          (expect (comp zero? count)))
+           ;; Check ACLs on correct request
+           #_#__ (->
+                  (authz/check-acls
+                   db
+                   (new-request
+                    "https://example.org/people/"
+                    db
+                    (get access-tokens ["sue" "admin-client"])
+                    {:request-body-doc {:xt/id "https://example.org/people/alice"}})
+                   "https://example.org/commands/create-user")
+                  (expect (comp not zero? count)))
 
-       ;; For example, right resource:
-       #_(->
-        (authz/check db req "create:user")
-        (expect (comp not zero? count)))
+           ;; TODO: Wrong person
+           ;; TODO: Wrong app
+           ;; TODO: Wrong command
+
+           #_#_req (new-request
+                    "https://example.org/people/"
+                    db
+                    (get access-tokens ["sue" "admin-client"])
+                    {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
+
+
 
        ;; TODO: Create a language of commands.
 
@@ -260,23 +282,31 @@
        ;; Subjects are mapped to commands. Applications are mapped to scopes.
 
        ;; Now to call 'create-user'
-       (authorizing-put!
-        req
-        ;; The request body would be transformed into this new doc
-        ["https://example.org/commands/create-user" (:request-body-doc req)]
+       (let [req (new-request
+                  "https://example.org/people/"
+                  db
+                  (get access-tokens ["sue" "admin-client"])
+                  {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
+         (authorizing-put!
+          req
+          ;; The request body would be transformed into this new doc
+          ["https://example.org/commands/create-user" (:request-body-doc req)]
 
-        ;; TODO: We need to create some ACLs for this user, ideally in the same tx
-        )
+          ;; TODO: We need to create some ACLs for this user, ideally in the same tx
+          ))
 
        )
 
-     (let [db (xt/db *xt-node*)]
-       (expect
-        (xt/entity db "https://example.org/people/alice")
-        #(= (::pass/ruleset %) "https://example.org/ruleset"))
+     #_(let [db (xt/db *xt-node*)]
+         (expect
+          (xt/entity db "https://example.org/people/alice")
+          #(= (::pass/ruleset %) "https://example.org/ruleset"))
 
-       :ok
-       (xt/entity db "https://example.org/people/alice")))
+         :ok
+         (xt/entity db "https://example.org/people/alice")
+
+
+         ))
 
    ;; If accessing the API directly with a browser, the access-token is
    ;; generated and stored in the session (accessed via the cookie rather than
