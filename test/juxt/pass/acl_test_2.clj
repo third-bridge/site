@@ -45,6 +45,19 @@
       ::pass/ruleset "https://example.org/ruleset"}]
 
     [::xt/put
+     {:xt/id "https://example.org/people/terry"
+      ::pass/ruleset "https://example.org/ruleset"}]
+    [::xt/put
+     {:xt/id "https://example.org/people/terry/identities/example"
+      ::site/type "Identity"
+      :juxt.pass.jwt/iss "https://example.org"
+      :juxt.pass.jwt/sub "terry"
+      ::pass/subject "https://example.org/people/terry"
+      ::pass/ruleset "https://example.org/ruleset"}]
+
+
+
+    [::xt/put
      {:xt/id "https://example.org/people"
       ::pass/ruleset "https://example.org/ruleset"}]
 
@@ -160,6 +173,8 @@
             :in [access-token]}
           access-token-id))]
 
+    (assert (string? subject))
+
     ;; Bind onto the request. For performance reasons, the actual scope
     ;; is determined now, since the db is now a value.
     (assoc req
@@ -226,105 +241,121 @@
          {["sue" "admin-client"] (acquire-access-token
                                   "sue" "https://example.org/_site/apps/admin-client"
                                   db)
+          ["terry" "admin-client"] (acquire-access-token
+                                    "terry" "https://example.org/_site/apps/admin-client"
+                                    db)
           ["sue" "example-client"] (acquire-access-token
                                     "sue" "https://example.org/_site/apps/example-client"
-                                    db)}]
+                                    db)
+          ;; Acquire access-tokens that don't have the right scope
+
+          }]
 
      ;; Sue creates a new user, Alice
+
+     ;; TODO: Create a language of commands.
+
+     ;; Each command is associated, many-to-one, with a required (single)
+     ;; scope. If an OpenAPI document defines an operation, that operation may
+     ;; involve multiple commands, and the security requirement might require
+     ;; multiple scopes. The security requirement of scopes may be implied
+     ;; (and may affect the publishing of the openapi.json such that authors
+     ;; don't need to concern themselves with declaring scope).
+
+     ;; A command such as 'create-user' is registered in the database.
+
+     ;; Scopes are an access token concern. An access token references an
+     ;; application which references a particular API. Commands are therefore
+     ;; part of the domain to which an API belongs. A GraphQL endpoint is
+     ;; defined as part of an overall OpenAPI, which is the same group where
+     ;; scopes, commands and rulesets are defined.
+
+     ;; create-user is in the 'admin:write' scope.
+
+     ;; create-user is defined with a description that can be showed to users
+     ;; for the purposes of informed authorization.
+
+     ;; The 'create-user' command determines the applicable ACLs.
+
+     ;; Subjects are mapped to commands. Applications are mapped to scopes.
+
+     ;; Now to call 'create-user'
+     ;; First we test various combinations
      (let [db (xt/db *xt-node*)
+           test-fn
+           (fn [{:keys [uri expected sub client error command] :as args}]
+             (try
+               (let [access-token (get access-tokens [sub client])
+                     _ (assert access-token)
+                     result
+                     (authz/authorizing-put-fn
+                      db
+                      (new-request
+                       uri db
+                       access-token
+                       {})
+                      command
+                      {:xt/id "https://example.org/people/alice"})]
+                 (if expected
+                   (expect result #(= expected %) args)
+                   (throw (ex-info "Expected to fail but didn't" {:args args}))))
+               (catch Exception e
+                 (when-not (= (.getMessage e) error)
+                   (throw (ex-info "Failed but with an unexpected error message"
+                                   {:expected-error error
+                                    :actual-error (.getMessage e)}))))))
+           base-args
+           {:uri "https://example.org/people/"
+            :sub "sue"
+            :client "admin-client"
+            :command "https://example.org/commands/create-user"}]
 
-           ]
+       ;; This is the happy case, Sue attempts to create a new user, Alice
+       (test-fn
+        (merge
+         base-args
+         {:expected [[:xtdb.api/put
+                      {:xt/id "https://example.org/people/alice",
+                       :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
 
-       ;; TODO: Create a language of commands.
+       ;; Terry should not be able to
+       (test-fn
+        (merge
+         base-args
+         {:sub "terry"
+          :error "Transaction function call denied as no ACLs found that approve it."}))
 
-       ;; Each command is associated, many-to-one, with a required (single)
-       ;; scope. If an OpenAPI document defines an operation, that operation may
-       ;; involve multiple commands, and the security requirement might require
-       ;; multiple scopes. The security requirement of scopes may be implied
-       ;; (and may affect the publishing of the openapi.json such that authors
-       ;; don't need to concern themselves with declaring scope).
+       (test-fn
+        (merge
+         base-args
+         {:client "example-client"
+          :error "Transaction function call denied as no ACLs found that approve it."}))
 
-       ;; A command such as 'create-user' is registered in the database.
+       :ok)
 
-       ;; Scopes are an access token concern. An access token references an
-       ;; application which references a particular API. Commands are therefore
-       ;; part of the domain to which an API belongs. A GraphQL endpoint is
-       ;; defined as part of an overall OpenAPI, which is the same group where
-       ;; scopes, commands and rulesets are defined.
+     ;; Now we do the official request which mutates the database
+     ;; This is the 'official' way to avoid race-conditions.
+     (let [req (new-request
+                "https://example.org/people/"
+                (xt/db *xt-node*)
+                (get access-tokens ["sue" "admin-client"])
+                {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
+       (authorizing-put!
+        req
+        ;; The request body would be transformed into this new doc
+        ["https://example.org/commands/create-user" (:request-body-doc req)]
 
-       ;; create-user is in the 'admin:write' scope.
+        ;; TODO: We need to create some ACLs for this user, ideally in the same tx
+        )
+       )
 
-       ;; create-user is defined with a description that can be showed to users
-       ;; for the purposes of informed authorization.
+     (let [db (xt/db *xt-node*)]
+       (expect
+        (xt/entity db "https://example.org/people/alice")
+        #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
+               :xt/id "https://example.org/people/alice"}))
 
-       ;; The 'create-user' command determines the applicable ACLs.
-
-       ;; Subjects are mapped to commands. Applications are mapped to scopes.
-
-       ;; Now to call 'create-user'
-       ;; First we test various combinations
-       (let [test-fn
-             (fn [{:keys [uri expected sub client error command] :as args}]
-               (try
-                 (let [result
-                       (authz/authorizing-put-fn
-                        db
-                        (new-request
-                         uri db
-                         (get access-tokens [sub client])
-                         {})
-                        command
-                        {:xt/id "https://example.org/people/alice"})]
-                   (if expected
-                     (expect result #(= expected %) args)
-                     (throw (ex-info "Expected to fail but didn't" {:args args}))))
-                 (catch Exception e
-                   (when-not (= (.getMessage e) error)
-                     (throw (ex-info "Failed but with an unexpected error message"
-                                     {:expected-error error
-                                      :actual-error (.getMessage e)}))))))
-             base-args
-             {:uri "https://example.org/people/"
-              :sub "sue"
-              :client "admin-client"
-              :command "https://example.org/commands/create-user"}]
-
-         (test-fn (merge base-args
-                         {:expected [[:xtdb.api/put
-                                      {:xt/id "https://example.org/people/alice",
-                                       :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
-
-         (test-fn (merge
-                   base-args
-                   {:client "example-client"
-                    :error "Transaction function call denied as no ACLs found that approve it."}))
-
-         :ok)
-
-       ;; Now we do the official request which mutates the database
-       ;; This is the 'official' way to avoid race-conditions.
-       (let [req (new-request
-                  "https://example.org/people/"
-                  db
-                  (get access-tokens ["sue" "admin-client"])
-                  {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
-         (authorizing-put!
-          req
-          ;; The request body would be transformed into this new doc
-          ["https://example.org/commands/create-user" (:request-body-doc req)]
-
-          ;; TODO: We need to create some ACLs for this user, ideally in the same tx
-          )
-         )
-
-       (let [db (xt/db *xt-node*)]
-         (expect
-          (xt/entity db "https://example.org/people/alice")
-          #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
-                 :xt/id "https://example.org/people/alice"}))
-
-         :ok
-         (xt/entity db "https://example.org/people/alice"))))
+       (xt/entity db "https://example.org/people/alice")))
 
 
    ;; If accessing the API directly with a browser, the access-token is
