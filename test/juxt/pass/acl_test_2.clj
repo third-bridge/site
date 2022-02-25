@@ -275,10 +275,10 @@
      (let [db (xt/db *xt-node*)]
        (expect
         (xt/entity db "https://example.org/people/alice")
-        #(= (::pass/ruleset %) "https://example.org/ruleset")))
+        #(= (::pass/ruleset %) "https://example.org/ruleset"))
 
-     :ok
-     )
+       :ok
+       (xt/entity db "https://example.org/people/alice")))
 
    ;; If accessing the API directly with a browser, the access-token is
    ;; generated and stored in the session (accessed via the cookie rather than

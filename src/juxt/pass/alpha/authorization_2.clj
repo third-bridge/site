@@ -155,6 +155,7 @@
           ;; context. This prevents documents from escaping their authorization
           ;; scheme into another.
           (let [doc (assoc doc ::pass/ruleset ruleset)]
+            (log/tracef "Inserting doc: %s" (pr-str doc))
             doc)]]
         []))
 
