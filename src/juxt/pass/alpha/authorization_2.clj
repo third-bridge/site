@@ -122,7 +122,7 @@
 
                       ;; Custom
                       (acl-applies-to-subject? acl subject)
-                      (acl-applies-to-resource? acl resource)]
+                      #_(acl-applies-to-resource? acl resource)]
              :rules rules
              :in '[subject command resource access-token-effective-scope]}]
         (seq (map first (xt/q db query
@@ -141,7 +141,7 @@
           (log/warnf msg)
           (throw (ex-info msg {}))))
 
-      (when-not (.startsWith (:xt/id doc) (::site/uri auth))
+      #_(when-not (.startsWith (:xt/id doc) (::site/uri auth))
         (let [msg ":xt/id of new document must be a sub-resource of ::site/uri"]
           (log/warnf msg)
           (throw (ex-info msg {:new-doc-id (:xt/id doc)

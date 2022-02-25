@@ -71,7 +71,8 @@
       ::site/type "ACL"
       ::pass/subject "https://example.org/people/sue"
       ::pass/command "https://example.org/commands/create-user"
-      ::pass/resource "https://example.org/people/"}]
+      ;;::pass/resource "https://example.org/people/"
+      }]
 
     [::xt/put
      {:xt/id "https://example.org/rules/1"
@@ -316,7 +317,7 @@
                                           :actual-error (.getMessage e)})))))]))]
 
        (let [base-args
-             {:uri "https://example.org/people/"
+             {;;:uri "https://example.org/people/"
               :access-token (get access-tokens ["sue" "admin-client"])
               :command "https://example.org/commands/create-user"
               :doc {:xt/id "https://example.org/people/alice"}}]
@@ -332,7 +333,7 @@
 
          ;; There's also a restriction currently that means the id of the
          ;; provided document must be a child of the targeted resource.
-         (test-fn
+         #_(test-fn
           db
           (merge
            base-args
@@ -342,7 +343,7 @@
 
          ;; But Sue's permission to call create-user only applies on the
          ;; relevant resource.
-         (test-fn
+         #_(test-fn
           db
           (merge
            base-args
