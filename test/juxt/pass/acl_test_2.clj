@@ -65,7 +65,11 @@
     [::xt/put
      {:xt/id "https://example.org/commands/create-identity"
       ::site/type "Command"
-      ::pass/scope "admin:write"}]
+      ::pass/scope "admin:write"
+      ::pass/process
+      [
+       [::pass/conform {::site/type "Identity"}]
+       ]}]
 
     [::xt/put
      {:xt/id "https://example.org/acls/sue-can-create-users"
@@ -304,32 +308,30 @@
            (fn [db {:keys [uri expected error command access-token doc] :as args}]
              (assert access-token)
 
-             (let [result
-                   (try
-                     (let [actual
-                           (authz/authorizing-put-fn
-                            db
-                            (new-request uri db access-token {})
-                            command
-                            doc)]
+             (try
+               (let [actual
+                     (authz/authorizing-put-fn
+                      db
+                      (new-request uri db access-token {})
+                      command
+                      doc)]
 
-                       (when (and expected (not= expected actual))
-                         (throw (ex-info "Unexpected result" {:expected expected
-                                                              :actual actual
-                                                              ::pass true})))
+                 (when (and expected (not= expected actual))
+                   (throw (ex-info "Unexpected result" {:expected expected
+                                                        :actual actual
+                                                        ::pass true})))
 
-                       (when error
-                         (throw (ex-info "Expected to fail but didn't" {:args args
-                                                                        ::pass true})))
+                 (when error
+                   (throw (ex-info "Expected to fail but didn't" {:args args
+                                                                  ::pass true})))
+                 actual)
 
-                       actual)
-
-                     (catch Exception e
-                       (when (::pass (ex-data e)) (throw e))
-                       (when-not (= (.getMessage e) error)
-                         (throw (ex-info "Failed but with an unexpected error message"
-                                         {:expected-error error
-                                          :actual-error (.getMessage e)})))))]))]
+               (catch Exception e
+                 (when (::pass (ex-data e)) (throw e))
+                 (when-not (= (.getMessage e) error)
+                   (throw (ex-info "Failed but with an unexpected error message"
+                                   {:expected-error error
+                                    :actual-error (.getMessage e)}))))))]
 
 
        ;; This is the happy case, Sue attempts to create a new user, Alice
@@ -411,12 +413,9 @@
        ;; ::pass/ruleset is inherited
        ;; An identity may have to be created 'under' the person record.
 
-       (test-fn
-        db
-        {:access-token (get access-tokens ["sue" "admin-client"])
-         :command "https://example.org/commands/create-identity"
-         :doc {:xt/id "https://example.org/people/alice/identities/test"}
-         })
+
+
+
 
        ;; Now we do the official request which mutates the database
        ;; This is the 'official' way to avoid race-conditions.
@@ -456,7 +455,21 @@
                 {:uri "https://example.org/people/"
                  :access-token access-token
                  :command "https://example.org/commands/put-resource"
-                 :expected []})))))
+                 :expected []})))
+
+       ;; ok let's create an identity for Alice
+       (let [id-doc {:xt/id "https://example.org/people/sue/identities/example"
+                     ;;::site/type "Identity"
+                     :juxt.pass.jwt/iss "https://example.org"
+                     :juxt.pass.jwt/sub "alice"
+                     ::pass/subject "https://example.org/people/alice"
+                     }]
+         (test-fn
+          db
+          {:command "https://example.org/commands/create-identity"
+           :doc id-doc
+           :access-token (get access-tokens ["sue" "admin-client"])
+           }))))
 
    ;; Notes:
 

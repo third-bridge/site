@@ -128,31 +128,50 @@
         (seq (map first (xt/q db query
                               subject command uri access-token-effective-scope)))))))
 
-(defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} command doc]
+(defmulti apply-processor (fn [processor m] (first processor)))
+
+(defmethod apply-processor :default [[kw] m]
+  (log/warnf "No processor for %s" kw)
+  m)
+
+(defmethod apply-processor ::pass/conform [[_ m-to-merge] m]
+  (merge m m-to-merge))
+
+(defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} command-id doc]
   (assert ruleset)
 
   (try
-    (let [acls (check-acls db auth command)]
-
-      (log/tracef "ACLs are %s" acls)
+    (let [acls (check-acls db auth command-id)
+          command (xt/entity db command-id)
+          process (into
+                   [[::pass/conform {::pass/ruleset ruleset}]]
+                   (::pass/process command))]
 
       (when (nil? acls)
         (let [msg "Transaction function call denied as no ACLs found that approve it."]
+          ;; Depending on the command, we may want to log and alert
           (log/warnf msg)
+          ;; TODO: Run some diagnostics to determine the reason
           (throw (ex-info msg {}))))
 
+      ;; This may be a process step
       #_(when-not (.startsWith (:xt/id doc) (::site/uri auth))
-        (let [msg ":xt/id of new document must be a sub-resource of ::site/uri"]
-          (log/warnf msg)
-          (throw (ex-info msg {:new-doc-id (:xt/id doc)
-                               ::site/uri auth}))))
+          (let [msg ":xt/id of new document must be a sub-resource of ::site/uri"]
+            (log/warnf msg)
+            (throw (ex-info msg {:new-doc-id (:xt/id doc)
+                                 ::site/uri auth}))))
 
       (if acls
         [[::xt/put
           ;; Critically, the new doc inherits the ruleset of the auth
           ;; context. This prevents documents from escaping their authorization
           ;; scheme into another.
-          (let [doc (assoc doc ::pass/ruleset ruleset)]
+          (let [doc (reduce
+                     (fn [acc processor]
+                       (apply-processor processor acc))
+                     doc
+                     process)]
+
             (log/tracef "Inserting doc: %s" (pr-str doc))
             doc)]]
         []))
