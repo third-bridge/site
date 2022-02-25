@@ -341,7 +341,10 @@
           db
           (merge
            base-args
-           {:expected [[:xtdb.api/put
+           {:access-token (get access-tokens ["sue" "admin-client"])
+            :command "https://example.org/commands/create-user"
+            :doc {:xt/id "https://example.org/people/alice"}
+            :expected [[:xtdb.api/put
                         {:xt/id "https://example.org/people/alice",
                          :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
 
@@ -351,7 +354,10 @@
           db
           (merge
            base-args
-           {:uri "https://example.org/other/"}))
+           {:access-token (get access-tokens ["sue" "admin-client"])
+            :command "https://example.org/commands/create-user"
+            :doc {:xt/id "https://example.org/people/alice"}
+            :uri "https://example.org/other/"}))
 
          ;; She can't use the example client to create users
          (test-fn
@@ -359,6 +365,8 @@
           (merge
            base-args
            {:access-token (get access-tokens ["sue" "example-client"])
+            :command "https://example.org/commands/create-user"
+            :doc {:xt/id "https://example.org/people/alice"}
             :error "Transaction function call denied as no ACLs found that approve it."}))
 
          ;; She can't use these privileges to call a different command
@@ -366,8 +374,9 @@
           db
           (merge
            base-args
-           {:access-token (get access-tokens ["sue" "example-client"])
+           {:access-token (get access-tokens ["sue" "admin-client"])
             :command "https://example.org/commands/create-superuser"
+            :doc {:xt/id "https://example.org/people/alice"}
             :error "Transaction function call denied as no ACLs found that approve it."}))
 
          ;; Neither can she used an access-token where she hasn't granted enough scope
@@ -376,6 +385,8 @@
           (merge
            base-args
            {:access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
+            :command "https://example.org/commands/create-user"
+            :doc {:xt/id "https://example.org/people/alice"}
             :error "Transaction function call denied as no ACLs found that approve it."}))
 
          ;; Terry should not be able to create-users, even with the admin-client
@@ -384,6 +395,8 @@
           (merge
            base-args
            {:access-token (get access-tokens ["terry" "admin-client"])
+            :command "https://example.org/commands/create-user"
+            :doc {:xt/id "https://example.org/people/alice"}
             :error "Transaction function call denied as no ACLs found that approve it."}))
 
 
@@ -420,6 +433,7 @@
            base-args
            {:access-token (get access-tokens ["sue" "admin-client"])
             :command "https://example.org/commands/create-identity"
+            :doc {:xt/id "https://example.org/people/alice/identities/test"}
             })))
 
        ;; Now we do the official request which mutates the database
