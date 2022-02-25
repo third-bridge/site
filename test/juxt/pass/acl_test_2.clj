@@ -323,8 +323,7 @@
                                           :actual-error (.getMessage e)})))))]))]
 
        (let [base-args
-             {;;:uri "https://example.org/people/"
-              :access-token (get access-tokens ["sue" "admin-client"])
+             {:access-token (get access-tokens ["sue" "admin-client"])
               :command "https://example.org/commands/create-user"
               :doc {:xt/id "https://example.org/people/alice"}}]
 
@@ -337,24 +336,13 @@
                         {:xt/id "https://example.org/people/alice",
                          :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
 
-         ;; There's also a restriction currently that means the id of the
-         ;; provided document must be a child of the targeted resource.
-         #_(test-fn
+         ;; Sue's permission to call create-user is not constrained by a
+         ;; resource, there is no error if we set one.
+         (test-fn
           db
           (merge
            base-args
-           {:doc {:xt/id "https://example.org/foo"}
-            :error ":xt/id of new document must be a sub-resource of ::site/uri"
-            }))
-
-         ;; But Sue's permission to call create-user only applies on the
-         ;; relevant resource.
-         #_(test-fn
-          db
-          (merge
-           base-args
-           {:uri "https://example.org/other/"
-            :error "Transaction function call denied as no ACLs found that approve it."}))
+           {:uri "https://example.org/other/"}))
 
          ;; She can't use the example client to create users
          (test-fn
@@ -423,7 +411,6 @@
            base-args
            {:access-token (get access-tokens ["sue" "admin-client"])
             :command "https://example.org/commands/create-identity"
-            ;;:error "Transaction function call denied as no ACLs found that approve it."
             })))
 
        ;; Now we do the official request which mutates the database
