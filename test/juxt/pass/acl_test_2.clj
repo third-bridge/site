@@ -122,19 +122,7 @@
        #{"read:index"
          "read:document" "write:document"
          "read:directory-contents" "write:create-new-document"}}
-      (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "example-client"))]
-
-    #_guest-client
-    #_(into
-       {::pass/name "Guest Access"
-        ::pass/scope #{"read:index" "read:document"}}
-       (authz/make-oauth-client-doc
-        {::site/base-uri "https://example.org"}))
-
-    #_#__ (submit-and-await!
-           [
-            [::xt/put guest-client]])
-    ])
+      (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "example-client"))]])
   (f))
 
 (defn acquire-access-token
