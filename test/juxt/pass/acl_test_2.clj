@@ -126,7 +126,7 @@
     ])
   (f))
 
-(defn acquire-access-token [sub client-id db]
+(defn acquire-access-token [sub client-id db scope]
   (let [
         ;; First we'll need the subject. As a performance optimisation, we can
         ;; associate the subject with the stored access token itself, rather
@@ -143,12 +143,9 @@
         ;; scopes. The overall scope of the request is ascertained at each and
         ;; every request.
         access-token
-        (into
-         (authz/make-access-token-doc
-          (:xt/id subject)
-          client-id
-          ;;#{"read:document"}
-          ))]
+        (if scope
+          (authz/make-access-token-doc (:xt/id subject) client-id scope)
+          (authz/make-access-token-doc (:xt/id subject) client-id))]
 
     ;; An access token must exist in the database, linking to the application,
     ;; the subject and its own granted scopes. The actual scopes are the
@@ -238,18 +235,25 @@
    (let [db (xt/db *xt-node*)
          ;; Access tokens for each sub/client pairing
          access-tokens
-         {["sue" "admin-client"] (acquire-access-token
-                                  "sue" "https://example.org/_site/apps/admin-client"
-                                  db)
-          ["terry" "admin-client"] (acquire-access-token
-                                    "terry" "https://example.org/_site/apps/admin-client"
-                                    db)
-          ["sue" "example-client"] (acquire-access-token
-                                    "sue" "https://example.org/_site/apps/example-client"
-                                    db)
-          ;; Acquire access-tokens that don't have the right scope
+         {["sue" "admin-client"]
+          (acquire-access-token
+           "sue" "https://example.org/_site/apps/admin-client"
+           db nil)
 
-          }]
+          ["sue" "admin-client" #{"limited"}]
+          (acquire-access-token
+           "sue" "https://example.org/_site/apps/admin-client"
+           db #{"limited"})
+
+          ["sue" "example-client"]
+          (acquire-access-token
+           "sue" "https://example.org/_site/apps/example-client"
+           db nil)
+
+          ["terry" "admin-client"]
+          (acquire-access-token
+           "terry" "https://example.org/_site/apps/admin-client"
+           db nil)}]
 
      ;; Sue creates a new user, Alice
 
@@ -284,10 +288,17 @@
      (let [db (xt/db *xt-node*)
            test-fn
            (fn [{:keys [uri expected sub client error command access-token-scope] :as args}]
-             (let [access-token (if access-token-scope
-                                  (get access-tokens [sub client access-token-scope])
-                                  (get access-tokens [sub client]))]
-               (assert access-token)
+             (let [access-token
+                   (if access-token-scope
+                     (get access-tokens [sub client access-token-scope])
+                     (get access-tokens [sub client]))]
+
+               (when-not access-token
+                 (throw
+                  (ex-info
+                   "Access token not found"
+                   {:sub sub :client client :access-token-scope access-token-scope})))
+
                (try
                  (let [result
                        (authz/authorizing-put-fn
@@ -320,20 +331,26 @@
                       {:xt/id "https://example.org/people/alice",
                        :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
 
-       ;; Terry should not be able to
-       (test-fn
-        (merge
-         base-args
-         {:sub "terry"
-          :error "Transaction function call denied as no ACLs found that approve it."}))
-
+       ;; She can't use the example client to create users
        (test-fn
         (merge
          base-args
          {:client "example-client"
           :error "Transaction function call denied as no ACLs found that approve it."}))
 
-       :ok)
+       ;; Neither can she used an access-token where she hasn't granted enough scope
+       (test-fn
+        (merge
+         base-args
+         {:access-token-scope #{"limited"}
+          :error "Transaction function call denied as no ACLs found that approve it."}))
+
+       ;; Terry should not be able to create-users, even with the admin-client
+       (test-fn
+        (merge
+         base-args
+         {:sub "terry"
+          :error "Transaction function call denied as no ACLs found that approve it."})))
 
      ;; Now we do the official request which mutates the database
      ;; This is the 'official' way to avoid race-conditions.
