@@ -294,7 +294,7 @@
      ;; First we test various combinations
      (let [db (xt/db *xt-node*)
            test-fn
-           (fn [db {:keys [uri expected error command access-token] :as args}]
+           (fn [db {:keys [uri expected error command access-token doc] :as args}]
              (assert access-token)
              (try
                (let [result
@@ -302,7 +302,7 @@
                       db
                       (new-request uri db access-token {})
                       command
-                      {:xt/id "https://example.org/people/alice"})]
+                      doc)]
                  (if expected
                    (expect result #(= expected %) args)
                    (throw (ex-info "Expected to fail but didn't" {:args args}))))
@@ -315,7 +315,8 @@
        (let [base-args
              {:uri "https://example.org/people/"
               :access-token (get access-tokens ["sue" "admin-client"])
-              :command "https://example.org/commands/create-user"}]
+              :command "https://example.org/commands/create-user"
+              :doc {:xt/id "https://example.org/people/alice"}}]
 
          ;; This is the happy case, Sue attempts to create a new user, Alice
          (test-fn
@@ -325,6 +326,15 @@
            {:expected [[:xtdb.api/put
                         {:xt/id "https://example.org/people/alice",
                          :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
+
+         ;; There's also a restriction currently that means the id of the
+         ;; provided document must be a child of the targeted resource.
+         (test-fn
+          db
+          (merge
+           base-args
+           {:doc {:xt/id "https://example.org/foo"}
+            :error ":xt/id of new document must be a sub-resource of ::site/uri"}))
 
          ;; But Sue's permission to call create-user only applies on the
          ;; relevant resource.
