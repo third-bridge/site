@@ -346,9 +346,9 @@
        ;; This is the happy case, Sue attempts to create a new user, Alice
        (test-fn
         db
-        {:access-token (get access-tokens ["sue" "admin-client"])
-         :command "https://example.org/commands/create-user"
+        {:command "https://example.org/commands/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["sue" "admin-client"])
          :expected [[:xtdb.api/put
                      {:xt/id "https://example.org/people/alice",
                       :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]})
@@ -357,41 +357,41 @@
        ;; resource, there is no error if we set one.
        (test-fn
         db
-        {:access-token (get access-tokens ["sue" "admin-client"])
-         :command "https://example.org/commands/create-user"
+        {:command "https://example.org/commands/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["sue" "admin-client"])
          :uri "https://example.org/other/"})
 
        ;; She can't use the example client to create users
        (test-fn
         db
-        {:access-token (get access-tokens ["sue" "example-client"])
-         :command "https://example.org/commands/create-user"
+        {:command "https://example.org/commands/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["sue" "example-client"])
          :error "Command 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
 
        ;; She can't use these privileges to call a different command
        (test-fn
         db
-        {:access-token (get access-tokens ["sue" "admin-client"])
-         :command "https://example.org/commands/create-superuser"
+        {:command "https://example.org/commands/create-superuser"
          :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["sue" "admin-client"])
          :error "No such command: https://example.org/commands/create-superuser"})
 
        ;; Neither can she used an access-token where she hasn't granted enough scope
        (test-fn
         db
-        {:access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
-         :command "https://example.org/commands/create-user"
+        {:command "https://example.org/commands/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
          :error "Command 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
 
        ;; Terry should not be able to create-users, even with the admin-client
        (test-fn
         db
-        {:access-token (get access-tokens ["terry" "admin-client"])
-         :command "https://example.org/commands/create-user"
+        {:command "https://example.org/commands/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["terry" "admin-client"])
          :error "Command 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
 
 
