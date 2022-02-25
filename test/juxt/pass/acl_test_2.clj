@@ -176,14 +176,16 @@
   (let [req (merge {::site/db db ::site/uri uri} opts)]
     (authorize-request req access-token-id)))
 
-(defn authorizing-put! [{::pass/keys [access-token-effective-scope] :as req}
+(defn authorizing-put! [req
                         & action-docs]
 
   (let [
-        ;; We construct an authentication/authorization 'context', which we
-        ;; pass to the function and name it simply 'auth'. Entries of this
-        ;; auth context will be used when determining whether access is
-        ;; approved or denied.
+        ;; We construct an authentication/authorization 'context' from the
+        ;; request, which we pass to the function and name it simply
+        ;; 'auth'. Entries of this auth context will be used when determining
+        ;; whether access is approved or denied. The reason we need to do this
+        ;; is because the request itself contains entries that can't be sent
+        ;; into a transaction function.
         auth (-> req
                  (select-keys
                   [::pass/subject
@@ -225,35 +227,13 @@
                                   "sue" "https://example.org/_site/apps/admin-client"
                                   db)
           ["sue" "example-client"] (acquire-access-token
-                                  "sue" "https://example.org/_site/apps/example-client"
-                                  db)}]
+                                    "sue" "https://example.org/_site/apps/example-client"
+                                    db)}]
 
      ;; Sue creates a new user, Alice
      (let [db (xt/db *xt-node*)
 
-           ;; Check ACLs on correct request
-           #_#__ (->
-                  (authz/check-acls
-                   db
-                   (new-request
-                    "https://example.org/people/"
-                    db
-                    (get access-tokens ["sue" "admin-client"])
-                    {:request-body-doc {:xt/id "https://example.org/people/alice"}})
-                   "https://example.org/commands/create-user")
-                  (expect (comp not zero? count)))
-
-           ;; TODO: Wrong person
-           ;; TODO: Wrong app
-           ;; TODO: Wrong command
-
-           #_#_req (new-request
-                    "https://example.org/people/"
-                    db
-                    (get access-tokens ["sue" "admin-client"])
-                    {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
-
-
+           ]
 
        ;; TODO: Create a language of commands.
 
@@ -282,6 +262,47 @@
        ;; Subjects are mapped to commands. Applications are mapped to scopes.
 
        ;; Now to call 'create-user'
+       ;; First we test various combinations
+       (let [test-fn
+             (fn [{:keys [uri expected sub client error command] :as args}]
+               (try
+                 (let [result
+                       (authz/authorizing-put-fn
+                        db
+                        (new-request
+                         uri db
+                         (get access-tokens [sub client])
+                         {})
+                        command
+                        {:xt/id "https://example.org/people/alice"})]
+                   (if expected
+                     (expect result #(= expected %) args)
+                     (throw (ex-info "Expected to fail but didn't" {:args args}))))
+                 (catch Exception e
+                   (when-not (= (.getMessage e) error)
+                     (throw (ex-info "Failed but with an unexpected error message"
+                                     {:expected-error error
+                                      :actual-error (.getMessage e)}))))))
+             base-args
+             {:uri "https://example.org/people/"
+              :sub "sue"
+              :client "admin-client"
+              :command "https://example.org/commands/create-user"}]
+
+         (test-fn (merge base-args
+                         {:expected [[:xtdb.api/put
+                                      {:xt/id "https://example.org/people/alice",
+                                       :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
+
+         (test-fn (merge
+                   base-args
+                   {:client "example-client"
+                    :error "Transaction function call denied as no ACLs found that approve it."}))
+
+         :ok)
+
+       ;; Now we do the official request which mutates the database
+       ;; This is the 'official' way to avoid race-conditions.
        (let [req (new-request
                   "https://example.org/people/"
                   db
@@ -293,20 +314,18 @@
           ["https://example.org/commands/create-user" (:request-body-doc req)]
 
           ;; TODO: We need to create some ACLs for this user, ideally in the same tx
-          ))
+          )
+         )
 
-       )
-
-     #_(let [db (xt/db *xt-node*)]
+       (let [db (xt/db *xt-node*)]
          (expect
           (xt/entity db "https://example.org/people/alice")
-          #(= (::pass/ruleset %) "https://example.org/ruleset"))
+          #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
+                 :xt/id "https://example.org/people/alice"}))
 
          :ok
-         (xt/entity db "https://example.org/people/alice")
+         (xt/entity db "https://example.org/people/alice"))))
 
-
-         ))
 
    ;; If accessing the API directly with a browser, the access-token is
    ;; generated and stored in the session (accessed via the cookie rather than
