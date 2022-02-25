@@ -331,110 +331,92 @@
                                          {:expected-error error
                                           :actual-error (.getMessage e)})))))]))]
 
-       (let [base-args
-             {:access-token (get access-tokens ["sue" "admin-client"])
-              :command "https://example.org/commands/create-user"
-              :doc {:xt/id "https://example.org/people/alice"}}]
 
-         ;; This is the happy case, Sue attempts to create a new user, Alice
-         (test-fn
-          db
-          (merge
-           base-args
-           {:access-token (get access-tokens ["sue" "admin-client"])
-            :command "https://example.org/commands/create-user"
-            :doc {:xt/id "https://example.org/people/alice"}
-            :expected [[:xtdb.api/put
-                        {:xt/id "https://example.org/people/alice",
-                         :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
+       ;; This is the happy case, Sue attempts to create a new user, Alice
+       (test-fn
+        db
+        {:access-token (get access-tokens ["sue" "admin-client"])
+         :command "https://example.org/commands/create-user"
+         :doc {:xt/id "https://example.org/people/alice"}
+         :expected [[:xtdb.api/put
+                     {:xt/id "https://example.org/people/alice",
+                      :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]})
 
-         ;; Sue's permission to call create-user is not constrained by a
-         ;; resource, there is no error if we set one.
-         (test-fn
-          db
-          (merge
-           base-args
-           {:access-token (get access-tokens ["sue" "admin-client"])
-            :command "https://example.org/commands/create-user"
-            :doc {:xt/id "https://example.org/people/alice"}
-            :uri "https://example.org/other/"}))
+       ;; Sue's permission to call create-user is not constrained by a
+       ;; resource, there is no error if we set one.
+       (test-fn
+        db
+        {:access-token (get access-tokens ["sue" "admin-client"])
+         :command "https://example.org/commands/create-user"
+         :doc {:xt/id "https://example.org/people/alice"}
+         :uri "https://example.org/other/"})
 
-         ;; She can't use the example client to create users
-         (test-fn
-          db
-          (merge
-           base-args
-           {:access-token (get access-tokens ["sue" "example-client"])
-            :command "https://example.org/commands/create-user"
-            :doc {:xt/id "https://example.org/people/alice"}
-            :error "Transaction function call denied as no ACLs found that approve it."}))
+       ;; She can't use the example client to create users
+       (test-fn
+        db
+        {:access-token (get access-tokens ["sue" "example-client"])
+         :command "https://example.org/commands/create-user"
+         :doc {:xt/id "https://example.org/people/alice"}
+         :error "Transaction function call denied as no ACLs found that approve it."})
 
-         ;; She can't use these privileges to call a different command
-         (test-fn
-          db
-          (merge
-           base-args
-           {:access-token (get access-tokens ["sue" "admin-client"])
-            :command "https://example.org/commands/create-superuser"
-            :doc {:xt/id "https://example.org/people/alice"}
-            :error "Transaction function call denied as no ACLs found that approve it."}))
+       ;; She can't use these privileges to call a different command
+       (test-fn
+        db
+        {:access-token (get access-tokens ["sue" "admin-client"])
+         :command "https://example.org/commands/create-superuser"
+         :doc {:xt/id "https://example.org/people/alice"}
+         :error "Transaction function call denied as no ACLs found that approve it."})
 
-         ;; Neither can she used an access-token where she hasn't granted enough scope
-         (test-fn
-          db
-          (merge
-           base-args
-           {:access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
-            :command "https://example.org/commands/create-user"
-            :doc {:xt/id "https://example.org/people/alice"}
-            :error "Transaction function call denied as no ACLs found that approve it."}))
+       ;; Neither can she used an access-token where she hasn't granted enough scope
+       (test-fn
+        db
+        {:access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
+         :command "https://example.org/commands/create-user"
+         :doc {:xt/id "https://example.org/people/alice"}
+         :error "Transaction function call denied as no ACLs found that approve it."})
 
-         ;; Terry should not be able to create-users, even with the admin-client
-         (test-fn
-          db
-          (merge
-           base-args
-           {:access-token (get access-tokens ["terry" "admin-client"])
-            :command "https://example.org/commands/create-user"
-            :doc {:xt/id "https://example.org/people/alice"}
-            :error "Transaction function call denied as no ACLs found that approve it."}))
+       ;; Terry should not be able to create-users, even with the admin-client
+       (test-fn
+        db
+        {:access-token (get access-tokens ["terry" "admin-client"])
+         :command "https://example.org/commands/create-user"
+         :doc {:xt/id "https://example.org/people/alice"}
+         :error "Transaction function call denied as no ACLs found that approve it."})
 
 
-         ;; In a GraphQL mutation, there will be no resource. Arguably, ACLs
-         ;; should not be tied to a resource.
+       ;; In a GraphQL mutation, there will be no resource. Arguably, ACLs
+       ;; should not be tied to a resource.
 
-         ;; The commands should be agnostic about whether they are called from
-         ;; OpenAPI or GraphQL.
+       ;; The commands should be agnostic about whether they are called from
+       ;; OpenAPI or GraphQL.
 
-         ;; A GraphQL mutation to create a user would still create the web
-         ;; resource at a given location.
+       ;; A GraphQL mutation to create a user would still create the web
+       ;; resource at a given location.
 
-         ;; Perhaps GraphQL mutations must always provide the ID of the 'new'
-         ;; resource, and perhaps also the ID of the 'parent' resource?
+       ;; Perhaps GraphQL mutations must always provide the ID of the 'new'
+       ;; resource, and perhaps also the ID of the 'parent' resource?
 
-         ;; Most, if not all, actions will require the caller to provide the
-         ;; document, which in some cases will contain the :xt/id, which will
-         ;; become the URI of the resource. Perhaps the command or ACL should
-         ;; qualify what kinds of documents are allowed?
+       ;; Most, if not all, actions will require the caller to provide the
+       ;; document, which in some cases will contain the :xt/id, which will
+       ;; become the URI of the resource. Perhaps the command or ACL should
+       ;; qualify what kinds of documents are allowed?
 
-         ;; create-user should accept a map.
-         ;; It should ensure the map is valid (according to clojure.spec, Malli or JSON Schema?)
+       ;; create-user should accept a map.
+       ;; It should ensure the map is valid (according to clojure.spec, Malli or JSON Schema?)
 
-         ;; create identity may specify its own id
-         ;; must provide :juxt.pass.jwt/iss and :juxt.pass.jwt/sub
-         ;; may provide anything else, but not in ::site or ::pass namespaces
-         ;; ::pass/subject must be provided
-         ;; ::pass/ruleset is inherited
-         ;; An identity may have to be created 'under' the person record.
+       ;; create identity may specify its own id
+       ;; must provide :juxt.pass.jwt/iss and :juxt.pass.jwt/sub
+       ;; may provide anything else, but not in ::site or ::pass namespaces
+       ;; ::pass/subject must be provided
+       ;; ::pass/ruleset is inherited
+       ;; An identity may have to be created 'under' the person record.
 
-         (test-fn
-          db
-          (merge
-           base-args
-           {:access-token (get access-tokens ["sue" "admin-client"])
-            :command "https://example.org/commands/create-identity"
-            :doc {:xt/id "https://example.org/people/alice/identities/test"}
-            })))
+       (test-fn
+        db
+        {:access-token (get access-tokens ["sue" "admin-client"])
+         :command "https://example.org/commands/create-identity"
+         :doc {:xt/id "https://example.org/people/alice/identities/test"}
+         })
 
        ;; Now we do the official request which mutates the database
        ;; This is the 'official' way to avoid race-conditions.
