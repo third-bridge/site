@@ -296,21 +296,24 @@
            test-fn
            (fn [db {:keys [uri expected error command access-token doc] :as args}]
              (assert access-token)
-             (try
-               (let [result
+
+             (let [result
+                   (try
                      (authz/authorizing-put-fn
                       db
                       (new-request uri db access-token {})
                       command
-                      doc)]
-                 (if expected
-                   (expect result #(= expected %) args)
-                   (throw (ex-info "Expected to fail but didn't" {:args args}))))
-               (catch Exception e
-                 (when-not (= (.getMessage e) error)
-                   (throw (ex-info "Failed but with an unexpected error message"
-                                   {:expected-error error
-                                    :actual-error (.getMessage e)}))))))]
+                      doc)
+
+                     (when error
+                       (throw (ex-info "Expected to fail but didn't" {:args args
+                                                                      ::pass true})))
+                     (catch Exception e
+                       (when (::pass (ex-data e)) (throw e))
+                       (when-not (= (.getMessage e) error)
+                         (throw (ex-info "Failed but with an unexpected error message"
+                                         {:expected-error error
+                                          :actual-error (.getMessage e)})))))]))]
 
        (let [base-args
              {:uri "https://example.org/people/"
@@ -334,7 +337,8 @@
           (merge
            base-args
            {:doc {:xt/id "https://example.org/foo"}
-            :error ":xt/id of new document must be a sub-resource of ::site/uri"}))
+            :error ":xt/id of new document must be a sub-resource of ::site/uri"
+            }))
 
          ;; But Sue's permission to call create-user only applies on the
          ;; relevant resource.
@@ -396,7 +400,14 @@
          ;; become the URI of the resource. Perhaps the command or ACL should
          ;; qualify what kinds of documents are allowed?
 
-         ;; create-user should accept a map
+         ;; create-user should accept a map.
+         ;; It should ensure the map is valid (according to clojure.spec, Malli or JSON Schema?)
+
+         ;; create identity may specify its own id
+         ;; must provide :juxt.pass.jwt/iss and :juxt.pass.jwt/sub
+         ;; may provide anything else, but not in ::site or ::pass namespaces
+         ;; ::pass/subject must be provided
+         ;; ::pass/ruleset is inherited
 
          (test-fn
           db
@@ -410,34 +421,34 @@
        ;; Now we do the official request which mutates the database
        ;; This is the 'official' way to avoid race-conditions.
        (let [req (new-request
-                    "https://example.org/people/"
-                    (xt/db *xt-node*)
-                    (get access-tokens ["sue" "admin-client"])
-                    {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
-           (authorizing-put!
-            req
-            ;; The request body would be transformed into this new doc
-            ["https://example.org/commands/create-user" (:request-body-doc req)]
-            ;; TODO: Alice will need an identity
-            ;; TODO: We need to create some ACLs for this user, ideally in the same tx
-            )
-           )
+                  "https://example.org/people/"
+                  (xt/db *xt-node*)
+                  (get access-tokens ["sue" "admin-client"])
+                  {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
+         (authorizing-put!
+          req
+          ;; The request body would be transformed into this new doc
+          ["https://example.org/commands/create-user" (:request-body-doc req)]
+          ;; TODO: Alice will need an identity
+          ;; TODO: We need to create some ACLs for this user, ideally in the same tx
+          )
+         )
 
        (let [db (xt/db *xt-node*)]
-           (expect
-            (xt/entity db "https://example.org/people/alice")
-            #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
-                   :xt/id "https://example.org/people/alice"}))
+         (expect
+          (xt/entity db "https://example.org/people/alice")
+          #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
+                 :xt/id "https://example.org/people/alice"}))
 
-           (xt/entity db "https://example.org/people/alice")
+         (xt/entity db "https://example.org/people/alice")
 
-           ;; Now Alice wants to create a document under https://example.org/~alice/
-           ;; Let's check that she can.
+         ;; Now Alice wants to create a document under https://example.org/~alice/
+         ;; Let's check that she can.
 
 
-           ;; Sue will need to create an ACL for her
+         ;; Sue will need to create an ACL for her
 
-           #_(let [access-token (acquire-access-token "alice" "example-client" db)
+         #_(let [access-token (acquire-access-token "alice" "example-client" db)
                  db (xt/db *xt-node*)]
              (xt/entity db access-token)
              #_(test-fn
