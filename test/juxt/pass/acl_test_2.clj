@@ -163,10 +163,9 @@
            ::pass/ruleset "https://example.org/ruleset"
            )))
 
-(defn new-request [uri db access-token-id]
+(defn new-request [uri db access-token-id opts]
   (assert access-token-id)
-  (let [req {::site/db db
-             ::site/uri uri}]
+  (let [req (merge {::site/db db ::site/uri uri} opts)]
     (authorize-request req access-token-id)))
 
 (defn authorizing-put! [{::pass/keys [access-token-effective-scope] :as req}
@@ -221,13 +220,13 @@
 
      ;; Sue creates a new user, Alice
      (let [db (xt/db *xt-node*)
-           req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]))]
+           req (new-request "https://example.org/people/" db (get access-tokens ["sue" "admin-client"]) {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
 
        ;; These are just checks on this request that can be done elsewhere
        ;; For example, wrong resource:
        #_(->
-        (authz/check db (assoc req ::site/uri "https://example.org/") "create:user")
-        (expect (comp zero? count)))
+          (authz/check db (assoc req ::site/uri "https://example.org/") "create:user")
+          (expect (comp zero? count)))
 
        ;; For example, right resource:
        #_(->
@@ -263,9 +262,8 @@
        ;; Now to call 'create-user'
        (authorizing-put!
         req
-        ["https://example.org/commands/create-user"
-         ;; The request body would be transformed into this new doc
-         {:xt/id "https://example.org/people/alice"}]
+        ;; The request body would be transformed into this new doc
+        ["https://example.org/commands/create-user" (:request-body-doc req)]
 
         ;; TODO: We need to create some ACLs for this user, ideally in the same tx
         )
