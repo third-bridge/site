@@ -61,14 +61,14 @@
     [::xt/put
      {:xt/id "https://example.org/commands/create-user"
       ::site/type "Command"
-      ::pass/scope "admin:write"}]
+      ::pass/scope "admin:write"
+      ::pass/command-args [{}]}]
+
     [::xt/put
      {:xt/id "https://example.org/commands/create-identity"
       ::site/type "Command"
       ::pass/scope "admin:write"
-      ::pass/process
-      [
-       [::pass/conform {::site/type "Identity"}]
+      ::pass/command-args [{::pass/process [[::pass/conform {::site/type "Identity"}]]}
        ]}]
 
     [::xt/put
@@ -100,9 +100,9 @@
 
     [::xt/put
      {:xt/id ::pass/authorizing-put
-      :xt/fn '(fn [ctx auth command doc]
+      :xt/fn '(fn [ctx auth command args]
                 (let [db (xtdb.api/db ctx)]
-                  (juxt.pass.alpha.authorization-2/authorizing-put-fn db auth command doc)))}]
+                  (apply juxt.pass.alpha.authorization-2/authorizing-put-fn db auth command args)))}]
 
     [::xt/put
      (into
@@ -207,7 +207,7 @@
     (authorize-request req access-token-id)))
 
 (defn authorizing-put! [req
-                        & action-docs]
+                        & command-calls]
 
   (let [
         ;; We construct an authentication/authorization 'context' from the
@@ -230,9 +230,9 @@
         tx (xt/submit-tx
             *xt-node*
             (mapv
-             (fn [[action doc]]
-               [:xtdb.api/fn ::pass/authorizing-put auth action doc])
-             action-docs))
+             (fn [[command & args]]
+               [:xtdb.api/fn ::pass/authorizing-put auth command args])
+             command-calls))
         tx (xt/await-tx *xt-node* tx)]
 
     ;; Currently due to https://github.com/xtdb/xtdb/issues/1672 the only way of
@@ -243,7 +243,7 @@
        (ex-info
         "Failed to commit, check logs"
         {:auth auth
-         :action-docs action-docs
+         :command-calls command-calls
          })))))
 
 ;; As above but building up from a smaller seed.
@@ -305,33 +305,42 @@
      ;; First we test various combinations
      (let [db (xt/db *xt-node*)
            test-fn
-           (fn [db {:keys [uri expected error command access-token doc] :as args}]
+           (fn [db {:keys [uri expected error command access-token args] :as all-args}]
              (assert access-token)
-
              (try
                (let [actual
-                     (authz/authorizing-put-fn
+                     (apply
+                      authz/authorizing-put-fn
                       db
                       (new-request uri db access-token {})
-                      command
-                      doc)]
+                      command args)]
 
                  (when (and expected (not= expected actual))
-                   (throw (ex-info "Unexpected result" {:expected expected
-                                                        :actual actual
-                                                        ::pass true})))
+                   (throw
+                    (ex-info
+                     "Unexpected result"
+                     {:expected expected
+                      :actual actual
+                      ::pass true})))
 
                  (when error
-                   (throw (ex-info "Expected to fail but didn't" {:args args
-                                                                  ::pass true})))
+                   (throw
+                    (ex-info
+                     "Expected to fail but didn't"
+                     {:all-args all-args
+                      ::pass true})))
+
                  actual)
 
                (catch Exception e
                  (when (::pass (ex-data e)) (throw e))
                  (when-not (= (.getMessage e) error)
-                   (throw (ex-info "Failed but with an unexpected error message"
-                                   {:expected-error error
-                                    :actual-error (.getMessage e)}))))))]
+                   (throw
+                    (ex-info
+                     "Failed but with an unexpected error message"
+                     {:expected-error error
+                      :actual-error (.getMessage e)}
+                     e))))))]
 
 
        ;; This is the happy case, Sue attempts to create a new user, Alice
@@ -339,7 +348,7 @@
         db
         {:access-token (get access-tokens ["sue" "admin-client"])
          :command "https://example.org/commands/create-user"
-         :doc {:xt/id "https://example.org/people/alice"}
+         :args [{:xt/id "https://example.org/people/alice"}]
          :expected [[:xtdb.api/put
                      {:xt/id "https://example.org/people/alice",
                       :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]})
@@ -350,7 +359,7 @@
         db
         {:access-token (get access-tokens ["sue" "admin-client"])
          :command "https://example.org/commands/create-user"
-         :doc {:xt/id "https://example.org/people/alice"}
+         :args [{:xt/id "https://example.org/people/alice"}]
          :uri "https://example.org/other/"})
 
        ;; She can't use the example client to create users
@@ -358,7 +367,7 @@
         db
         {:access-token (get access-tokens ["sue" "example-client"])
          :command "https://example.org/commands/create-user"
-         :doc {:xt/id "https://example.org/people/alice"}
+         :args [{:xt/id "https://example.org/people/alice"}]
          :error "Transaction function call denied as no ACLs found that approve it."})
 
        ;; She can't use these privileges to call a different command
@@ -366,15 +375,15 @@
         db
         {:access-token (get access-tokens ["sue" "admin-client"])
          :command "https://example.org/commands/create-superuser"
-         :doc {:xt/id "https://example.org/people/alice"}
-         :error "Transaction function call denied as no ACLs found that approve it."})
+         :args [{:xt/id "https://example.org/people/alice"}]
+         :error "No such command: https://example.org/commands/create-superuser"})
 
        ;; Neither can she used an access-token where she hasn't granted enough scope
        (test-fn
         db
         {:access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
          :command "https://example.org/commands/create-user"
-         :doc {:xt/id "https://example.org/people/alice"}
+         :args [{:xt/id "https://example.org/people/alice"}]
          :error "Transaction function call denied as no ACLs found that approve it."})
 
        ;; Terry should not be able to create-users, even with the admin-client
@@ -382,7 +391,7 @@
         db
         {:access-token (get access-tokens ["terry" "admin-client"])
          :command "https://example.org/commands/create-user"
-         :doc {:xt/id "https://example.org/people/alice"}
+         :args [{:xt/id "https://example.org/people/alice"}]
          :error "Transaction function call denied as no ACLs found that approve it."})
 
 
@@ -412,9 +421,6 @@
        ;; ::pass/subject must be provided
        ;; ::pass/ruleset is inherited
        ;; An identity may have to be created 'under' the person record.
-
-
-
 
 
        ;; Now we do the official request which mutates the database
@@ -457,7 +463,7 @@
                  :command "https://example.org/commands/put-resource"
                  :expected []})))
 
-       ;; ok let's create an identity for Alice
+       ;; OK, let's create an identity for Alice!
        (let [id-doc {:xt/id "https://example.org/people/sue/identities/example"
                      ;;::site/type "Identity"
                      :juxt.pass.jwt/iss "https://example.org"
@@ -467,8 +473,8 @@
          (test-fn
           db
           {:command "https://example.org/commands/create-identity"
-           :doc id-doc
            :access-token (get access-tokens ["sue" "admin-client"])
+           :args [id-doc]
            }))))
 
    ;; Notes:

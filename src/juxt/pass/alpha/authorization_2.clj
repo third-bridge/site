@@ -137,15 +137,32 @@
 (defmethod apply-processor ::pass/conform [[_ m-to-merge] m]
   (merge m m-to-merge))
 
-(defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} command-id doc]
+(defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} command-id & args]
   (assert ruleset)
 
   (try
     (let [acls (check-acls db auth command-id)
           command (xt/entity db command-id)
+
+          _ (when-not command
+              (throw
+               (ex-info
+                (format "No such command: %s" command-id)
+                {:command command-id})))
+
+          command-args (::pass/command-args command)
+
           process (into
                    [[::pass/conform {::pass/ruleset ruleset}]]
                    (::pass/process command))]
+
+      (when (not= (count args) (count command-args))
+        (throw
+         (ex-info
+          (format "Arity error on command: %s" command-id)
+          {:command command-id
+           :args-given (count args)
+           :args-expected (count command-args)})))
 
       (when (nil? acls)
         (let [msg "Transaction function call denied as no ACLs found that approve it."]
@@ -162,18 +179,19 @@
                                  ::site/uri auth}))))
 
       (if acls
-        [[::xt/put
-          ;; Critically, the new doc inherits the ruleset of the auth
-          ;; context. This prevents documents from escaping their authorization
-          ;; scheme into another.
-          (let [doc (reduce
-                     (fn [acc processor]
-                       (apply-processor processor acc))
-                     doc
-                     process)]
-
-            (log/tracef "Inserting doc: %s" (pr-str doc))
-            doc)]]
+        (mapv (fn [arg process]
+                [::xt/put
+                 ;; Critically, the new doc inherits the ruleset of the auth
+                 ;; context. This prevents documents from escaping their authorization
+                 ;; scheme into another.
+                 (let [arg (reduce
+                            (fn [acc processor]
+                              (apply-processor processor acc))
+                            arg
+                            process)]
+                   (assoc arg ::pass/ruleset ruleset))])
+              args
+              (map ::pass/process command-args))
         []))
 
     (catch Throwable e
