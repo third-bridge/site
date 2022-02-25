@@ -49,10 +49,15 @@
       ::pass/ruleset "https://example.org/ruleset"}]
 
     [::xt/put
+     {:xt/id "https://example.org/commands/create-user"
+      ::site/type "Command"
+      ::pass/scope "admin:write"}]
+
+    [::xt/put
      {:xt/id "https://example.org/acls/sue-can-create-users"
       ::site/type "ACL"
       ::pass/subject "https://example.org/people/sue"
-      ::pass/scope #{"create:user"}
+      ::pass/command "https://example.org/commands/create-user"
       ::pass/resource "https://example.org/people/"}]
 
     [::xt/put
@@ -71,9 +76,9 @@
 
     [::xt/put
      {:xt/id ::pass/authorizing-put
-      :xt/fn '(fn [ctx auth action doc]
+      :xt/fn '(fn [ctx auth command doc]
                 (let [db (xtdb.api/db ctx)]
-                  (juxt.pass.alpha.authorization-2/authorizing-put db auth action doc)))}]
+                  (juxt.pass.alpha.authorization-2/authorizing-put-fn db auth command doc)))}]
 
     [::xt/put
      (into
@@ -84,7 +89,7 @@
        #{"read:index"
          "read:document" "write:document"
          "read:directory-contents" "write:create-new-document"
-         "create:user"}}
+         "admin:write"}}
       (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "admin-client"))]
 
     #_guest-client
@@ -167,12 +172,6 @@
 (defn authorizing-put! [{::pass/keys [access-token-effective-scope] :as req}
                         & action-docs]
 
-  ;; Check actions against scope now, since this doesn't require a database
-  ;; query.
-  (assert (set? access-token-effective-scope))
-  (doseq [[action _] action-docs]
-    (authz/check-scope access-token-effective-scope action))
-
   (let [
         ;; We construct an authentication/authorization 'context', which we
         ;; pass to the function and name it simply 'auth'. Entries of this
@@ -226,23 +225,51 @@
 
        ;; These are just checks on this request that can be done elsewhere
        ;; For example, wrong resource:
-       (->
+       #_(->
         (authz/check db (assoc req ::site/uri "https://example.org/") "create:user")
         (expect (comp zero? count)))
 
        ;; For example, right resource:
-       (->
+       #_(->
         (authz/check db req "create:user")
         (expect (comp not zero? count)))
 
-       ;; Now to call create-user!
+       ;; TODO: Create a language of commands.
+
+       ;; Each command is associated, many-to-one, with a required (single)
+       ;; scope. If an OpenAPI document defines an operation, that operation may
+       ;; involve multiple commands, and the security requirement might require
+       ;; multiple scopes. The security requirement of scopes may be implied
+       ;; (and may affect the publishing of the openapi.json such that authors
+       ;; don't need to concern themselves with declaring scope).
+
+       ;; A command such as 'create-user' is registered in the database.
+
+       ;; Scopes are an access token concern. An access token references an
+       ;; application which references a particular API. Commands are therefore
+       ;; part of the domain to which an API belongs. A GraphQL endpoint is
+       ;; defined as part of an overall OpenAPI, which is the same group where
+       ;; scopes, commands and rulesets are defined.
+
+       ;; create-user is in the 'admin:write' scope.
+
+       ;; create-user is defined with a description that can be showed to users
+       ;; for the purposes of informed authorization.
+
+       ;; The 'create-user' command determines the applicable ACLs.
+
+       ;; Subjects are mapped to commands. Applications are mapped to scopes.
+
+       ;; Now to call 'create-user'
        (authorizing-put!
         req
-        ["create:user"
+        ["https://example.org/commands/create-user"
          ;; The request body would be transformed into this new doc
-         {:xt/id "https://example.org/people/alice"}])
+         {:xt/id "https://example.org/people/alice"}]
 
-       ;; We need to create some ACLs for this user, ideally in the same tx
+        ;; TODO: We need to create some ACLs for this user, ideally in the same tx
+        )
+
        )
 
      (let [db (xt/db *xt-node*)]

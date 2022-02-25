@@ -80,7 +80,7 @@
     (set/intersection access-token-scope (::pass/scope client))
     (::pass/scope client)))
 
-(defn check-scope [access-token-effective-scope action]
+#_(defn check-scope [access-token-effective-scope action]
   (assert (set? access-token-effective-scope))
   (assert (string? action))
   ;; First, an easy check to see if the action is allowed with respect to the
@@ -95,41 +95,46 @@
 
 (defn check-acls
   [db {::site/keys [uri]
-       ::pass/keys [subject ruleset]}
-   action]
+       ::pass/keys [subject ruleset access-token-effective-scope]}
+   command]
 
   (assert db)
   (assert subject)
   (assert (string? ruleset))
+  (assert (string? command))
 
-  ;; TODO:
+  (let [rules (rules db ruleset)]
 
-  (let [rules (rules db ruleset)
-
-        _ (log/tracef "Rules are %s" rules)
-
-        query {:find ['(pull acl [*])]
-               :where '[
-                        ;; Site enforced
-                        [acl ::site/type "ACL"]
-                        [acl ::pass/scope action]
-                        ;; Custom
-                        (acl-applies-to-subject? acl subject)
-                        (acl-applies-to-resource? acl resource)]
-               :rules rules
-               :in '[access-token action resource]}]
     (when (seq rules)
-      (seq (map first (xt/q db query subject action uri))))))
+      (let [query
+            {:find ['(pull acl [*])]
+             :where '[
+                      ;; Site enforced
+                      [acl ::site/type "ACL"]
+                      [acl ::pass/command command]
+
+                      [command ::site/type "Command"]
+
+                      ;; Scope
+                      [command ::pass/scope scope]
+                      [(contains? access-token-effective-scope scope)]
+
+                      ;; Custom
+                      (acl-applies-to-subject? acl subject)
+                      (acl-applies-to-resource? acl resource)]
+             :rules rules
+             :in '[access-token action resource access-token-effective-scope]}]
+        (seq (map first (xt/q db query subject command uri access-token-effective-scope)))))))
 
 (defn check [db auth action]
-  (check-scope (::pass/access-token-effective-scope auth) action)
+  #_(check-scope (::pass/access-token-effective-scope auth) action)
   (check-acls db auth action))
 
-(defn authorizing-put [db {::pass/keys [ruleset] :as auth} required-scope doc]
+(defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} command doc]
   (assert ruleset)
 
   (try
-    (let [acls (check-acls db auth required-scope)]
+    (let [acls (check-acls db auth command)]
 
       (log/tracef "ACLs are %s" acls)
 
