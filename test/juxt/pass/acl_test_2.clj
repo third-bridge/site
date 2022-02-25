@@ -126,33 +126,39 @@
     ])
   (f))
 
-(defn acquire-access-token [sub client-id db scope]
-  (let [
-        ;; First we'll need the subject. As a performance optimisation, we can
-        ;; associate the subject with the stored access token itself, rather
-        ;; than re-establish the subject on each request via the id-token
-        ;; claims, because we assume the claims can never apply to a different
-        ;; subject. However, this assertion needs to be written up and
-        ;; communicated. If claims were ever to be reassigned to a different
-        ;; subject, then all access-tokens would need to be made void
-        ;; (removed).
-        subject
-        (authz/lookup->subject {:claims {"iss" "https://example.org" "sub" sub}} db)
+(defn acquire-access-token
+  ([sub client-id db]
+   (acquire-access-token sub client-id db nil))
+  ([sub client-id db scope]
+   (let [
+         ;; First we'll need the subject. As a performance optimisation, we can
+         ;; associate the subject with the stored access token itself, rather
+         ;; than re-establish the subject on each request via the id-token
+         ;; claims, because we assume the claims can never apply to a different
+         ;; subject. However, this assertion needs to be written up and
+         ;; communicated. If claims were ever to be reassigned to a different
+         ;; subject, then all access-tokens would need to be made void
+         ;; (removed).
+         subject
+         (authz/lookup->subject {:claims {"iss" "https://example.org" "sub" sub}} db)
 
-        ;; The access-token links to the application, the subject and its own
-        ;; scopes. The overall scope of the request is ascertained at each and
-        ;; every request.
-        access-token
-        (if scope
-          (authz/make-access-token-doc (:xt/id subject) client-id scope)
-          (authz/make-access-token-doc (:xt/id subject) client-id))]
+         _ (when-not subject
+             (throw (ex-info (format "Cannot find identity with sub: %s" sub) {:sub sub})))
 
-    ;; An access token must exist in the database, linking to the application,
-    ;; the subject and its own granted scopes. The actual scopes are the
-    ;; intersection of all three.
-    (submit-and-await! [[::xt/put access-token]])
+         ;; The access-token links to the application, the subject and its own
+         ;; scopes. The overall scope of the request is ascertained at each and
+         ;; every request.
+         access-token
+         (if scope
+           (authz/make-access-token-doc (:xt/id subject) client-id scope)
+           (authz/make-access-token-doc (:xt/id subject) client-id))]
 
-    (:xt/id access-token)))
+     ;; An access token must exist in the database, linking to the application,
+     ;; the subject and its own granted scopes. The actual scopes are the
+     ;; intersection of all three.
+     (submit-and-await! [[::xt/put access-token]])
+
+     (:xt/id access-token))))
 
 (defn authorize-request [{::site/keys [db] :as req} access-token-id]
   (let [access-token (xt/entity db access-token-id)
@@ -170,6 +176,7 @@
             :in [access-token]}
           access-token-id))]
 
+    (assert subject)
     (assert (string? subject))
 
     ;; Bind onto the request. For performance reasons, the actual scope
@@ -287,112 +294,119 @@
      ;; First we test various combinations
      (let [db (xt/db *xt-node*)
            test-fn
-           (fn [{:keys [uri expected sub client error command access-token-scope] :as args}]
-             (let [access-token
-                   (if access-token-scope
-                     (get access-tokens [sub client access-token-scope])
-                     (get access-tokens [sub client]))]
-
-               (when-not access-token
-                 (throw
-                  (ex-info
-                   "Access token not found"
-                   {:sub sub :client client :access-token-scope access-token-scope})))
-
-               (try
-                 (let [result
-                       (authz/authorizing-put-fn
-                        db
-                        (new-request
-                         uri db
-                         access-token
-                         {})
-                        command
-                        {:xt/id "https://example.org/people/alice"})]
-                   (if expected
-                     (expect result #(= expected %) args)
-                     (throw (ex-info "Expected to fail but didn't" {:args args}))))
-                 (catch Exception e
-                   (when-not (= (.getMessage e) error)
-                     (throw (ex-info "Failed but with an unexpected error message"
-                                     {:expected-error error
-                                      :actual-error (.getMessage e)})))))))
-           ]
+           (fn [db {:keys [uri expected error command access-token] :as args}]
+             (assert access-token)
+             (try
+               (let [result
+                     (authz/authorizing-put-fn
+                      db
+                      (new-request uri db access-token {})
+                      command
+                      {:xt/id "https://example.org/people/alice"})]
+                 (if expected
+                   (expect result #(= expected %) args)
+                   (throw (ex-info "Expected to fail but didn't" {:args args}))))
+               (catch Exception e
+                 (when-not (= (.getMessage e) error)
+                   (throw (ex-info "Failed but with an unexpected error message"
+                                   {:expected-error error
+                                    :actual-error (.getMessage e)}))))))]
 
        (let [base-args
              {:uri "https://example.org/people/"
-              :sub "sue"
-              :client "admin-client"
+              :access-token (get access-tokens ["sue" "admin-client"])
               :command "https://example.org/commands/create-user"}]
 
          ;; This is the happy case, Sue attempts to create a new user, Alice
          (test-fn
+          db
           (merge
            base-args
            {:expected [[:xtdb.api/put
                         {:xt/id "https://example.org/people/alice",
                          :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
 
-         ;; She can't use the example client to create users
+         ;; But Sue's permission to call create-user only applies on the
+         ;; relevant resource.
          (test-fn
+          db
           (merge
            base-args
-           {:client "example-client"
+           {:uri "https://example.org/other/"
+            :error "Transaction function call denied as no ACLs found that approve it."}))
+
+         ;; She can't use the example client to create users
+         (test-fn
+          db
+          (merge
+           base-args
+           {:access-token (get access-tokens ["sue" "example-client"])
+            :error "Transaction function call denied as no ACLs found that approve it."}))
+
+         ;; She can't use these privileges to call a different command
+         (test-fn
+          db
+          (merge
+           base-args
+           {:access-token (get access-tokens ["sue" "example-client"])
+            :command "https://example.org/commands/create-superuser"
             :error "Transaction function call denied as no ACLs found that approve it."}))
 
          ;; Neither can she used an access-token where she hasn't granted enough scope
          (test-fn
+          db
           (merge
            base-args
-           {:access-token-scope #{"limited"}
+           {:access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
             :error "Transaction function call denied as no ACLs found that approve it."}))
 
          ;; Terry should not be able to create-users, even with the admin-client
          (test-fn
+          db
           (merge
            base-args
-           {:sub "terry"
+           {:access-token (get access-tokens ["terry" "admin-client"])
             :error "Transaction function call denied as no ACLs found that approve it."})))
 
        ;; Now we do the official request which mutates the database
        ;; This is the 'official' way to avoid race-conditions.
-       (let [req (new-request
-                  "https://example.org/people/"
-                  (xt/db *xt-node*)
-                  (get access-tokens ["sue" "admin-client"])
-                  {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
-         (authorizing-put!
-          req
-          ;; The request body would be transformed into this new doc
-          ["https://example.org/commands/create-user" (:request-body-doc req)]
-          ;; TODO: We need to create some ACLs for this user, ideally in the same tx
-          )
-         )
+       #_(let [req (new-request
+                    "https://example.org/people/"
+                    (xt/db *xt-node*)
+                    (get access-tokens ["sue" "admin-client"])
+                    {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
+           (authorizing-put!
+            req
+            ;; The request body would be transformed into this new doc
+            ["https://example.org/commands/create-user" (:request-body-doc req)]
+            ;; TODO: Alice will need an identity
+            ;; TODO: We need to create some ACLs for this user, ideally in the same tx
+            )
+           )
 
-       (let [db (xt/db *xt-node*)]
-         (expect
-          (xt/entity db "https://example.org/people/alice")
-          #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
-                 :xt/id "https://example.org/people/alice"}))
+       #_(let [db (xt/db *xt-node*)]
+           (expect
+            (xt/entity db "https://example.org/people/alice")
+            #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
+                   :xt/id "https://example.org/people/alice"}))
 
-         (xt/entity db "https://example.org/people/alice"))
+           (xt/entity db "https://example.org/people/alice")
 
-       ;; Now Alice wants to create a document under https://example.org/~alice/
-       ;; Let's check that she can.
+           ;; Now Alice wants to create a document under https://example.org/~alice/
+           ;; Let's check that she can.
 
-       ;; Alice will need to login
 
-       ;; Sue will need to create an ACL for her
+           ;; Sue will need to create an ACL for her
 
-       (test-fn
-        {:uri "https://example.org/people/"
-         :sub "alice"
-         :client "example-client"
-         :command "https://example.org/commands/put-resource"
-         :expected []})
-
-       ))
-
+           (let [access-token (acquire-access-token "alice" "example-client" db)
+                 db (xt/db *xt-node*)]
+             (xt/entity db access-token)
+             #_(test-fn
+                db
+                {:uri "https://example.org/people/"
+                 :access-token access-token
+                 :command "https://example.org/commands/put-resource"
+                 :expected []})))))
 
    ;; Notes:
 
