@@ -317,65 +317,84 @@
                      (throw (ex-info "Failed but with an unexpected error message"
                                      {:expected-error error
                                       :actual-error (.getMessage e)})))))))
+           ]
+
+       (let [base-args
+             {:uri "https://example.org/people/"
+              :sub "sue"
+              :client "admin-client"
+              :command "https://example.org/commands/create-user"}]
+
+         ;; This is the happy case, Sue attempts to create a new user, Alice
+         (test-fn
+          (merge
            base-args
-           {:uri "https://example.org/people/"
-            :sub "sue"
-            :client "admin-client"
-            :command "https://example.org/commands/create-user"}]
+           {:expected [[:xtdb.api/put
+                        {:xt/id "https://example.org/people/alice",
+                         :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
 
-       ;; This is the happy case, Sue attempts to create a new user, Alice
+         ;; She can't use the example client to create users
+         (test-fn
+          (merge
+           base-args
+           {:client "example-client"
+            :error "Transaction function call denied as no ACLs found that approve it."}))
+
+         ;; Neither can she used an access-token where she hasn't granted enough scope
+         (test-fn
+          (merge
+           base-args
+           {:access-token-scope #{"limited"}
+            :error "Transaction function call denied as no ACLs found that approve it."}))
+
+         ;; Terry should not be able to create-users, even with the admin-client
+         (test-fn
+          (merge
+           base-args
+           {:sub "terry"
+            :error "Transaction function call denied as no ACLs found that approve it."})))
+
+       ;; Now we do the official request which mutates the database
+       ;; This is the 'official' way to avoid race-conditions.
+       (let [req (new-request
+                  "https://example.org/people/"
+                  (xt/db *xt-node*)
+                  (get access-tokens ["sue" "admin-client"])
+                  {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
+         (authorizing-put!
+          req
+          ;; The request body would be transformed into this new doc
+          ["https://example.org/commands/create-user" (:request-body-doc req)]
+          ;; TODO: We need to create some ACLs for this user, ideally in the same tx
+          )
+         )
+
+       (let [db (xt/db *xt-node*)]
+         (expect
+          (xt/entity db "https://example.org/people/alice")
+          #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
+                 :xt/id "https://example.org/people/alice"}))
+
+         (xt/entity db "https://example.org/people/alice"))
+
+       ;; Now Alice wants to create a document under https://example.org/~alice/
+       ;; Let's check that she can.
+
+       ;; Alice will need to login
+
+       ;; Sue will need to create an ACL for her
+
        (test-fn
-        (merge
-         base-args
-         {:expected [[:xtdb.api/put
-                      {:xt/id "https://example.org/people/alice",
-                       :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]}))
+        {:uri "https://example.org/people/"
+         :sub "alice"
+         :client "example-client"
+         :command "https://example.org/commands/put-resource"
+         :expected []})
 
-       ;; She can't use the example client to create users
-       (test-fn
-        (merge
-         base-args
-         {:client "example-client"
-          :error "Transaction function call denied as no ACLs found that approve it."}))
+       ))
 
-       ;; Neither can she used an access-token where she hasn't granted enough scope
-       (test-fn
-        (merge
-         base-args
-         {:access-token-scope #{"limited"}
-          :error "Transaction function call denied as no ACLs found that approve it."}))
 
-       ;; Terry should not be able to create-users, even with the admin-client
-       (test-fn
-        (merge
-         base-args
-         {:sub "terry"
-          :error "Transaction function call denied as no ACLs found that approve it."})))
-
-     ;; Now we do the official request which mutates the database
-     ;; This is the 'official' way to avoid race-conditions.
-     (let [req (new-request
-                "https://example.org/people/"
-                (xt/db *xt-node*)
-                (get access-tokens ["sue" "admin-client"])
-                {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
-       (authorizing-put!
-        req
-        ;; The request body would be transformed into this new doc
-        ["https://example.org/commands/create-user" (:request-body-doc req)]
-
-        ;; TODO: We need to create some ACLs for this user, ideally in the same tx
-        )
-       )
-
-     (let [db (xt/db *xt-node*)]
-       (expect
-        (xt/entity db "https://example.org/people/alice")
-        #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
-               :xt/id "https://example.org/people/alice"}))
-
-       (xt/entity db "https://example.org/people/alice")))
-
+   ;; Notes:
 
    ;; If accessing the API directly with a browser, the access-token is
    ;; generated and stored in the session (accessed via the cookie rather than
