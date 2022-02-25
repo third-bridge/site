@@ -31,10 +31,11 @@
 (defn with-scenario [f]
   (submit-and-await!
    [
+    ;; Sue is our superuser, we must create her records when bootstrapping the
+    ;; Site instance.
     [::xt/put
      {:xt/id "https://example.org/people/sue"
       ::pass/ruleset "https://example.org/ruleset"}]
-
     ;; A person may have many identities
     [::xt/put
      {:xt/id "https://example.org/people/sue/identities/example"
@@ -44,6 +45,7 @@
       ::pass/subject "https://example.org/people/sue"
       ::pass/ruleset "https://example.org/ruleset"}]
 
+    ;; Terry is someone who is NOT a superuser, for testing.
     [::xt/put
      {:xt/id "https://example.org/people/terry"
       ::pass/ruleset "https://example.org/ruleset"}]
@@ -55,14 +57,13 @@
       ::pass/subject "https://example.org/people/terry"
       ::pass/ruleset "https://example.org/ruleset"}]
 
-
-
-    [::xt/put
-     {:xt/id "https://example.org/people"
-      ::pass/ruleset "https://example.org/ruleset"}]
-
+    ;; Some commands that are pre-registered.
     [::xt/put
      {:xt/id "https://example.org/commands/create-user"
+      ::site/type "Command"
+      ::pass/scope "admin:write"}]
+    [::xt/put
+     {:xt/id "https://example.org/commands/create-identity"
       ::site/type "Command"
       ::pass/scope "admin:write"}]
 
@@ -70,8 +71,10 @@
      {:xt/id "https://example.org/acls/sue-can-create-users"
       ::site/type "ACL"
       ::pass/subject "https://example.org/people/sue"
-      ::pass/command "https://example.org/commands/create-user"
-      ;;::pass/resource "https://example.org/people/"
+      ::pass/command #{"https://example.org/commands/create-user"
+                       "https://example.org/commands/create-identity"}
+      ;; Is not constrained to a resource
+      ::pass/resource nil #_"https://example.org/people/"
       }]
 
     [::xt/put
@@ -81,7 +84,10 @@
       (pr-str '[[(acl-applies-to-subject? acl subject)
                  [acl ::pass/subject subject]]
                 [(acl-applies-to-resource? acl resource)
-                 [acl ::pass/resource resource]]])}]
+                 [acl ::pass/resource resource]]
+                [(acl-applies-to-resource? acl resource)
+                 [(some? resource)]
+                 [acl ::pass/resource nil]]])}]
 
     ;; We can now define the ruleset
     [::xt/put
@@ -409,15 +415,16 @@
          ;; may provide anything else, but not in ::site or ::pass namespaces
          ;; ::pass/subject must be provided
          ;; ::pass/ruleset is inherited
+         ;; An identity may have to be created 'under' the person record.
 
          (test-fn
           db
           (merge
            base-args
-           {:access-token (get access-tokens ["sue" "example-client"])
-            :command "https://example.org/commands/create-superuser"
-            :error "Transaction function call denied as no ACLs found that approve it."}))
-         )
+           {:access-token (get access-tokens ["sue" "admin-client"])
+            :command "https://example.org/commands/create-identity"
+            ;;:error "Transaction function call denied as no ACLs found that approve it."
+            })))
 
        ;; Now we do the official request which mutates the database
        ;; This is the 'official' way to avoid race-conditions.

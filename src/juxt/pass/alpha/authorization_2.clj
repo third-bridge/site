@@ -122,7 +122,7 @@
 
                       ;; Custom
                       (acl-applies-to-subject? acl subject)
-                      #_(acl-applies-to-resource? acl resource)]
+                      (acl-applies-to-resource? acl resource)]
              :rules rules
              :in '[subject command resource access-token-effective-scope]}]
         (seq (map first (xt/q db query
