@@ -366,11 +366,40 @@
           (merge
            base-args
            {:access-token (get access-tokens ["terry" "admin-client"])
-            :error "Transaction function call denied as no ACLs found that approve it."})))
+            :error "Transaction function call denied as no ACLs found that approve it."}))
+
+
+         ;; In a GraphQL mutation, there will be no resource. Arguably, ACLs
+         ;; should not be tied to a resource.
+
+         ;; The commands should be agnostic about whether they are called from
+         ;; OpenAPI or GraphQL.
+
+         ;; A GraphQL mutation to create a user would still create the web
+         ;; resource at a given location.
+
+         ;; Perhaps GraphQL mutations must always provide the ID of the 'new'
+         ;; resource, and perhaps also the ID of the 'parent' resource?
+
+         ;; Most, if not all, actions will require the caller to provide the
+         ;; document, which in some cases will contain the :xt/id, which will
+         ;; become the URI of the resource. Perhaps the command or ACL should
+         ;; qualify what kinds of documents are allowed?
+
+         ;; create-user should accept a map
+
+         (test-fn
+          db
+          (merge
+           base-args
+           {:access-token (get access-tokens ["sue" "example-client"])
+            :command "https://example.org/commands/create-superuser"
+            :error "Transaction function call denied as no ACLs found that approve it."}))
+         )
 
        ;; Now we do the official request which mutates the database
        ;; This is the 'official' way to avoid race-conditions.
-       #_(let [req (new-request
+       (let [req (new-request
                     "https://example.org/people/"
                     (xt/db *xt-node*)
                     (get access-tokens ["sue" "admin-client"])
@@ -384,7 +413,7 @@
             )
            )
 
-       #_(let [db (xt/db *xt-node*)]
+       (let [db (xt/db *xt-node*)]
            (expect
             (xt/entity db "https://example.org/people/alice")
             #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
@@ -398,7 +427,7 @@
 
            ;; Sue will need to create an ACL for her
 
-           (let [access-token (acquire-access-token "alice" "example-client" db)
+           #_(let [access-token (acquire-access-token "alice" "example-client" db)
                  db (xt/db *xt-node*)]
              (xt/entity db access-token)
              #_(test-fn
