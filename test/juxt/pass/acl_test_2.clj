@@ -306,15 +306,24 @@
 
              (let [result
                    (try
-                     (authz/authorizing-put-fn
-                      db
-                      (new-request uri db access-token {})
-                      command
-                      doc)
+                     (let [actual
+                           (authz/authorizing-put-fn
+                            db
+                            (new-request uri db access-token {})
+                            command
+                            doc)]
 
-                     (when error
-                       (throw (ex-info "Expected to fail but didn't" {:args args
-                                                                      ::pass true})))
+                       (when (and expected (not= expected actual))
+                         (throw (ex-info "Unexpected result" {:expected expected
+                                                              :actual actual
+                                                              ::pass true})))
+
+                       (when error
+                         (throw (ex-info "Expected to fail but didn't" {:args args
+                                                                        ::pass true})))
+
+                       actual)
+
                      (catch Exception e
                        (when (::pass (ex-data e)) (throw e))
                        (when-not (= (.getMessage e) error)
