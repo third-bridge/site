@@ -136,7 +136,7 @@
   (log/warnf "No processor for %s" kw)
   m)
 
-(defmethod apply-processor ::pass/conform [[_ m-to-merge] val]
+(defmethod apply-processor ::pass/merge [[_ m-to-merge] val]
   (merge val m-to-merge))
 
 (defmethod apply-processor ::pass.malli/validate [[_ form] val]
@@ -163,7 +163,7 @@
           command-args (::pass/command-args command)
 
           process (into
-                   [[::pass/conform {::pass/ruleset ruleset}]]
+                   [[::pass/merge {::pass/ruleset ruleset}]]
                    (::pass/process command))]
 
       (when (not= (count args) (count command-args))
