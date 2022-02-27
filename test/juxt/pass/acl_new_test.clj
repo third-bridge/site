@@ -393,7 +393,6 @@
         :access-token (get access-tokens ["terry" "admin-client"])
         :error "Command 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
 
-
       ;; In a GraphQL mutation, there will be no resource. Arguably, ACLs
       ;; should not be tied to a resource.
 
@@ -444,8 +443,6 @@
          #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
                 :xt/id "https://example.org/people/alice"}))
 
-        (xt/entity db "https://example.org/people/alice")
-
         ;; Now Alice wants to create a document under https://example.org/~alice/
         ;; Let's check that she can.
 
@@ -463,7 +460,8 @@
                 :expected []})))
 
       ;; OK, let's create an identity for Alice!
-      (let [id-doc
+      (let [db (xt/db *xt-node*)
+            id-doc
             {:xt/id "https://example.org/people/sue/identities/example"
              :juxt.pass.jwt/iss "https://example.org"
              :juxt.pass.jwt/sub "alice"
