@@ -1,6 +1,6 @@
 ;; Copyright © 2022, JUXT LTD.
 
-(ns juxt.pass.acl-test-2
+(ns juxt.pass.acl-new-test
   (:require
    [clojure.test :refer [deftest is are testing] :as t]
    [juxt.pass.alpha.authorization-2 :as authz]
