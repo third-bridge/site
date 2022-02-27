@@ -144,9 +144,8 @@
     (throw
      (ex-info
       "Failed validation check"
-      (m/explain form val)
-      #_{:form form
-       :value val}))))
+      (m/explain form val))))
+  val)
 
 (defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} command-id & args]
   (assert ruleset)
