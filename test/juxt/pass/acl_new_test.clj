@@ -70,14 +70,15 @@
       ::site/type "Command"
       ::pass/scope "admin:write"
       ::pass/command-args
-      ;; TODO: Simplify args just to use
-      [{::pass/process
+      ;; TODO: Simplify args just to use malli transform and validation
+      [{::pass.malli/schema
+        [:map
+         [:juxt.pass.jwt/iss [:re "https://.*"]]
+         [:juxt.pass.jwt/sub [:re "[a-zA-Z][a-zA-Z0-9\\|]{2,}"]]
+         [::site/type [:= "Identity"]]]
+        ::pass/process
         [[::pass/merge {::site/type "Identity"}]
-         [::pass.malli/validate
-          [:map
-           [:juxt.pass.jwt/iss [:re "https://.*"]]
-           [:juxt.pass.jwt/sub [:re "[a-zA-Z][a-zA-Z0-9\\|]{2,}"]]
-           [::site/type [:= "Identity"]]]]]}]}]
+         [::pass.malli/validate]]}]}]
 
     [::xt/put
      {:xt/id "https://example.org/acls/sue-can-create-users"
@@ -340,7 +341,6 @@
                     {:expected-error error
                      :actual-error (.getMessage e)}
                     e))))))]
-
 
       ;; This is the happy case, Sue attempts to create a new user, Alice
       (test-fn

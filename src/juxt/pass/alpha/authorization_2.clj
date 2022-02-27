@@ -130,22 +130,30 @@
         (seq (map first (xt/q db query
                               subject command uri access-token-effective-scope)))))))
 
-(defmulti apply-processor (fn [processor m] (first processor)))
+(defmulti apply-processor (fn [processor m arg-def] (first processor)))
 
-(defmethod apply-processor :default [[kw] m]
+(defmethod apply-processor :default [[kw] m _]
   (log/warnf "No processor for %s" kw)
   m)
 
-(defmethod apply-processor ::pass/merge [[_ m-to-merge] val]
+(defmethod apply-processor ::pass/merge [[_ m-to-merge] val _]
   (merge val m-to-merge))
 
-(defmethod apply-processor ::pass.malli/validate [[_ form] val]
-  (when-not (m/validate form val)
+(defmethod apply-processor ::pass.malli/validate [[_ form] val {::pass.malli/keys [schema]}]
+  (assert schema)
+  (when-not (m/validate schema val)
     (throw
      (ex-info
       "Failed validation check"
-      (m/explain form val))))
+      (m/explain schema val))))
   val)
+
+(defn process-arg [arg arg-def]
+  (reduce
+   (fn [acc processor]
+     (apply-processor processor acc arg-def))
+   arg
+   (::pass/process arg-def)))
 
 (defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} command-id & args]
   (assert ruleset)
@@ -160,11 +168,7 @@
                 (format "No such command: %s" command-id)
                 {:command command-id})))
 
-          command-args (::pass/command-args command)
-
-          process (into
-                   [[::pass/merge {::pass/ruleset ruleset}]]
-                   (::pass/process command))]
+          command-args (::pass/command-args command)]
 
       (when (not= (count args) (count command-args))
         (throw
@@ -189,19 +193,17 @@
                                  ::site/uri auth}))))
 
       (if acls
-        (mapv (fn [arg process]
+        (mapv (fn [arg arg-def]
                 [::xt/put
-                 ;; Critically, the new doc inherits the ruleset of the auth
-                 ;; context. This prevents documents from escaping their authorization
-                 ;; scheme into another.
-                 (let [arg (reduce
-                            (fn [acc processor]
-                              (apply-processor processor acc))
-                            arg
-                            process)]
-                   (assoc arg ::pass/ruleset ruleset))])
+                 (cond-> arg
+                   ;; Critically, the new doc inherits the ruleset of the auth
+                   ;; context. This prevents documents from escaping their authorization
+                   ;; scheme into another.
+                   true (assoc ::pass/ruleset ruleset)
+                   (::pass/process arg-def) (process-arg arg-def)
+                   )])
               args
-              (map ::pass/process command-args))
+              command-args)
         []))
 
     (catch Throwable e
