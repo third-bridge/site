@@ -2,13 +2,15 @@
 
 (ns juxt.pass.alpha.authorization-2
   (:require
-   [juxt.site.alpha.util :refer [sha random-bytes as-hex-str as-b64-str uuid-bytes]]
-   [xtdb.api :as xt]
    [clojure.set :as set]
-   [clojure.tools.logging :as log]))
+   [clojure.tools.logging :as log]
+   [juxt.site.alpha.util :refer [sha random-bytes as-hex-str as-b64-str uuid-bytes]]
+   [malli.core :as m]
+   [xtdb.api :as xt]))
 
 (alias 'http (create-ns 'juxt.http.alpha))
 (alias 'pass (create-ns 'juxt.pass.alpha))
+(alias 'pass.malli (create-ns 'juxt.pass.alpha.malli))
 (alias 'site (create-ns 'juxt.site.alpha))
 
 (defn lookup->subject [id-token db]
@@ -134,8 +136,17 @@
   (log/warnf "No processor for %s" kw)
   m)
 
-(defmethod apply-processor ::pass/conform [[_ m-to-merge] m]
-  (merge m m-to-merge))
+(defmethod apply-processor ::pass/conform [[_ m-to-merge] val]
+  (merge val m-to-merge))
+
+(defmethod apply-processor ::pass.malli/validate [[_ form] val]
+  (when-not (m/validate form val)
+    (throw
+     (ex-info
+      "Failed validation check"
+      (m/explain form val)
+      #_{:form form
+       :value val}))))
 
 (defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} command-id & args]
   (assert ruleset)
@@ -167,7 +178,7 @@
       (when (nil? acls)
         (let [msg (format "Command '%s' denied as no ACLs found that approve it." command-id)]
           ;; Depending on the command, we may want to log and alert
-          (log/warnf msg)
+          (when false (log/warnf msg))
           ;; TODO: Run some diagnostics to determine the reason
           (throw (ex-info msg {}))))
 

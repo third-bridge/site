@@ -6,12 +6,16 @@
    [juxt.pass.alpha.authorization-2 :as authz]
    [juxt.test.util :refer [with-xt with-handler submit-and-await!
                            *xt-node* *handler*]]
-   [xtdb.api :as xt]))
+   [xtdb.api :as xt]
+   [malli.core :as m]))
+
+;;(m/validate (m/schema [:string {:min 2}]) "fo")
 
 (alias 'apex (create-ns 'juxt.apex.alpha))
 (alias 'http (create-ns 'juxt.http.alpha))
 (alias 'pick (create-ns 'juxt.pick.alpha))
 (alias 'pass (create-ns 'juxt.pass.alpha))
+(alias 'pass.malli (create-ns 'juxt.pass.alpha.malli))
 (alias 'site (create-ns 'juxt.site.alpha))
 
 (t/use-fixtures :each with-xt with-handler)
@@ -68,8 +72,13 @@
      {:xt/id "https://example.org/commands/create-identity"
       ::site/type "Command"
       ::pass/scope "admin:write"
-      ::pass/command-args [{::pass/process [[::pass/conform {::site/type "Identity"}]]}
-       ]}]
+      ::pass/command-args
+      [{::pass/process
+        [[::pass/conform {::site/type "Identity"}]
+         [::pass.malli/validate
+          [:map
+           [:juxt.pass.jwt/iss [:re "https://.*"]]
+           [:juxt.pass.jwt/sub [:re "[a-zA-Z][a-zA-Z0-9\\|]{2,}"]]]]]}]}]
 
     [::xt/put
      {:xt/id "https://example.org/acls/sue-can-create-users"
@@ -263,7 +272,7 @@
 
      ;; Sue creates a new user, Alice
 
-     ;; TODO: Create a language of commands.
+     ;; Commands
 
      ;; Each command is associated, many-to-one, with a required (single)
      ;; scope. If an OpenAPI document defines an operation, that operation may
@@ -272,7 +281,10 @@
      ;; (and may affect the publishing of the openapi.json such that authors
      ;; don't need to concern themselves with declaring scope).
 
-     ;; A command such as 'create-user' is registered in the database.
+     ;; A command such as 'https://example.org/commands/create-user' is registered in the database.
+
+     ;; Since commands are themselves part of the database, they can evolve over
+     ;; time (their behavior can be amended).
 
      ;; Scopes are an access token concern. An access token references an
      ;; application which references a particular API. Commands are therefore
@@ -454,8 +466,7 @@
        ;; OK, let's create an identity for Alice!
        (let [id-doc
              {:xt/id "https://example.org/people/sue/identities/example"
-              ;;::site/type "Identity"
-;;              :juxt.pass.jwt/iss "https://example.org"
+              :juxt.pass.jwt/iss "https://example.org"
               :juxt.pass.jwt/sub "alice"
               ::pass/subject "https://example.org/people/alice"
               }]
@@ -505,3 +516,8 @@
 ;; Allowed methods reported in the Allow response header may be the intersection
 ;; of methods defined on the resource and the methods allowed by the 'auth'
 ;; context.
+
+
+#_(m/validate
+ [:map [:juxt.pass.jwt/iss [:re "https://.*"]]]
+ {:juxt.pass.jwt/iss "https://foo"})
