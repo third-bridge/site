@@ -116,7 +116,7 @@
                       [acl ::site/type "ACL"]
                       [acl ::pass/command command]
 
-                      [command ::site/type "Command"]
+                      [command ::site/type "Effect"]
 
                       ;; Scope
                       [command ::pass/scope scope]
@@ -179,7 +179,7 @@
            :args-expected (count command-args)})))
 
       (when (nil? acls)
-        (let [msg (format "Command '%s' denied as no ACLs found that approve it." command-id)]
+        (let [msg (format "Effect '%s' denied as no ACLs found that approve it." command-id)]
           ;; Depending on the command, we may want to log and alert
           (when false (log/warnf msg))
           ;; TODO: Run some diagnostics to determine the reason

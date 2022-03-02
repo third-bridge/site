@@ -61,13 +61,13 @@
     ;; Some commands that are pre-registered.
     [::xt/put
      {:xt/id "https://example.org/commands/create-user"
-      ::site/type "Command"
+      ::site/type "Effect"
       ::pass/scope "admin:write"
       ::pass/command-args [{}]}]
 
     [::xt/put
      {:xt/id "https://example.org/commands/create-identity"
-      ::site/type "Command"
+      ::site/type "Effect"
       ::pass/scope "admin:write"
       ::pass/command-args
       [{::pass.malli/schema
@@ -85,7 +85,7 @@
 
     [::xt/put
      {:xt/id "https://example.org/commands/put-resource"
-      ::site/type "Command"
+      ::site/type "Effect"
       ::pass/command-args [{}]}]
 
     [::xt/put
@@ -280,7 +280,7 @@
 
     ;; Sue creates a new user, Alice
 
-    ;; Commands
+    ;; Effects
 
     ;; Each command is associated, many-to-one, with a required (single)
     ;; scope. If an OpenAPI document defines an operation, that operation may
@@ -295,7 +295,7 @@
     ;; time (their behavior can be amended).
 
     ;; Scopes are an access token concern. An access token references an
-    ;; application which references a particular API. Commands are therefore
+    ;; application which references a particular API. Effects are therefore
     ;; part of the domain to which an API belongs. A GraphQL endpoint is
     ;; defined as part of an overall OpenAPI, which is the same group where
     ;; scopes, commands and rulesets are defined.
@@ -375,7 +375,7 @@
        {:command "https://example.org/commands/create-user"
         :args [{:xt/id "https://example.org/people/alice"}]
         :access-token (get access-tokens ["sue" "example-client"])
-        :error "Command 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
+        :error "Effect 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
 
       ;; She can't use these privileges to call a different command
       (test-fn
@@ -391,7 +391,7 @@
        {:command "https://example.org/commands/create-user"
         :args [{:xt/id "https://example.org/people/alice"}]
         :access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
-        :error "Command 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
+        :error "Effect 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
 
       ;; Terry should not be able to create-users, even with the admin-client
       (test-fn
@@ -399,7 +399,7 @@
        {:command "https://example.org/commands/create-user"
         :args [{:xt/id "https://example.org/people/alice"}]
         :access-token (get access-tokens ["terry" "admin-client"])
-        :error "Command 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
+        :error "Effect 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
 
       ;; In a GraphQL mutation, there will be no resource. Arguably, ACLs
       ;; should not be tied to a resource.
@@ -540,12 +540,12 @@
   ;; likes to talk about? A command is akin to set of GraphQL mutations,
   ;; often one per request.
 
-  ;; Commands can cause mutations and also side-effects.
+  ;; Effects can cause mutations and also side-effects.
 
   ;; Consider a command: create-user - a command can be protected by a scope,
   ;; e.g. write:admin
 
-  ;; Commands must just be EDN.
+  ;; Effects must just be EDN.
 
 
   )
