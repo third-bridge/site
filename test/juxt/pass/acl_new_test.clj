@@ -70,15 +70,23 @@
       ::site/type "Command"
       ::pass/scope "admin:write"
       ::pass/command-args
-      ;; TODO: Simplify args just to use malli transform and validation
       [{::pass.malli/schema
         [:map
          [:juxt.pass.jwt/iss [:re "https://.*"]]
          [:juxt.pass.jwt/sub [:re "[a-zA-Z][a-zA-Z0-9\\|]{2,}"]]
          [::site/type [:= "Identity"]]]
         ::pass/process
-        [[::pass/merge {::site/type "Identity"}]
+        [
+         ;; Though we could use a Malli value transformer here, at this stage is
+         ;; doesn't feel beneficial to lean too heavily on Malli's extensive
+         ;; feature set.
+         [::pass/merge {::site/type "Identity"}]
          [::pass.malli/validate]]}]}]
+
+    [::xt/put
+     {:xt/id "https://example.org/commands/put-resource"
+      ::site/type "Command"
+      ::pass/command-args [{}]}]
 
     [::xt/put
      {:xt/id "https://example.org/acls/sue-can-create-users"
@@ -461,18 +469,55 @@
 
       ;; OK, let's create an identity for Alice!
       (let [db (xt/db *xt-node*)
-            id-doc
-            {:xt/id "https://example.org/people/sue/identities/example"
-             :juxt.pass.jwt/iss "https://example.org"
-             :juxt.pass.jwt/sub "alice"
-             ::pass/subject "https://example.org/people/alice"
-             }]
-        (test-fn
-         db
-         {:command "https://example.org/commands/create-identity"
-          :access-token (get access-tokens ["sue" "admin-client"])
-          :args [id-doc]
-          }))))
+
+            req (new-request
+                 "https://example.org/people/"
+                 (xt/db *xt-node*)
+                 (get access-tokens ["sue" "admin-client"])
+                 {})]
+
+        (authorizing-put!
+         req
+         ;; The request body would be transformed into this new doc
+         ["https://example.org/commands/create-identity"
+          {:xt/id "https://example.org/people/sue/identities/example"
+           :juxt.pass.jwt/iss "https://example.org"
+           :juxt.pass.jwt/sub "alice"
+           ::pass/subject "https://example.org/people/alice"
+           }]
+         ;; TODO: Alice will need an identity
+         ;; TODO: We need to create some ACLs for this user, ideally in the same tx
+         )
+        )
+
+
+      #_(let [
+              id-doc
+              {:xt/id "https://example.org/people/sue/identities/example"
+               :juxt.pass.jwt/iss "https://example.org"
+               :juxt.pass.jwt/sub "alice"
+               ::pass/subject "https://example.org/people/alice"
+               }]
+          (test-fn
+           db
+           {:command "https://example.org/commands/create-identity"
+            :access-token (get access-tokens ["sue" "admin-client"])
+            :args [id-doc]
+            }))
+
+      ;; Alice can now log in
+      (let
+          [db (xt/db *xt-node*)
+           alice-token (acquire-access-token "alice" "https://example.org/_site/apps/example-client" db nil)
+           db (xt/db *xt-node*)]
+
+          (is alice-token)
+          #_(test-fn
+           db
+           {:uri "https://example.org/~alice/"
+            :access-token alice-token
+            :command "https://example.org/commands/put-resource"
+            :args [{}]}))))
 
   ;; Notes:
 
