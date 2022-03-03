@@ -88,7 +88,7 @@
       ::site/type "ACL"
       ::pass/subject "https://example.org/people/sue"
       ::pass/effect #{"https://example.org/effects/create-user"
-                       "https://example.org/effects/create-identity"}
+                      "https://example.org/effects/create-identity"}
       ;; Is not constrained to a resource
       ::pass/resource nil #_"https://example.org/people/"
       }]
@@ -99,11 +99,19 @@
       ::pass/rule-content
       (pr-str '[[(acl-applies-to-subject? acl subject)
                  [acl ::pass/subject subject]]
+
                 [(acl-applies-to-resource? acl resource)
                  [acl ::pass/resource resource]]
+
                 [(acl-applies-to-resource? acl resource)
                  [(some? resource)]
-                 [acl ::pass/resource nil]]])}]
+                 [acl ::pass/resource nil]]
+
+                [(effect-applies-to-resource? effect resource)
+                 [(some? effect)]
+                 #_[effect ::pass/resource nil]]
+
+                ])}]
 
     ;; We can now define the ruleset
     [::xt/put
@@ -544,6 +552,7 @@
                               {:xt/id "https://example.org/effects/put-user-dir-resource"
                                ::site/type "Effect"
                                ::pass/scope "userdir:write"
+                               ::pass/resource nil
                                ::pass/effect-args [{}]}]
 
                              [::xt/put

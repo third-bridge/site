@@ -122,9 +122,13 @@
                       [effect ::pass/scope scope]
                       [(contains? access-token-effective-scope scope)]
 
-                      ;; Custom
+                      ;; These rules must be satisfied provided by the domain
                       (acl-applies-to-subject? acl subject)
+                      ;; Some effects are limited by resource
+                      (effect-applies-to-resource? effect resource)
+                      ;; Some ACLs are limited by resource
                       (acl-applies-to-resource? acl resource)]
+
              :rules rules
              :in '[subject effect resource access-token-effective-scope]}]
         (seq (map first (xt/q db query
