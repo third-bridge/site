@@ -68,31 +68,31 @@
    ::username "carl"})
 
 (def PUT_USER_DIR
-  {:xt/id "https://example.org/effects/put-user-dir"
+  {:xt/id "https://example.org/effects/write-user-dir"
    ::site/type "Effect"
    ::pass/scope "userdir:write"
    ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
    ::pass/effect-args [{}]})
 
 (def ALICE_CAN_PUT_USER_DIR_CONTENT
-  {:xt/id "https://example.org/acls/alice-can-put-user-dir-content"
+  {:xt/id "https://example.org/acls/alice-can-write-user-dir-content"
    ::site/type "ACL"
    ::pass/subject "https://example.org/people/alice"
-   ::pass/effect #{"https://example.org/effects/put-user-dir"}
+   ::pass/effect #{"https://example.org/effects/write-user-dir"}
    ;; Is not constrained to a resource
    ::pass/resource nil})
 
 (def BOB_CAN_PUT_USER_DIR_CONTENT
-  {:xt/id "https://example.org/acls/bob-can-put-user-dir-content"
+  {:xt/id "https://example.org/acls/bob-can-write-user-dir-content"
    ::site/type "ACL"
    ::pass/subject "https://example.org/people/bob"
-   ::pass/effect #{"https://example.org/effects/put-user-dir"}
+   ::pass/effect #{"https://example.org/effects/write-user-dir"}
    ::pass/resource nil})
 
 (def PUT_USER_DIR_RULE
   '[(allowed? acl subject effect resource)
     [acl ::pass/subject subject]
-    [effect :xt/id "https://example.org/effects/put-user-dir"]
+    [effect :xt/id "https://example.org/effects/write-user-dir"]
     [effect ::pass/resource-matches resource-regex]
     [subject ::username username]
     [(re-pattern resource-regex) resource-pattern]
@@ -112,13 +112,22 @@
   (let [rules [PUT_USER_DIR_RULE]
         db (xt/db *xt-node*)]
 
+    #_(is
+     (seq
+      (check-acls
+       db
+       "https://example.org/people/alice"
+       "https://example.org/effects/read-user-dir"
+       "https://example.org/~alice/foo.txt"
+       #{"userdir:read"} rules)))
+
     (are [subject effect resource access-token-effective-scope ok?]
         (let [actual (check-acls db subject effect resource access-token-effective-scope rules)]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can put a file to her user directory
-        "https://example.org/people/alice"
-        "https://example.org/effects/put-user-dir"
+      "https://example.org/people/alice"
+      "https://example.org/effects/write-user-dir"
         "https://example.org/~alice/foo.txt"
         #{"userdir:write" "other:scope"} true
 
@@ -126,37 +135,37 @@
         ;; it (either the application is itself constrained, or she hasn't
         ;; authorized the userdir:write scope on the application)
         "https://example.org/people/alice"
-        "https://example.org/effects/put-user-dir"
+        "https://example.org/effects/write-user-dir"
         "https://example.org/~alice/foo.txt"
         #{"other:scope"} false
 
         ;; Alice can't put a file to Bob's user directory
         "https://example.org/people/alice"
-        "https://example.org/effects/put-user-dir"
+        "https://example.org/effects/write-user-dir"
         "https://example.org/~bob/foo.txt"
         #{"userdir:write"} false
 
         ;; Alice can't put a file outside her user directory
         "https://example.org/people/alice"
-        "https://example.org/effects/put-user-dir"
+        "https://example.org/effects/write-user-dir"
         "https://example.org/index.html"
         #{"userdir:write"} false
 
         ;; Bob can put a file to his user directory
         "https://example.org/people/bob"
-        "https://example.org/effects/put-user-dir"
+        "https://example.org/effects/write-user-dir"
         "https://example.org/~bob/foo.txt"
         #{"userdir:write"} true
 
         ;; Bob can't put a file to Alice's directory
         "https://example.org/people/bob"
-        "https://example.org/effects/put-user-dir"
+        "https://example.org/effects/write-user-dir"
         "https://example.org/~alice/foo.txt"
         #{"userdir:write"} false
 
         ;; Carl cannot put a file to his user directory, as he hasn't been
-        ;; granted the put-user-dir effect.
+        ;; granted the write-user-dir effect.
         "https://example.org/people/carl"
-        "https://example.org/effects/put-user-dir"
+        "https://example.org/effects/write-user-dir"
         "https://example.org/~carl/foo.txt"
         #{"userdir:write"} false)))
