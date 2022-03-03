@@ -51,45 +51,48 @@
 
            subject effect resource access-token-effective-scope))
 
+(def ALICE {:xt/id "https://example.org/people/alice",
+            ::site/type "User"
+            ::username "alice"})
+
+(def BOB {:xt/id "https://example.org/people/bob",
+          ::site/type "User"
+          ::username "bob"})
+
+(def CARL {:xt/id "https://example.org/people/carl",
+           ::site/type "User"
+           ::username "carl"})
+
+(def PUT_USER_DIR {:xt/id "https://example.org/effects/put-user-dir"
+                   ::site/type "Effect"
+                   ::pass/scope "userdir:write"
+                   ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
+                   ::pass/effect-args [{}]})
+
+(def ALICE_CAN_PUT_USER_DIR_CONTENT
+  {:xt/id "https://example.org/acls/alice-can-put-user-dir-content"
+   ::site/type "ACL"
+   ::pass/subject "https://example.org/people/alice"
+   ::pass/effect #{"https://example.org/effects/put-user-dir"}
+   ;; Is not constrained to a resource
+   ::pass/resource nil})
+
+(def BOB_CAN_PUT_USER_DIR_CONTENT
+  {:xt/id "https://example.org/acls/bob-can-put-user-dir-content"
+   ::site/type "ACL"
+   ::pass/subject "https://example.org/people/bob"
+   ::pass/effect #{"https://example.org/effects/put-user-dir"}
+   ::pass/resource nil})
+
 (deftest user-dir-test
   (submit-and-await!
    [
-    [:xtdb.api/put
-     {:xt/id "https://example.org/people/alice",
-      ::site/type "User"
-      ::username "alice"}]
-
-    [:xtdb.api/put
-     {:xt/id "https://example.org/people/bob",
-      ::site/type "User"
-      ::username "bob"}]
-
-    [:xtdb.api/put
-     {:xt/id "https://example.org/people/carl",
-      ::site/type "User"
-      ::username "carl"}]
-
-    [::xt/put
-     {:xt/id "https://example.org/effects/put-user-dir"
-      ::site/type "Effect"
-      ::pass/scope "userdir:write"
-      ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
-      ::pass/effect-args [{}]}]
-
-    [::xt/put
-     {:xt/id "https://example.org/acls/alice-can-create-user-dir-content"
-      ::site/type "ACL"
-      ::pass/subject "https://example.org/people/alice"
-      ::pass/effect #{"https://example.org/effects/put-user-dir"}
-      ;; Is not constrained to a resource
-      ::pass/resource nil}]
-
-    [::xt/put
-     {:xt/id "https://example.org/acls/bob-can-create-user-dir-content"
-      ::site/type "ACL"
-      ::pass/subject "https://example.org/people/bob"
-      ::pass/effect #{"https://example.org/effects/put-user-dir"}
-      ::pass/resource nil}]])
+    [:xtdb.api/put ALICE]
+    [:xtdb.api/put BOB]
+    [:xtdb.api/put CARL]
+    [::xt/put PUT_USER_DIR]
+    [::xt/put ALICE_CAN_PUT_USER_DIR_CONTENT]
+    [::xt/put BOB_CAN_PUT_USER_DIR_CONTENT]])
 
   (let [rules
         '[
