@@ -89,6 +89,16 @@
    ::pass/effect #{"https://example.org/effects/put-user-dir"}
    ::pass/resource nil})
 
+(def PUT_USER_DIR_RULE
+  '[(allowed? acl subject effect resource)
+    [acl ::pass/subject subject]
+    [effect :xt/id "https://example.org/effects/put-user-dir"]
+    [effect ::pass/resource-matches resource-regex]
+    [subject ::username username]
+    [(re-pattern resource-regex) resource-pattern]
+    [(re-matches resource-pattern resource) [_ user]]
+    [(= user username)]])
+
 (deftest user-dir-test
   (submit-and-await!
    [
@@ -99,17 +109,7 @@
     [::xt/put ALICE_CAN_PUT_USER_DIR_CONTENT]
     [::xt/put BOB_CAN_PUT_USER_DIR_CONTENT]])
 
-  (let [rules
-        '[
-          [(allowed? acl subject effect resource)
-           [acl ::pass/subject subject]
-           [effect ::pass/resource-matches resource-regex]
-           [subject ::username username]
-           [(re-pattern resource-regex) resource-pattern]
-           [(re-matches resource-pattern resource) [_ user]]
-           [(= user username)]
-           ]]
-
+  (let [rules [PUT_USER_DIR_RULE]
 
         db (xt/db *xt-node*)]
 
