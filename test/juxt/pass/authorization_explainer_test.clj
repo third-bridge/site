@@ -30,44 +30,49 @@
 ;; We'll create a similar system here, using subjects/effects/resources and
 ;; scopes.
 
-(defn check-acls [db subject effect resource access-token-effective-scope rules]
-          (xt/q
-           db
-           {:find '[acl]
-            :where
-            '[
-             [acl ::site/type "ACL"]
-             [effect ::site/type "Effect"]
-             [acl ::pass/effect effect]
+(defn check-acls
+  [db subject effect resource access-token-effective-scope rules]
+  (xt/q
+   db
+   {:find '[acl]
+    :where
+    '[
+      [acl ::site/type "ACL"]
+      [effect ::site/type "Effect"]
+      [acl ::pass/effect effect]
 
-             [effect ::pass/scope scope]
-             [(contains? access-token-effective-scope scope)]
+      [effect ::pass/scope scope]
+      [(contains? access-token-effective-scope scope)]
 
-             (allowed? acl subject effect resource)]
+      (allowed? acl subject effect resource)]
 
-            :rules rules
+    :rules rules
 
-            :in '[subject effect resource access-token-effective-scope]}
+    :in '[subject effect resource access-token-effective-scope]}
 
-           subject effect resource access-token-effective-scope))
+   subject effect resource access-token-effective-scope))
 
-(def ALICE {:xt/id "https://example.org/people/alice",
-            ::site/type "User"
-            ::username "alice"})
+(def ALICE
+  {:xt/id "https://example.org/people/alice",
+   ::site/type "User"
+   ::username "alice"})
 
-(def BOB {:xt/id "https://example.org/people/bob",
-          ::site/type "User"
-          ::username "bob"})
+(def BOB
+  {:xt/id "https://example.org/people/bob",
+   ::site/type "User"
+   ::username "bob"})
 
-(def CARL {:xt/id "https://example.org/people/carl",
-           ::site/type "User"
-           ::username "carl"})
+(def CARL
+  {:xt/id "https://example.org/people/carl",
+   ::site/type "User"
+   ::username "carl"})
 
-(def PUT_USER_DIR {:xt/id "https://example.org/effects/put-user-dir"
-                   ::site/type "Effect"
-                   ::pass/scope "userdir:write"
-                   ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
-                   ::pass/effect-args [{}]})
+(def PUT_USER_DIR
+  {:xt/id "https://example.org/effects/put-user-dir"
+   ::site/type "Effect"
+   ::pass/scope "userdir:write"
+   ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
+   ::pass/effect-args [{}]})
 
 (def ALICE_CAN_PUT_USER_DIR_CONTENT
   {:xt/id "https://example.org/acls/alice-can-put-user-dir-content"
