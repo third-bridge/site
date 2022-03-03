@@ -29,6 +29,8 @@
   ([result pred]
    (expect result pred {})))
 
+
+
 (defn with-scenario [f]
   (submit-and-await!
    [
@@ -261,40 +263,7 @@
 (deftest scenario-1-test
 
 
-  ;; Notes:
-
-  ;; If accessing the API directly with a browser, the access-token is
-  ;; generated and stored in the session (accessed via the cookie rather than
-  ;; the Authorization header).
-
-  ;; The bin/site tool might have to be configured with the client-id of the
-  ;; 'Admin App'.
-
-  ;; TODO: Sue creates Alice, with Alice's rights
-  ;; scope is 'create:user'
-
-  ;; Could we have an underlying 'DSL' that can be used by both OpenAPI and
-  ;; GraphQL? Rather than OpenAPI wrapping GraphQL (and therefore requiring
-  ;; it), could we have both call an underlying 'Site DSL' which integrates
-  ;; scope-based authorization?
-
-  ;; Consider a 'create-user' effect. Might these be the events that jms
-  ;; likes to talk about? A effect is akin to set of GraphQL mutations,
-  ;; often one per request.
-
-  ;; Effects can cause mutations and also side-effects.
-
-  ;; Consider a effect: create-user - a effect can be protected by a scope,
-  ;; e.g. write:admin
-
-  ;; Effects must just be EDN.
-
-
-  )
-
-((t/join-fixtures [with-xt with-handler with-scenario])
- (fn []
-   (let [db (xt/db *xt-node*)
+(let [db (xt/db *xt-node*)
          ;; Access tokens for each sub/client pairing
          access-tokens
          {["sue" "admin-client"]
@@ -575,13 +544,48 @@
              :effect "https://example.org/effects/put-user-dir-resource"
              :args [{}]})
 
-           (test-fn
+           #_(test-fn
               db
               {:uri "https://example.org/index.html"
                :access-token alice-token
                :effect "https://example.org/effects/put-user-dir-resource"
                :args [{}]
                :error "foo"}))))
+
+  ;; Notes:
+
+  ;; If accessing the API directly with a browser, the access-token is
+  ;; generated and stored in the session (accessed via the cookie rather than
+  ;; the Authorization header).
+
+  ;; The bin/site tool might have to be configured with the client-id of the
+  ;; 'Admin App'.
+
+  ;; TODO: Sue creates Alice, with Alice's rights
+  ;; scope is 'create:user'
+
+  ;; Could we have an underlying 'DSL' that can be used by both OpenAPI and
+  ;; GraphQL? Rather than OpenAPI wrapping GraphQL (and therefore requiring
+  ;; it), could we have both call an underlying 'Site DSL' which integrates
+  ;; scope-based authorization?
+
+  ;; Consider a 'create-user' effect. Might these be the events that jms
+  ;; likes to talk about? A effect is akin to set of GraphQL mutations,
+  ;; often one per request.
+
+  ;; Effects can cause mutations and also side-effects.
+
+  ;; Consider a effect: create-user - a effect can be protected by a scope,
+  ;; e.g. write:admin
+
+  ;; Effects must just be EDN.
+
+
+  )
+
+#_((t/join-fixtures [with-xt with-handler with-scenario])
+ (fn []
+
    )
  )
 
@@ -603,71 +607,7 @@
 
 
 
-((t/join-fixtures [with-xt with-handler])
- (fn []
-   (submit-and-await!
-    [
-     [::xt/put
-      {:xt/id "https://example.org/effects/put-user-dir-resource"
-       ::site/type "Effect"
-       ::pass/scope "userdir:write"
-       ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
-       ::pass/effect-args [{}]}]
 
-     [:xtdb.api/put
-      {:xt/id "https://example.org/people/alice",
-       ::site/type "User"
-       ::username "alice"
-       :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]
-
-     [:xtdb.api/put
-      {:xt/id "https://example.org/people/bob",
-       ::site/type "User"
-       ::username "bob"
-       :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]
-
-     [::xt/put
-      {:xt/id "https://example.org/acls/alice-can-create-user-dir-content"
-       ::site/type "ACL"
-       ::pass/subject "https://example.org/people/alice"
-       ::pass/effect #{"https://example.org/effects/put-user-dir-resource"}
-       ;; Is not constrained to a resource
-       ::pass/resource nil #_"https://example.org/people/"
-       }]])
-
-   ;; Turn this into a rule
-   (xt/q (xt/db *xt-node*)
-         '{:find [acl effect]
-           :where
-           [
-            [acl ::site/type "ACL"]
-            [effect ::site/type "Effect"]
-            [acl ::pass/effect effect]
-
-            [effect ::pass/scope scope]
-            [(contains? access-token-effective-scope scope)]
-
-            (allowed? acl subject effect resource)]
-
-           :rules [
-                   [(allowed? acl subject effect resource)
-                    [acl ::pass/subject subject]
-                    [effect ::pass/resource-matches resource-regex]
-                    [subject ::username username]
-                    [(re-pattern resource-regex) resource-pattern]
-                    [(re-matches resource-pattern resource) [_ user]]
-                    [(= user username)]
-                    ]]
-
-           :in [subject effect resource access-token-effective-scope]}
-
-         "https://example.org/people/alice"                  ; subject
-         "https://example.org/effects/put-user-dir-resource" ; effect
-         "https://example.org/~alice/foo.txt"                ; resource
-         #{"userdir:write"}
-         )
-
-   ))
 
 
 ;; Conclusion: the determining domain-provide rule has to take the following parameters:
