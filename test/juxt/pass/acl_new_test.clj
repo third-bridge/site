@@ -611,7 +611,7 @@
       {:xt/id "https://example.org/effects/put-user-dir-resource"
        ::site/type "Effect"
        ::pass/scope "userdir:write"
-       ::pass/resource-matches #"https://example.org/~([a-z]+)/.+"
+       ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
        ::pass/effect-args [{}]}]
 
      [:xtdb.api/put
@@ -652,9 +652,10 @@
            :rules [
                    [(allowed? acl subject effect resource)
                     [acl ::pass/subject subject]
-                    [effect ::pass/resource-matches pattern]
+                    [effect ::pass/resource-matches resource-regex]
                     [subject ::username username]
-                    [(re-matches pattern resource) [_ user]]
+                    [(re-pattern resource-regex) resource-pattern]
+                    [(re-matches resource-pattern resource) [_ user]]
                     [(= user username)]
                     ]]
 
