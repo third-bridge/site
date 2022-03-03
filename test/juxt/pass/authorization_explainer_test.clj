@@ -110,7 +110,6 @@
     [::xt/put BOB_CAN_PUT_USER_DIR_CONTENT]])
 
   (let [rules [PUT_USER_DIR_RULE]
-
         db (xt/db *xt-node*)]
 
     (are [subject effect resource access-token-effective-scope ok?]
