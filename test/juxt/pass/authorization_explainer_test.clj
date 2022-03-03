@@ -30,6 +30,27 @@
 ;; We'll create a similar system here, using subjects/effects/resources and
 ;; scopes.
 
+(defn check-acls [db subject effect resource access-token-effective-scope rules]
+          (xt/q
+           db
+           {:find '[acl]
+            :where
+            '[
+             [acl ::site/type "ACL"]
+             [effect ::site/type "Effect"]
+             [acl ::pass/effect effect]
+
+             [effect ::pass/scope scope]
+             [(contains? access-token-effective-scope scope)]
+
+             (allowed? acl subject effect resource)]
+
+            :rules rules
+
+            :in '[subject effect resource access-token-effective-scope]}
+
+           subject effect resource access-token-effective-scope))
+
 (deftest user-dir-test
   (submit-and-await!
    [
@@ -81,32 +102,11 @@
            [(= user username)]
            ]]
 
-        check-acls
-        (fn [db subject effect resource access-token-effective-scope]
-          (xt/q
-           db
-           {:find '[acl]
-            :where
-            '[
-             [acl ::site/type "ACL"]
-             [effect ::site/type "Effect"]
-             [acl ::pass/effect effect]
-
-             [effect ::pass/scope scope]
-             [(contains? access-token-effective-scope scope)]
-
-             (allowed? acl subject effect resource)]
-
-            :rules rules
-
-            :in '[subject effect resource access-token-effective-scope]}
-
-           subject effect resource access-token-effective-scope))
 
         db (xt/db *xt-node*)]
 
     (are [subject effect resource access-token-effective-scope ok?]
-        (let [actual (check-acls db subject effect resource access-token-effective-scope)]
+        (let [actual (check-acls db subject effect resource access-token-effective-scope rules)]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can put a file to her user directory
