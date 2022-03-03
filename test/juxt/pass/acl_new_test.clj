@@ -606,8 +606,7 @@
 ((t/join-fixtures [with-xt with-handler])
  (fn []
    (submit-and-await!
-    [[::xt/put {:xt/id :foo}]
-
+    [
      [::xt/put
       {:xt/id "https://example.org/effects/put-user-dir-resource"
        ::site/type "Effect"
@@ -661,9 +660,9 @@
 
            :in [subject effect resource access-token-effective-scope]}
 
-         "https://example.org/people/alice"   ; subject
+         "https://example.org/people/alice"                  ; subject
          "https://example.org/effects/put-user-dir-resource" ; effect
-         "https://example.org/~alice/foo.txt" ; resource
+         "https://example.org/~alice/foo.txt"                ; resource
          #{"userdir:write"}
          )
 
