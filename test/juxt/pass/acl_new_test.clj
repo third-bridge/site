@@ -60,13 +60,13 @@
 
     ;; Some commands that are pre-registered.
     [::xt/put
-     {:xt/id "https://example.org/commands/create-user"
+     {:xt/id "https://example.org/effects/create-user"
       ::site/type "Effect"
       ::pass/scope "admin:write"
       ::pass/command-args [{}]}]
 
     [::xt/put
-     {:xt/id "https://example.org/commands/create-identity"
+     {:xt/id "https://example.org/effects/create-identity"
       ::site/type "Effect"
       ::pass/scope "admin:write"
       ::pass/command-args
@@ -84,16 +84,11 @@
          [::pass.malli/validate]]}]}]
 
     [::xt/put
-     {:xt/id "https://example.org/commands/put-resource"
-      ::site/type "Effect"
-      ::pass/command-args [{}]}]
-
-    [::xt/put
      {:xt/id "https://example.org/acls/sue-can-create-users"
       ::site/type "ACL"
       ::pass/subject "https://example.org/people/sue"
-      ::pass/command #{"https://example.org/commands/create-user"
-                       "https://example.org/commands/create-identity"}
+      ::pass/command #{"https://example.org/effects/create-user"
+                       "https://example.org/effects/create-identity"}
       ;; Is not constrained to a resource
       ::pass/resource nil #_"https://example.org/people/"
       }]
@@ -138,7 +133,8 @@
        ::pass/scope
        #{"read:index"
          "read:document" "write:document"
-         "read:directory-contents" "write:create-new-document"}}
+         "read:directory-contents" "write:create-new-document"
+         "userdir:write"}}
       (authz/make-oauth-client-doc {::site/base-uri "https://example.org"} "example-client"))]])
   (f))
 
@@ -255,269 +251,7 @@
 
 ;; As above but building up from a smaller seed.
 (deftest scenario-1-test
-  (let [db (xt/db *xt-node*)
-        ;; Access tokens for each sub/client pairing
-        access-tokens
-        {["sue" "admin-client"]
-         (acquire-access-token
-          "sue" "https://example.org/_site/apps/admin-client"
-          db nil)
 
-         ["sue" "admin-client" #{"limited"}]
-         (acquire-access-token
-          "sue" "https://example.org/_site/apps/admin-client"
-          db #{"limited"})
-
-         ["sue" "example-client"]
-         (acquire-access-token
-          "sue" "https://example.org/_site/apps/example-client"
-          db nil)
-
-         ["terry" "admin-client"]
-         (acquire-access-token
-          "terry" "https://example.org/_site/apps/admin-client"
-          db nil)}]
-
-    ;; Sue creates a new user, Alice
-
-    ;; Effects
-
-    ;; Each command is associated, many-to-one, with a required (single)
-    ;; scope. If an OpenAPI document defines an operation, that operation may
-    ;; involve multiple commands, and the security requirement might require
-    ;; multiple scopes. The security requirement of scopes may be implied
-    ;; (and may affect the publishing of the openapi.json such that authors
-    ;; don't need to concern themselves with declaring scope).
-
-    ;; A command such as 'https://example.org/commands/create-user' is registered in the database.
-
-    ;; Since commands are themselves part of the database, they can evolve over
-    ;; time (their behavior can be amended).
-
-    ;; Scopes are an access token concern. An access token references an
-    ;; application which references a particular API. Effects are therefore
-    ;; part of the domain to which an API belongs. A GraphQL endpoint is
-    ;; defined as part of an overall OpenAPI, which is the same group where
-    ;; scopes, commands and rulesets are defined.
-
-    ;; create-user is in the 'admin:write' scope.
-
-    ;; create-user is defined with a description that can be showed to users
-    ;; for the purposes of informed authorization.
-
-    ;; The 'create-user' command determines the applicable ACLs.
-
-    ;; Subjects are mapped to commands. Applications are mapped to scopes.
-
-    ;; Now to call 'create-user'
-    ;; First we test various combinations
-    (let [db (xt/db *xt-node*)
-          test-fn
-          (fn [db {:keys [uri expected error command access-token args] :as all-args}]
-            (assert access-token)
-            (try
-              (let [actual
-                    (apply
-                     authz/authorizing-put-fn
-                     db
-                     (new-request uri db access-token {})
-                     command args)]
-
-                (when (and expected (not= expected actual))
-                  (throw
-                   (ex-info
-                    "Unexpected result"
-                    {:expected expected
-                     :actual actual
-                     ::pass true})))
-
-                (when error
-                  (throw
-                   (ex-info
-                    "Expected to fail but didn't"
-                    {:all-args all-args
-                     ::pass true})))
-
-                actual)
-
-              (catch Exception e
-                (when (::pass (ex-data e)) (throw e))
-                (when-not (= (.getMessage e) error)
-                  (throw
-                   (ex-info
-                    "Failed but with an unexpected error message"
-                    {:expected-error error
-                     :actual-error (.getMessage e)}
-                    e))))))]
-
-      ;; This is the happy case, Sue attempts to create a new user, Alice
-      (test-fn
-       db
-       {:command "https://example.org/commands/create-user"
-        :args [{:xt/id "https://example.org/people/alice"}]
-        :access-token (get access-tokens ["sue" "admin-client"])
-        :expected [[:xtdb.api/put
-                    {:xt/id "https://example.org/people/alice",
-                     :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]})
-
-      ;; Sue's permission to call create-user is not constrained by a
-      ;; resource, there is no error if we set one.
-      (test-fn
-       db
-       {:command "https://example.org/commands/create-user"
-        :args [{:xt/id "https://example.org/people/alice"}]
-        :access-token (get access-tokens ["sue" "admin-client"])
-        :uri "https://example.org/other/"})
-
-      ;; She can't use the example client to create users
-      (test-fn
-       db
-       {:command "https://example.org/commands/create-user"
-        :args [{:xt/id "https://example.org/people/alice"}]
-        :access-token (get access-tokens ["sue" "example-client"])
-        :error "Effect 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
-
-      ;; She can't use these privileges to call a different command
-      (test-fn
-       db
-       {:command "https://example.org/commands/create-superuser"
-        :args [{:xt/id "https://example.org/people/alice"}]
-        :access-token (get access-tokens ["sue" "admin-client"])
-        :error "No such command: https://example.org/commands/create-superuser"})
-
-      ;; Neither can she used an access-token where she hasn't granted enough scope
-      (test-fn
-       db
-       {:command "https://example.org/commands/create-user"
-        :args [{:xt/id "https://example.org/people/alice"}]
-        :access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
-        :error "Effect 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
-
-      ;; Terry should not be able to create-users, even with the admin-client
-      (test-fn
-       db
-       {:command "https://example.org/commands/create-user"
-        :args [{:xt/id "https://example.org/people/alice"}]
-        :access-token (get access-tokens ["terry" "admin-client"])
-        :error "Effect 'https://example.org/commands/create-user' denied as no ACLs found that approve it."})
-
-      ;; In a GraphQL mutation, there will be no resource. Arguably, ACLs
-      ;; should not be tied to a resource.
-
-      ;; The commands should be agnostic about whether they are called from
-      ;; OpenAPI or GraphQL.
-
-      ;; A GraphQL mutation to create a user would still create the web
-      ;; resource at a given location.
-
-      ;; Perhaps GraphQL mutations must always provide the ID of the 'new'
-      ;; resource, and perhaps also the ID of the 'parent' resource?
-
-      ;; Most, if not all, actions will require the caller to provide the
-      ;; document, which in some cases will contain the :xt/id, which will
-      ;; become the URI of the resource. Perhaps the command or ACL should
-      ;; qualify what kinds of documents are allowed?
-
-      ;; create-user should accept a map.
-      ;; It should ensure the map is valid (according to clojure.spec, Malli or JSON Schema?)
-
-      ;; create identity may specify its own id
-      ;; must provide :juxt.pass.jwt/iss and :juxt.pass.jwt/sub
-      ;; may provide anything else, but not in ::site or ::pass namespaces
-      ;; ::pass/subject must be provided
-      ;; ::pass/ruleset is inherited
-      ;; An identity may have to be created 'under' the person record.
-
-
-      ;; Now we do the official request which mutates the database
-      ;; This is the 'official' way to avoid race-conditions.
-      (let [req (new-request
-                 "https://example.org/people/"
-                 (xt/db *xt-node*)
-                 (get access-tokens ["sue" "admin-client"])
-                 {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
-        (authorizing-put!
-         req
-         ;; The request body would be transformed into this new doc
-         ["https://example.org/commands/create-user" (:request-body-doc req)]
-         ;; TODO: Alice will need an identity
-         ;; TODO: We need to create some ACLs for this user, ideally in the same tx
-         )
-        )
-
-      (let [db (xt/db *xt-node*)]
-        (expect
-         (xt/entity db "https://example.org/people/alice")
-         #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
-                :xt/id "https://example.org/people/alice"}))
-
-        ;; Now Alice wants to create a document under https://example.org/~alice/
-        ;; Let's check that she can.
-
-
-        ;; Sue will need to create an ACL for her
-
-        #_(let [access-token (acquire-access-token "alice" "example-client" db)
-                db (xt/db *xt-node*)]
-            (xt/entity db access-token)
-            #_(test-fn
-               db
-               {:uri "https://example.org/people/"
-                :access-token access-token
-                :command "https://example.org/commands/put-resource"
-                :expected []})))
-
-      ;; OK, let's create an identity for Alice!
-      (let [db (xt/db *xt-node*)
-
-            req (new-request
-                 "https://example.org/people/"
-                 (xt/db *xt-node*)
-                 (get access-tokens ["sue" "admin-client"])
-                 {})]
-
-        (authorizing-put!
-         req
-         ;; The request body would be transformed into this new doc
-         ["https://example.org/commands/create-identity"
-          {:xt/id "https://example.org/people/sue/identities/example"
-           :juxt.pass.jwt/iss "https://example.org"
-           :juxt.pass.jwt/sub "alice"
-           ::pass/subject "https://example.org/people/alice"
-           }]
-         ;; TODO: Alice will need an identity
-         ;; TODO: We need to create some ACLs for this user, ideally in the same tx
-         )
-        )
-
-
-      #_(let [
-              id-doc
-              {:xt/id "https://example.org/people/sue/identities/example"
-               :juxt.pass.jwt/iss "https://example.org"
-               :juxt.pass.jwt/sub "alice"
-               ::pass/subject "https://example.org/people/alice"
-               }]
-          (test-fn
-           db
-           {:command "https://example.org/commands/create-identity"
-            :access-token (get access-tokens ["sue" "admin-client"])
-            :args [id-doc]
-            }))
-
-      ;; Alice can now log in
-      (let
-          [db (xt/db *xt-node*)
-           alice-token (acquire-access-token "alice" "https://example.org/_site/apps/example-client" db nil)
-           db (xt/db *xt-node*)]
-
-          (is alice-token)
-          #_(test-fn
-           db
-           {:uri "https://example.org/~alice/"
-            :access-token alice-token
-            :command "https://example.org/commands/put-resource"
-            :args [{}]}))))
 
   ;; Notes:
 
@@ -550,7 +284,296 @@
 
   )
 
-#_((t/join-fixtures [with-xt with-handler with-scenario])
+((t/join-fixtures [with-xt with-handler with-scenario])
+ (fn []
+   (let [db (xt/db *xt-node*)
+         ;; Access tokens for each sub/client pairing
+         access-tokens
+         {["sue" "admin-client"]
+          (acquire-access-token
+           "sue" "https://example.org/_site/apps/admin-client"
+           db)
+
+          ["sue" "admin-client" #{"limited"}]
+          (acquire-access-token
+           "sue" "https://example.org/_site/apps/admin-client"
+           db #{"limited"})
+
+          ["sue" "example-client"]
+          (acquire-access-token
+           "sue" "https://example.org/_site/apps/example-client"
+           db)
+
+          ["terry" "admin-client"]
+          (acquire-access-token
+           "terry" "https://example.org/_site/apps/admin-client"
+           db)}]
+
+     ;; Sue creates a new user, Alice
+
+     ;; Effects
+
+     ;; Each command is associated, many-to-one, with a required (single)
+     ;; scope. If an OpenAPI document defines an operation, that operation may
+     ;; involve multiple effects, and the security requirement might require
+     ;; multiple scopes. The security requirement of scopes may be implied
+     ;; (and may affect the publishing of the openapi.json such that authors
+     ;; don't need to concern themselves with declaring scope).
+
+     ;; A command such as 'https://example.org/effects/create-user' is registered in the database.
+
+     ;; Since effects are themselves defined and stored in the database, they
+     ;; can evolve over time (their behavior can be amended).
+
+     ;; Scopes are an access token concern. An access token references an
+     ;; application which references a particular API. Effects are therefore
+     ;; part of the domain to which an API belongs. A GraphQL endpoint is
+     ;; defined as part of an overall OpenAPI, which is the same group where
+     ;; scopes, effects and rulesets are defined.
+
+     ;; create-user is in the 'admin:write' scope.
+
+     ;; create-user is defined with a description that can be showed to users
+     ;; for the purposes of informed authorization.
+
+     ;; The 'create-user' command determines the applicable ACLs.
+
+     ;; Subjects are mapped to effects. Applications are mapped to scopes.
+
+     ;; Now to call 'create-user'
+     ;; First we test various combinations
+     (let [db (xt/db *xt-node*)
+           test-fn
+           (fn [db {:keys [uri expected error command access-token args] :as all-args}]
+             (assert access-token)
+             (try
+               (let [actual
+                     (apply
+                      authz/authorizing-put-fn
+                      db
+                      (new-request uri db access-token {})
+                      command args)]
+
+                 (when (and expected (not= expected actual))
+                   (throw
+                    (ex-info
+                     "Unexpected result"
+                     {:expected expected
+                      :actual actual
+                      ::pass true})))
+
+                 (when error
+                   (throw
+                    (ex-info
+                     "Expected to fail but didn't"
+                     {:all-args all-args
+                      ::pass true})))
+
+                 actual)
+
+               (catch Exception e
+                 (when (::pass (ex-data e)) (throw e))
+                 (when-not (= (.getMessage e) error)
+                   (throw
+                    (ex-info
+                     "Failed but with an unexpected error message"
+                     {:expected-error error
+                      :actual-error (.getMessage e)}
+                     e))))))]
+
+       ;; This is the happy case, Sue attempts to create a new user, Alice
+       (test-fn
+        db
+        {:command "https://example.org/effects/create-user"
+         :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["sue" "admin-client"])
+         :expected [[:xtdb.api/put
+                     {:xt/id "https://example.org/people/alice",
+                      :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]]})
+
+       ;; Sue's permission to call create-user is not constrained by a
+       ;; resource, there is no error if we set one.
+       (test-fn
+        db
+        {:command "https://example.org/effects/create-user"
+         :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["sue" "admin-client"])
+         :uri "https://example.org/other/"})
+
+       ;; She can't use the example client to create users
+       (test-fn
+        db
+        {:command "https://example.org/effects/create-user"
+         :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["sue" "example-client"])
+         :error "Effect 'https://example.org/effects/create-user' denied as no ACLs found that approve it."})
+
+       ;; She can't use these privileges to call a different command
+       (test-fn
+        db
+        {:command "https://example.org/effects/create-superuser"
+         :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["sue" "admin-client"])
+         :error "No such command: https://example.org/effects/create-superuser"})
+
+       ;; Neither can she used an access-token where she hasn't granted enough scope
+       (test-fn
+        db
+        {:command "https://example.org/effects/create-user"
+         :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
+         :error "Effect 'https://example.org/effects/create-user' denied as no ACLs found that approve it."})
+
+       ;; Terry should not be able to create-users, even with the admin-client
+       (test-fn
+        db
+        {:command "https://example.org/effects/create-user"
+         :args [{:xt/id "https://example.org/people/alice"}]
+         :access-token (get access-tokens ["terry" "admin-client"])
+         :error "Effect 'https://example.org/effects/create-user' denied as no ACLs found that approve it."})
+
+       ;; In a GraphQL mutation, there will be no resource. Arguably, ACLs
+       ;; should not be tied to a resource.
+
+       ;; The effects should be agnostic about whether they are called from
+       ;; OpenAPI or GraphQL.
+
+       ;; A GraphQL mutation to create a user would still create the web
+       ;; resource at a given location.
+
+       ;; Perhaps GraphQL mutations must always provide the ID of the 'new'
+       ;; resource, and perhaps also the ID of the 'parent' resource?
+
+       ;; Most, if not all, actions will require the caller to provide the
+       ;; document, which in some cases will contain the :xt/id, which will
+       ;; become the URI of the resource. Perhaps the command or ACL should
+       ;; qualify what kinds of documents are allowed?
+
+       ;; create-user should accept a map.
+       ;; It should ensure the map is valid (according to clojure.spec, Malli or JSON Schema?)
+
+       ;; create identity may specify its own id
+       ;; must provide :juxt.pass.jwt/iss and :juxt.pass.jwt/sub
+       ;; may provide anything else, but not in ::site or ::pass namespaces
+       ;; ::pass/subject must be provided
+       ;; ::pass/ruleset is inherited
+       ;; An identity may have to be created 'under' the person record.
+
+
+       ;; Now we do the official request which mutates the database
+       ;; This is the 'official' way to avoid race-conditions.
+       (let [req (new-request
+                  "https://example.org/people/"
+                  (xt/db *xt-node*)
+                  (get access-tokens ["sue" "admin-client"])
+                  {:request-body-doc {:xt/id "https://example.org/people/alice"}})]
+         (authorizing-put!
+          req
+          ;; The request body would be transformed into this new doc
+          ["https://example.org/effects/create-user" (:request-body-doc req)]
+          ;; TODO: Alice will need an identity
+          ;; TODO: We need to create some ACLs for this user, ideally in the same tx
+          )
+         )
+
+       (let [db (xt/db *xt-node*)]
+         (expect
+          (xt/entity db "https://example.org/people/alice")
+          #(= % {:juxt.pass.alpha/ruleset "https://example.org/ruleset",
+                 :xt/id "https://example.org/people/alice"}))
+
+         ;; Now Alice wants to create a document under https://example.org/~alice/
+         ;; Let's check that she can.
+
+
+         ;; Sue will need to create an ACL for her
+
+         #_(let [access-token (acquire-access-token "alice" "example-client" db)
+                 db (xt/db *xt-node*)]
+             (xt/entity db access-token)
+             #_(test-fn
+                db
+                {:uri "https://example.org/people/"
+                 :access-token access-token
+                 :command "https://example.org/effects/put-resource"
+                 :expected []})))
+
+       ;; OK, let's create an identity for Alice!
+       (let [db (xt/db *xt-node*)
+
+             req (new-request
+                  "https://example.org/people/"
+                  (xt/db *xt-node*)
+                  (get access-tokens ["sue" "admin-client"])
+                  {})]
+
+         (authorizing-put!
+          req
+          ;; The request body would be transformed into this new doc
+          ["https://example.org/effects/create-identity"
+           {:xt/id "https://example.org/people/sue/identities/example"
+            :juxt.pass.jwt/iss "https://example.org"
+            :juxt.pass.jwt/sub "alice"
+            ::pass/subject "https://example.org/people/alice"
+            }]
+          ;; TODO: Alice will need an identity
+          ;; TODO: We need to create some ACLs for this user, ideally in the same tx
+          )
+         )
+
+
+       #_(let [
+               id-doc
+               {:xt/id "https://example.org/people/sue/identities/example"
+                :juxt.pass.jwt/iss "https://example.org"
+                :juxt.pass.jwt/sub "alice"
+                ::pass/subject "https://example.org/people/alice"
+                }]
+           (test-fn
+            db
+            {:command "https://example.org/effects/create-identity"
+             :access-token (get access-tokens ["sue" "admin-client"])
+             :args [id-doc]
+             }))
+
+       ;; Alice can now log in
+       (let
+           [db (xt/db *xt-node*)
+            _ (xt/submit-tx *xt-node*
+                            [[::xt/put
+                              {:xt/id "https://example.org/effects/put-user-dir-resource"
+                               ::site/type "Effect"
+                               ::pass/scope "userdir:write"
+                               ::pass/command-args [{}]}]
+
+                             [::xt/put
+                              {:xt/id "https://example.org/acls/alice-can-create-user-dir-content"
+                               ::site/type "ACL"
+                               ::pass/subject "https://example.org/people/alice"
+                               ::pass/command #{"https://example.org/effects/put-user-dir-resource"}
+                               ;; Is not constrained to a resource
+                               ::pass/resource nil #_"https://example.org/people/"
+                               }]])
+            alice-token (acquire-access-token "alice" "https://example.org/_site/apps/example-client" db)
+            db (xt/db *xt-node*)]
+
+           (is alice-token)
+
+           (test-fn
+            db
+            {:uri "https://example.org/~alice/"
+             :access-token alice-token
+             :command "https://example.org/effects/put-user-dir-resource"
+             :args [{}]})
+
+           #_(test-fn
+              db
+              {:uri "https://example.org/index.html"
+               :access-token alice-token
+               :command "https://example.org/effects/put-user-dir-resource"
+               :args [{}]
+               :error "foo"}))))
+   )
  )
 
 
