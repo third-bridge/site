@@ -98,13 +98,13 @@
 (defn check-acls
   [db {::site/keys [uri]
        ::pass/keys [subject ruleset access-token-effective-scope]}
-   command]
+   effect]
 
   (assert db)
   (assert subject)
   (assert (string? subject))
   (assert (string? ruleset))
-  (assert (string? command))
+  (assert (string? effect))
 
   (let [rules (rules db ruleset)]
 
@@ -114,21 +114,21 @@
              :where '[
                       ;; Site enforced
                       [acl ::site/type "ACL"]
-                      [acl ::pass/command command]
+                      [acl ::pass/effect effect]
 
-                      [command ::site/type "Effect"]
+                      [effect ::site/type "Effect"]
 
                       ;; Scope
-                      [command ::pass/scope scope]
+                      [effect ::pass/scope scope]
                       [(contains? access-token-effective-scope scope)]
 
                       ;; Custom
                       (acl-applies-to-subject? acl subject)
                       (acl-applies-to-resource? acl resource)]
              :rules rules
-             :in '[subject command resource access-token-effective-scope]}]
+             :in '[subject effect resource access-token-effective-scope]}]
         (seq (map first (xt/q db query
-                              subject command uri access-token-effective-scope)))))))
+                              subject effect uri access-token-effective-scope)))))))
 
 (defmulti apply-processor (fn [processor m arg-def] (first processor)))
 
@@ -155,32 +155,32 @@
    arg
    (::pass/process arg-def)))
 
-(defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} command-id & args]
+(defn authorizing-put-fn [db {::pass/keys [ruleset] :as auth} effect-id & args]
   (assert ruleset)
 
   (try
-    (let [acls (check-acls db auth command-id)
-          command (xt/entity db command-id)
+    (let [acls (check-acls db auth effect-id)
+          effect (xt/entity db effect-id)
 
-          _ (when-not command
+          _ (when-not effect
               (throw
                (ex-info
-                (format "No such command: %s" command-id)
-                {:command command-id})))
+                (format "No such effect: %s" effect-id)
+                {:effect effect-id})))
 
-          command-args (::pass/command-args command)]
+          effect-args (::pass/effect-args effect)]
 
-      (when (not= (count args) (count command-args))
+      (when (not= (count args) (count effect-args))
         (throw
          (ex-info
-          (format "Arity error on command: %s" command-id)
-          {:command command-id
+          (format "Arity error on effect: %s" effect-id)
+          {:effect effect-id
            :args-given (count args)
-           :args-expected (count command-args)})))
+           :args-expected (count effect-args)})))
 
       (when (nil? acls)
-        (let [msg (format "Effect '%s' denied as no ACLs found that approve it." command-id)]
-          ;; Depending on the command, we may want to log and alert
+        (let [msg (format "Effect '%s' denied as no ACLs found that approve it." effect-id)]
+          ;; Depending on the effect, we may want to log and alert
           (when false (log/warnf msg))
           ;; TODO: Run some diagnostics to determine the reason
           (throw (ex-info msg {}))))
@@ -203,7 +203,7 @@
                    (::pass/process arg-def) (process-arg arg-def)
                    )])
               args
-              command-args)
+              effect-args)
         []))
 
     (catch Throwable e

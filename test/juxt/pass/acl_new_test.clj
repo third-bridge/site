@@ -58,18 +58,18 @@
       ::pass/subject "https://example.org/people/terry"
       ::pass/ruleset "https://example.org/ruleset"}]
 
-    ;; Some commands that are pre-registered.
+    ;; Some effects that are pre-registered.
     [::xt/put
      {:xt/id "https://example.org/effects/create-user"
       ::site/type "Effect"
       ::pass/scope "admin:write"
-      ::pass/command-args [{}]}]
+      ::pass/effect-args [{}]}]
 
     [::xt/put
      {:xt/id "https://example.org/effects/create-identity"
       ::site/type "Effect"
       ::pass/scope "admin:write"
-      ::pass/command-args
+      ::pass/effect-args
       [{::pass.malli/schema
         [:map
          [:juxt.pass.jwt/iss [:re "https://.*"]]
@@ -87,7 +87,7 @@
      {:xt/id "https://example.org/acls/sue-can-create-users"
       ::site/type "ACL"
       ::pass/subject "https://example.org/people/sue"
-      ::pass/command #{"https://example.org/effects/create-user"
+      ::pass/effect #{"https://example.org/effects/create-user"
                        "https://example.org/effects/create-identity"}
       ;; Is not constrained to a resource
       ::pass/resource nil #_"https://example.org/people/"
@@ -112,9 +112,9 @@
 
     [::xt/put
      {:xt/id ::pass/authorizing-put
-      :xt/fn '(fn [ctx auth command args]
+      :xt/fn '(fn [ctx auth effect args]
                 (let [db (xtdb.api/db ctx)]
-                  (apply juxt.pass.alpha.authorization-2/authorizing-put-fn db auth command args)))}]
+                  (apply juxt.pass.alpha.authorization-2/authorizing-put-fn db auth effect args)))}]
 
     [::xt/put
      (into
@@ -208,7 +208,7 @@
     (authorize-request req access-token-id)))
 
 (defn authorizing-put! [req
-                        & command-calls]
+                        & effect-calls]
 
   (let [
         ;; We construct an authentication/authorization 'context' from the
@@ -231,9 +231,9 @@
         tx (xt/submit-tx
             *xt-node*
             (mapv
-             (fn [[command & args]]
-               [:xtdb.api/fn ::pass/authorizing-put auth command args])
-             command-calls))
+             (fn [[effect & args]]
+               [:xtdb.api/fn ::pass/authorizing-put auth effect args])
+             effect-calls))
         tx (xt/await-tx *xt-node* tx)]
 
     ;; Currently due to https://github.com/xtdb/xtdb/issues/1672 the only way of
@@ -244,7 +244,7 @@
        (ex-info
         "Failed to commit, check logs"
         {:auth auth
-         :command-calls command-calls
+         :effect-calls effect-calls
          })))))
 
 (t/use-fixtures :each with-xt with-handler with-scenario)
@@ -270,13 +270,13 @@
   ;; it), could we have both call an underlying 'Site DSL' which integrates
   ;; scope-based authorization?
 
-  ;; Consider a 'create-user' command. Might these be the events that jms
-  ;; likes to talk about? A command is akin to set of GraphQL mutations,
+  ;; Consider a 'create-user' effect. Might these be the events that jms
+  ;; likes to talk about? A effect is akin to set of GraphQL mutations,
   ;; often one per request.
 
   ;; Effects can cause mutations and also side-effects.
 
-  ;; Consider a command: create-user - a command can be protected by a scope,
+  ;; Consider a effect: create-user - a effect can be protected by a scope,
   ;; e.g. write:admin
 
   ;; Effects must just be EDN.
@@ -313,14 +313,14 @@
 
      ;; Effects
 
-     ;; Each command is associated, many-to-one, with a required (single)
+     ;; Each effect is associated, many-to-one, with a required (single)
      ;; scope. If an OpenAPI document defines an operation, that operation may
      ;; involve multiple effects, and the security requirement might require
      ;; multiple scopes. The security requirement of scopes may be implied
      ;; (and may affect the publishing of the openapi.json such that authors
      ;; don't need to concern themselves with declaring scope).
 
-     ;; A command such as 'https://example.org/effects/create-user' is registered in the database.
+     ;; A effect such as 'https://example.org/effects/create-user' is registered in the database.
 
      ;; Since effects are themselves defined and stored in the database, they
      ;; can evolve over time (their behavior can be amended).
@@ -336,7 +336,7 @@
      ;; create-user is defined with a description that can be showed to users
      ;; for the purposes of informed authorization.
 
-     ;; The 'create-user' command determines the applicable ACLs.
+     ;; The 'create-user' effect determines the applicable ACLs.
 
      ;; Subjects are mapped to effects. Applications are mapped to scopes.
 
@@ -344,7 +344,7 @@
      ;; First we test various combinations
      (let [db (xt/db *xt-node*)
            test-fn
-           (fn [db {:keys [uri expected error command access-token args] :as all-args}]
+           (fn [db {:keys [uri expected error effect access-token args] :as all-args}]
              (assert access-token)
              (try
                (let [actual
@@ -352,7 +352,7 @@
                       authz/authorizing-put-fn
                       db
                       (new-request uri db access-token {})
-                      command args)]
+                      effect args)]
 
                  (when (and expected (not= expected actual))
                    (throw
@@ -384,7 +384,7 @@
        ;; This is the happy case, Sue attempts to create a new user, Alice
        (test-fn
         db
-        {:command "https://example.org/effects/create-user"
+        {:effect "https://example.org/effects/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
          :access-token (get access-tokens ["sue" "admin-client"])
          :expected [[:xtdb.api/put
@@ -395,7 +395,7 @@
        ;; resource, there is no error if we set one.
        (test-fn
         db
-        {:command "https://example.org/effects/create-user"
+        {:effect "https://example.org/effects/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
          :access-token (get access-tokens ["sue" "admin-client"])
          :uri "https://example.org/other/"})
@@ -403,23 +403,23 @@
        ;; She can't use the example client to create users
        (test-fn
         db
-        {:command "https://example.org/effects/create-user"
+        {:effect "https://example.org/effects/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
          :access-token (get access-tokens ["sue" "example-client"])
          :error "Effect 'https://example.org/effects/create-user' denied as no ACLs found that approve it."})
 
-       ;; She can't use these privileges to call a different command
+       ;; She can't use these privileges to call a different effect
        (test-fn
         db
-        {:command "https://example.org/effects/create-superuser"
+        {:effect "https://example.org/effects/create-superuser"
          :args [{:xt/id "https://example.org/people/alice"}]
          :access-token (get access-tokens ["sue" "admin-client"])
-         :error "No such command: https://example.org/effects/create-superuser"})
+         :error "No such effect: https://example.org/effects/create-superuser"})
 
        ;; Neither can she used an access-token where she hasn't granted enough scope
        (test-fn
         db
-        {:command "https://example.org/effects/create-user"
+        {:effect "https://example.org/effects/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
          :access-token (get access-tokens ["sue" "admin-client" #{"limited"}])
          :error "Effect 'https://example.org/effects/create-user' denied as no ACLs found that approve it."})
@@ -427,7 +427,7 @@
        ;; Terry should not be able to create-users, even with the admin-client
        (test-fn
         db
-        {:command "https://example.org/effects/create-user"
+        {:effect "https://example.org/effects/create-user"
          :args [{:xt/id "https://example.org/people/alice"}]
          :access-token (get access-tokens ["terry" "admin-client"])
          :error "Effect 'https://example.org/effects/create-user' denied as no ACLs found that approve it."})
@@ -446,7 +446,7 @@
 
        ;; Most, if not all, actions will require the caller to provide the
        ;; document, which in some cases will contain the :xt/id, which will
-       ;; become the URI of the resource. Perhaps the command or ACL should
+       ;; become the URI of the resource. Perhaps the effect or ACL should
        ;; qualify what kinds of documents are allowed?
 
        ;; create-user should accept a map.
@@ -495,7 +495,7 @@
                 db
                 {:uri "https://example.org/people/"
                  :access-token access-token
-                 :command "https://example.org/effects/put-resource"
+                 :effect "https://example.org/effects/put-resource"
                  :expected []})))
 
        ;; OK, let's create an identity for Alice!
@@ -531,7 +531,7 @@
                 }]
            (test-fn
             db
-            {:command "https://example.org/effects/create-identity"
+            {:effect "https://example.org/effects/create-identity"
              :access-token (get access-tokens ["sue" "admin-client"])
              :args [id-doc]
              }))
@@ -544,13 +544,13 @@
                               {:xt/id "https://example.org/effects/put-user-dir-resource"
                                ::site/type "Effect"
                                ::pass/scope "userdir:write"
-                               ::pass/command-args [{}]}]
+                               ::pass/effect-args [{}]}]
 
                              [::xt/put
                               {:xt/id "https://example.org/acls/alice-can-create-user-dir-content"
                                ::site/type "ACL"
                                ::pass/subject "https://example.org/people/alice"
-                               ::pass/command #{"https://example.org/effects/put-user-dir-resource"}
+                               ::pass/effect #{"https://example.org/effects/put-user-dir-resource"}
                                ;; Is not constrained to a resource
                                ::pass/resource nil #_"https://example.org/people/"
                                }]])
@@ -563,14 +563,14 @@
             db
             {:uri "https://example.org/~alice/"
              :access-token alice-token
-             :command "https://example.org/effects/put-user-dir-resource"
+             :effect "https://example.org/effects/put-user-dir-resource"
              :args [{}]})
 
            #_(test-fn
               db
               {:uri "https://example.org/index.html"
                :access-token alice-token
-               :command "https://example.org/effects/put-user-dir-resource"
+               :effect "https://example.org/effects/put-user-dir-resource"
                :args [{}]
                :error "foo"}))))
    )
