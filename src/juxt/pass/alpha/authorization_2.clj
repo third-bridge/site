@@ -114,9 +114,8 @@
              :where '[
                       ;; Site enforced
                       [acl ::site/type "ACL"]
-                      [acl ::pass/effect effect]
-
                       [effect ::site/type "Effect"]
+                      [acl ::pass/effect effect]
 
                       ;; Scope
                       [effect ::pass/scope scope]
