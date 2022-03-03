@@ -575,7 +575,7 @@
              :effect "https://example.org/effects/put-user-dir-resource"
              :args [{}]})
 
-           #_(test-fn
+           (test-fn
               db
               {:uri "https://example.org/index.html"
                :access-token alice-token
@@ -599,3 +599,79 @@
 #_(m/validate
  [:map [:juxt.pass.jwt/iss [:re "https://.*"]]]
  {:juxt.pass.jwt/iss "https://foo"})
+
+
+
+
+((t/join-fixtures [with-xt with-handler])
+ (fn []
+   (submit-and-await!
+    [[::xt/put {:xt/id :foo}]
+
+     [::xt/put
+      {:xt/id "https://example.org/effects/put-user-dir-resource"
+       ::site/type "Effect"
+       ::pass/scope "userdir:write"
+       ::pass/resource-matches #"https://example.org/~([a-z]+)/.+"
+       ::pass/effect-args [{}]}]
+
+     [:xtdb.api/put
+      {:xt/id "https://example.org/people/alice",
+       ::site/type "User"
+       ::username "alice"
+       :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]
+
+     [:xtdb.api/put
+      {:xt/id "https://example.org/people/bob",
+       ::site/type "User"
+       ::username "bob"
+       :juxt.pass.alpha/ruleset "https://example.org/ruleset"}]
+
+     [::xt/put
+      {:xt/id "https://example.org/acls/alice-can-create-user-dir-content"
+       ::site/type "ACL"
+       ::pass/subject "https://example.org/people/alice"
+       ::pass/effect #{"https://example.org/effects/put-user-dir-resource"}
+       ;; Is not constrained to a resource
+       ::pass/resource nil #_"https://example.org/people/"
+       }]])
+
+   ;; Turn this into a rule
+   (xt/q (xt/db *xt-node*)
+         '{:find [acl effect]
+           :where
+           [
+            [acl ::site/type "ACL"]
+            [effect ::site/type "Effect"]
+            [acl ::pass/effect effect]
+
+            [effect ::pass/scope scope]
+            [(contains? access-token-effective-scope scope)]
+
+            (allowed? acl subject effect resource)]
+
+           :rules [
+                   [(allowed? acl subject effect resource)
+                    [acl ::pass/subject subject]
+                    [effect ::pass/resource-matches pattern]
+                    [subject ::username username]
+                    [(re-matches pattern resource) [_ user]]
+                    [(= user username)]
+                    ]]
+
+           :in [subject effect resource access-token-effective-scope]}
+
+         "https://example.org/people/alice"   ; subject
+         "https://example.org/effects/put-user-dir-resource" ; effect
+         "https://example.org/~alice/foo.txt" ; resource
+         #{"userdir:write"}
+         )
+
+   ))
+
+
+;; Conclusion: the determining domain-provide rule has to take the following parameters:
+;; subject resource effect ACL
+
+;; Only effects that are within scope are considered
+;; An ACL must apply to an effect
