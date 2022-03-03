@@ -30,7 +30,7 @@
 ;; We'll create a similar system here, using subjects/effects/resources and
 ;; scopes.
 
-(deftest warmup-test
+(deftest user-dir-test
   (submit-and-await!
    [
     [:xtdb.api/put
