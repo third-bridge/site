@@ -70,33 +70,36 @@
       ::pass/effect #{"https://example.org/effects/put-user-dir"}
       ::pass/resource nil}]])
 
-  (let [check-acls
+  (let [rules
+        '[
+          [(allowed? acl subject effect resource)
+           [acl ::pass/subject subject]
+           [effect ::pass/resource-matches resource-regex]
+           [subject ::username username]
+           [(re-pattern resource-regex) resource-pattern]
+           [(re-matches resource-pattern resource) [_ user]]
+           [(= user username)]
+           ]]
+
+        check-acls
         (fn [db subject effect resource access-token-effective-scope]
           (xt/q
            db
-           '{:find [acl]
-             :where
-             [
-              [acl ::site/type "ACL"]
-              [effect ::site/type "Effect"]
-              [acl ::pass/effect effect]
+           {:find '[acl]
+            :where
+            '[
+             [acl ::site/type "ACL"]
+             [effect ::site/type "Effect"]
+             [acl ::pass/effect effect]
 
-              [effect ::pass/scope scope]
-              [(contains? access-token-effective-scope scope)]
+             [effect ::pass/scope scope]
+             [(contains? access-token-effective-scope scope)]
 
-              (allowed? acl subject effect resource)]
+             (allowed? acl subject effect resource)]
 
-             :rules [
-                     [(allowed? acl subject effect resource)
-                      [acl ::pass/subject subject]
-                      [effect ::pass/resource-matches resource-regex]
-                      [subject ::username username]
-                      [(re-pattern resource-regex) resource-pattern]
-                      [(re-matches resource-pattern resource) [_ user]]
-                      [(= user username)]
-                      ]]
+            :rules rules
 
-             :in [subject effect resource access-token-effective-scope]}
+            :in '[subject effect resource access-token-effective-scope]}
 
            subject effect resource access-token-effective-scope))
 
