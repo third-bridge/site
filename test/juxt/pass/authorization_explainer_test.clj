@@ -16,8 +16,8 @@
 ;; authorization works in Site.
 
 ;; In Site's authorization system, a subject might cause an action on a resource
-;; (which would change it in some way). The authorization system must first
-;; check that the subject (user) is allowed to cause a given action on the
+;; (which might cause it to change in some way). The authorization system must
+;; first check that the subject (user) is allowed to cause a given action on the
 ;; resource.
 
 ;; A long time ago, web servers supported 'user directories'. If you had an
@@ -271,7 +271,7 @@
       #{["https://example.org/~alice/shared.txt"]
         ["https://example.org/~alice/private.txt"]}
 
-      ;; Bob can only see the file he's been shared by Alice.
+      ;; Bob can only see the file Alice has shared with him.
       "https://example.org/people/bob"
       #{"https://example.org/actions/read-user-dir"
         "https://example.org/actions/read-shared"}
@@ -279,9 +279,11 @@
       #{["https://example.org/~alice/shared.txt"]})
 
     ;; TODO
-    ;; Next up. Sharing itself. Is Alice allowed to share her files?
+    ;; Next up. Sharing itself. Is Alice even permitted to share her files?
     ;; read-only, read/write
 
 
+    ;; TODO
+    ;; Consent. Alice consents that her file be read but only for certain purposes
 
     ))
