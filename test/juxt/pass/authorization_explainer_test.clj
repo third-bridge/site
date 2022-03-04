@@ -41,6 +41,7 @@
       [effect ::site/type "Effect"]
       [acl ::pass/effect effect]
 
+      ;; TODO: Hey, if we're passing in an effect, this can be done in advance.
       [effect ::pass/scope scope]
       [(contains? access-token-effective-scope scope)]
 
@@ -51,6 +52,25 @@
     :in '[subject effect resource access-token-effective-scope]}
 
    subject effect resource access-token-effective-scope))
+
+(defn allowed-resources
+  [db subject effect rules]
+  (xt/q
+   db
+   {:find '[resource]
+    :where
+    '[
+      [acl ::site/type "ACL"]
+      [effect ::site/type "Effect"]
+      [acl ::pass/effect effect]
+
+      (allowed? acl subject effect resource)]
+
+    :rules rules
+
+    :in '[subject effect]}
+
+   subject effect))
 
 (def ALICE
   {:xt/id "https://example.org/people/alice",
@@ -142,6 +162,7 @@
      [effect :xt/id "https://example.org/effects/read-user-dir"]
      [effect ::pass/resource-matches resource-regex]
      [subject ::username username]
+     [resource ::site/type "Resource"]
      [(re-pattern resource-regex) resource-pattern]
      [(re-matches resource-pattern resource) [_ user]]
      [(= user username)]]])
@@ -154,7 +175,6 @@
 
 ;; TODO: Rename ACL to permission ?
 ;; TODO: Rename effect to action ?
-;; TODO: Create an effect that allows us to list all files matching some criteria
 
 (deftest user-dir-test
   (submit-and-await!
@@ -249,4 +269,12 @@
       "https://example.org/people/carl"
       "https://example.org/effects/write-user-dir"
       "https://example.org/~carl/foo.txt"
-      #{"userdir:write"} false)))
+      #{"userdir:write"} false)
+
+    (is (= #{["https://example.org/~alice/shared.txt"]
+             ["https://example.org/~alice/private.txt"]}
+           (allowed-resources
+            db
+            "https://example.org/people/alice"
+            "https://example.org/effects/read-user-dir"
+            (vec (concat READ_USER_DIR_RULES)))))))
