@@ -71,6 +71,10 @@
   {:xt/id "https://example.org/~alice/private.txt"
    ::site/type "Resource"})
 
+(def ALICE_USER_DIR_SHARED_FILE
+  {:xt/id "https://example.org/~alice/shared.txt"
+   ::site/type "Resource"})
+
 (def READ_USER_DIR_EFFECT
   {:xt/id "https://example.org/effects/read-user-dir"
    ::site/type "Effect"
@@ -136,6 +140,7 @@
     [::xt/put BOB]
     [::xt/put CARL]
     [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
+    [::xt/put ALICE_USER_DIR_SHARED_FILE]
     [::xt/put READ_USER_DIR_EFFECT]
     [::xt/put WRITE_USER_DIR_EFFECT]
 
@@ -147,7 +152,7 @@
   (let [rules (vec (concat WRITE_USER_DIR_RULES READ_USER_DIR_RULES))
         db (xt/db *xt-node*)]
 
-    ;; Alice can read her own private file
+    ;; Alice can read her own private file.
     (is
      (seq
       (check-acls
@@ -157,7 +162,18 @@
        "https://example.org/~alice/private.txt"
        #{"read"} rules)))
 
-    ;; Bob cannot read Alice's private file
+    ;; Alice can read the file in her user directory which she has shared with
+    ;; Bob.
+    (is
+     (seq
+      (check-acls
+       db
+       "https://example.org/people/alice"
+       "https://example.org/effects/read-user-dir"
+       "https://example.org/~alice/shared.txt"
+       #{"read"} rules)))
+
+    ;; Bob cannot read Alice's private file.
     (is
      (not
       (seq
