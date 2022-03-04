@@ -29,18 +29,18 @@
 
 ;; We'll create a similar system here, using subjects/effects/resources.
 
-(defn check-acls
-  "Given a subject, an effect and resource, return all related ACLs."
+(defn check-permissions
+  "Given a subject, an effect and resource, return all related permissions."
   [db subject effect resource rules]
   (xt/q
    db
-   {:find '[acl]
+   {:find '[permission]
     :where
     '[
-      [acl ::site/type "ACL"]
+      [permission ::site/type "Permission"]
       [effect ::site/type "Effect"]
-      [acl ::pass/effect effect]
-      (allowed? acl subject effect resource)]
+      [permission ::pass/effect effect]
+      (allowed? permission subject effect resource)]
 
     :rules rules
 
@@ -56,12 +56,12 @@
    {:find '[resource]
     :where
     '[
-      [acl ::site/type "ACL"]
+      [permission ::site/type "Permission"]
       [effect ::site/type "Effect"]
-      [acl ::pass/effect effect]
+      [permission ::pass/effect effect]
       [(contains? effects effect)]
 
-      (allowed? acl subject effect resource)]
+      (allowed? permission subject effect resource)]
 
     :rules rules
 
@@ -108,41 +108,41 @@
    ::site/type "Effect"})
 
 (def ALICE_CAN_READ
-  {:xt/id "https://example.org/acls/alice-can-read"
-   ::site/type "ACL"
+  {:xt/id "https://example.org/permissions/alice-can-read"
+   ::site/type "Permission"
    ::pass/subject "https://example.org/people/alice"
    ::pass/effect #{"https://example.org/effects/read-shared"
                    "https://example.org/effects/read-user-dir"}})
 
 (def ALICE_CAN_WRITE_USER_DIR_CONTENT
-  {:xt/id "https://example.org/acls/alice-can-write-user-dir-content"
-   ::site/type "ACL"
+  {:xt/id "https://example.org/permissions/alice-can-write-user-dir-content"
+   ::site/type "Permission"
    ::pass/subject "https://example.org/people/alice"
    ::pass/effect #{"https://example.org/effects/write-user-dir"}})
 
 (def BOB_CAN_READ
-  {:xt/id "https://example.org/acls/bob-can-read"
-   ::site/type "ACL"
+  {:xt/id "https://example.org/permissions/bob-can-read"
+   ::site/type "Permission"
    ::pass/subject "https://example.org/people/bob"
    ::pass/effect #{"https://example.org/effects/read-shared"
                    "https://example.org/effects/read-user-dir"}})
 
 (def ALICES_SHARES_FILE_WITH_BOB
-  {:xt/id "https://example.org/acls/alice-shares-file-with-bob"
-   ::site/type "ACL"
+  {:xt/id "https://example.org/permissions/alice-shares-file-with-bob"
+   ::site/type "Permission"
    ::pass/subject "https://example.org/people/bob"
    ::pass/effect "https://example.org/effects/read-shared"
    ::pass/resource "https://example.org/~alice/shared.txt"})
 
 (def BOB_CAN_WRITE_USER_DIR_CONTENT
-  {:xt/id "https://example.org/acls/bob-can-write-user-dir-content"
-   ::site/type "ACL"
+  {:xt/id "https://example.org/permissions/bob-can-write-user-dir-content"
+   ::site/type "Permission"
    ::pass/subject "https://example.org/people/bob"
    ::pass/effect #{"https://example.org/effects/write-user-dir"}})
 
 (def WRITE_USER_DIR_RULES
-  '[[(allowed? acl subject effect resource)
-     [acl ::pass/subject subject]
+  '[[(allowed? permission subject effect resource)
+     [permission ::pass/subject subject]
      [effect :xt/id "https://example.org/effects/write-user-dir"]
      [effect ::pass/resource-matches resource-regex]
      [subject ::username username]
@@ -151,8 +151,8 @@
      [(= user username)]]])
 
 (def READ_USER_DIR_RULES
-  '[[(allowed? acl subject effect resource)
-     [acl ::pass/subject subject]
+  '[[(allowed? permission subject effect resource)
+     [permission ::pass/subject subject]
      [effect :xt/id "https://example.org/effects/read-user-dir"]
      [effect ::pass/resource-matches resource-regex]
      [subject ::username username]
@@ -162,12 +162,11 @@
      [(= user username)]]])
 
 (def READ_SHARED_RULES
-  '[[(allowed? acl subject effect resource)
-     [acl ::pass/subject subject]
+  '[[(allowed? permission subject effect resource)
+     [permission ::pass/subject subject]
      [effect :xt/id "https://example.org/effects/read-shared"]
-     [acl ::pass/resource resource]]])
+     [permission ::pass/resource resource]]])
 
-;; TODO: Rename ACL to permission ?
 ;; TODO: Rename effect to action ?
 
 (deftest user-dir-test
@@ -191,7 +190,7 @@
         db (xt/db *xt-node*)]
 
     (are [subject effect resource ok?]
-        (let [actual (check-acls db subject effect resource rules)]
+        (let [actual (check-permissions db subject effect resource rules)]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
