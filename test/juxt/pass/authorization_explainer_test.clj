@@ -30,6 +30,7 @@
 ;; We'll create a similar system here, using subjects/effects/resources.
 
 (defn check-acls
+  "Given a subject, an effect and resource, return all related ACLs."
   [db subject effect resource rules]
   (xt/q
    db
@@ -48,6 +49,7 @@
    subject effect resource))
 
 (defn allowed-resources
+  "Given a subject and a set of possible effects, which resources are allowed?"
   [db subject effects rules]
   (xt/q
    db
@@ -57,7 +59,6 @@
       [acl ::site/type "ACL"]
       [effect ::site/type "Effect"]
       [acl ::pass/effect effect]
-
       [(contains? effects effect)]
 
       (allowed? acl subject effect resource)]
@@ -180,7 +181,6 @@
     [::xt/put READ_USER_DIR_EFFECT]
     [::xt/put READ_SHARED_EFFECT]
     [::xt/put WRITE_USER_DIR_EFFECT]
-
     [::xt/put ALICE_CAN_READ]
     [::xt/put ALICE_CAN_WRITE_USER_DIR_CONTENT]
     [::xt/put ALICES_SHARES_FILE_WITH_BOB]
