@@ -27,11 +27,10 @@
 ;; belong to the account owner. See
 ;; https://httpd.apache.org/docs/2.4/howto/public_html.html for further details.
 
-;; We'll create a similar system here, using subjects/effects/resources and
-;; scopes.
+;; We'll create a similar system here, using subjects/effects/resources.
 
 (defn check-acls
-  [db subject effect resource access-token-effective-scope rules]
+  [db subject effect resource rules]
   (xt/q
    db
    {:find '[acl]
@@ -40,18 +39,13 @@
       [acl ::site/type "ACL"]
       [effect ::site/type "Effect"]
       [acl ::pass/effect effect]
-
-      ;; TODO: Hey, if we're passing in an effect, this can be done in advance.
-      [effect ::pass/scope scope]
-      [(contains? access-token-effective-scope scope)]
-
       (allowed? acl subject effect resource)]
 
     :rules rules
 
-    :in '[subject effect resource access-token-effective-scope]}
+    :in '[subject effect resource]}
 
-   subject effect resource access-token-effective-scope))
+   subject effect resource))
 
 (defn allowed-resources
   [db subject effects rules]
@@ -100,20 +94,17 @@
 (def READ_USER_DIR_EFFECT
   {:xt/id "https://example.org/effects/read-user-dir"
    ::site/type "Effect"
-   ::pass/scope "read"
    ::pass/resource-matches "https://example.org/~([a-z]+)/.+"})
 
 (def WRITE_USER_DIR_EFFECT
   {:xt/id "https://example.org/effects/write-user-dir"
    ::site/type "Effect"
-   ::pass/scope "userdir:write"
    ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
    ::pass/effect-args [{}]})
 
 (def READ_SHARED_EFFECT
   {:xt/id "https://example.org/effects/read-shared"
-   ::site/type "Effect"
-   ::pass/scope "read"})
+   ::site/type "Effect"})
 
 (def ALICE_CAN_READ
   {:xt/id "https://example.org/acls/alice-can-read"
@@ -199,79 +190,71 @@
   (let [rules (vec (concat WRITE_USER_DIR_RULES READ_USER_DIR_RULES READ_SHARED_RULES))
         db (xt/db *xt-node*)]
 
-    (are [subject effect resource access-token-effective-scope ok?]
-        (let [actual (check-acls db subject effect resource access-token-effective-scope rules)]
+    (are [subject effect resource ok?]
+        (let [actual (check-acls db subject effect resource rules)]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
       "https://example.org/people/alice"
       "https://example.org/effects/read-user-dir"
       "https://example.org/~alice/private.txt"
-      #{"read"} true
+      true
 
       ;; Alice can read the file in her user directory which she has shared with
       ;; Bob.
       "https://example.org/people/alice"
       "https://example.org/effects/read-user-dir"
       "https://example.org/~alice/shared.txt"
-      #{"read"} true
+      true
 
       ;; Bob cannot read Alice's private file.
       "https://example.org/people/bob"
       "https://example.org/effects/read-user-dir"
       "https://example.org/~alice/private.txt"
-      #{"read"} false
+      false
 
       ;; Bob can read the file Alice has shared with him.
       "https://example.org/people/bob"
       "https://example.org/effects/read-shared"
       "https://example.org/~alice/shared.txt"
-      #{"read"} true
+      true
 
       ;; Alice can put a file to her user directory
       "https://example.org/people/alice"
       "https://example.org/effects/write-user-dir"
       "https://example.org/~alice/foo.txt"
-      #{"userdir:write" "other:scope"} true
-
-      ;; Alice can't put a file to her user directory if the scope doesn't allow
-      ;; it (either the application is itself constrained, or she hasn't
-      ;; authorized the userdir:write scope on the application)
-      "https://example.org/people/alice"
-      "https://example.org/effects/write-user-dir"
-      "https://example.org/~alice/foo.txt"
-      #{"other:scope"} false
+      true
 
       ;; Alice can't put a file to Bob's user directory
       "https://example.org/people/alice"
       "https://example.org/effects/write-user-dir"
       "https://example.org/~bob/foo.txt"
-      #{"userdir:write"} false
+      false
 
       ;; Alice can't put a file outside her user directory
       "https://example.org/people/alice"
       "https://example.org/effects/write-user-dir"
       "https://example.org/index.html"
-      #{"userdir:write"} false
+      false
 
       ;; Bob can put a file to his user directory
       "https://example.org/people/bob"
       "https://example.org/effects/write-user-dir"
       "https://example.org/~bob/foo.txt"
-      #{"userdir:write"} true
+      true
 
       ;; Bob can't put a file to Alice's directory
       "https://example.org/people/bob"
       "https://example.org/effects/write-user-dir"
       "https://example.org/~alice/foo.txt"
-      #{"userdir:write"} false
+      false
 
       ;; Carl cannot put a file to his user directory, as he hasn't been
       ;; granted the write-user-dir effect.
       "https://example.org/people/carl"
       "https://example.org/effects/write-user-dir"
       "https://example.org/~carl/foo.txt"
-      #{"userdir:write"} false)
+      false)
 
     (is (= #{["https://example.org/~alice/shared.txt"]
              ["https://example.org/~alice/private.txt"]}
