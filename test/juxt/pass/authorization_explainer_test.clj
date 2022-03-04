@@ -67,59 +67,106 @@
    ::site/type "User"
    ::username "carl"})
 
-(def PUT_USER_DIR
+(def ALICE_USER_DIR_PRIVATE_FILE
+  {:xt/id "https://example.org/~alice/private.txt"
+   ::site/type "Resource"})
+
+(def READ_USER_DIR_EFFECT
+  {:xt/id "https://example.org/effects/read-user-dir"
+   ::site/type "Effect"
+   ::pass/scope "read"
+   ::pass/resource-matches "https://example.org/~([a-z]+)/.+"})
+
+(def WRITE_USER_DIR_EFFECT
   {:xt/id "https://example.org/effects/write-user-dir"
    ::site/type "Effect"
    ::pass/scope "userdir:write"
    ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
    ::pass/effect-args [{}]})
 
-(def ALICE_CAN_PUT_USER_DIR_CONTENT
+(def ALICE_CAN_READ
+  {:xt/id "https://example.org/acls/alice-can-read"
+   ::site/type "ACL"
+   ::pass/subject "https://example.org/people/alice"
+   ::pass/effect #{"https://example.org/effects/read-user-dir"}})
+
+(def ALICE_CAN_WRITE_USER_DIR_CONTENT
   {:xt/id "https://example.org/acls/alice-can-write-user-dir-content"
    ::site/type "ACL"
    ::pass/subject "https://example.org/people/alice"
-   ::pass/effect #{"https://example.org/effects/write-user-dir"}
-   ;; Is not constrained to a resource
-   ::pass/resource nil})
+   ::pass/effect #{"https://example.org/effects/write-user-dir"}})
 
-(def BOB_CAN_PUT_USER_DIR_CONTENT
+(def BOB_CAN_READ
+  {:xt/id "https://example.org/acls/bob-can-read"
+   ::site/type "ACL"
+   ::pass/subject "https://example.org/people/bob"
+   ::pass/effect #{;;"https://example.org/effects/read-granted"
+                   "https://example.org/effects/read-user-dir"}})
+
+(def BOB_CAN_WRITE_USER_DIR_CONTENT
   {:xt/id "https://example.org/acls/bob-can-write-user-dir-content"
    ::site/type "ACL"
    ::pass/subject "https://example.org/people/bob"
-   ::pass/effect #{"https://example.org/effects/write-user-dir"}
-   ::pass/resource nil})
+   ::pass/effect #{"https://example.org/effects/write-user-dir"}})
 
-(def PUT_USER_DIR_RULE
-  '[(allowed? acl subject effect resource)
-    [acl ::pass/subject subject]
-    [effect :xt/id "https://example.org/effects/write-user-dir"]
-    [effect ::pass/resource-matches resource-regex]
-    [subject ::username username]
-    [(re-pattern resource-regex) resource-pattern]
-    [(re-matches resource-pattern resource) [_ user]]
-    [(= user username)]])
+(def WRITE_USER_DIR_RULES
+  '[[(allowed? acl subject effect resource)
+     [acl ::pass/subject subject]
+     [effect :xt/id "https://example.org/effects/write-user-dir"]
+     [effect ::pass/resource-matches resource-regex]
+     [subject ::username username]
+     [(re-pattern resource-regex) resource-pattern]
+     [(re-matches resource-pattern resource) [_ user]]
+     [(= user username)]]])
+
+(def READ_USER_DIR_RULES
+  '[[(allowed? acl subject effect resource)
+     [acl ::pass/subject subject]
+     [effect :xt/id "https://example.org/effects/read-user-dir"]
+     [effect ::pass/resource-matches resource-regex]
+     [subject ::username username]
+     [(re-pattern resource-regex) resource-pattern]
+     [(re-matches resource-pattern resource) [_ user]]
+     [(= user username)]]])
 
 (deftest user-dir-test
   (submit-and-await!
    [
-    [:xtdb.api/put ALICE]
-    [:xtdb.api/put BOB]
-    [:xtdb.api/put CARL]
-    [::xt/put PUT_USER_DIR]
-    [::xt/put ALICE_CAN_PUT_USER_DIR_CONTENT]
-    [::xt/put BOB_CAN_PUT_USER_DIR_CONTENT]])
+    [::xt/put ALICE]
+    [::xt/put BOB]
+    [::xt/put CARL]
+    [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
+    [::xt/put READ_USER_DIR_EFFECT]
+    [::xt/put WRITE_USER_DIR_EFFECT]
 
-  (let [rules [PUT_USER_DIR_RULE]
+    [::xt/put ALICE_CAN_READ]
+    [::xt/put ALICE_CAN_WRITE_USER_DIR_CONTENT]
+    [::xt/put BOB_CAN_READ]
+    [::xt/put BOB_CAN_WRITE_USER_DIR_CONTENT]])
+
+  (let [rules (vec (concat WRITE_USER_DIR_RULES READ_USER_DIR_RULES))
         db (xt/db *xt-node*)]
 
-    #_(is
+    ;; Alice can read her own private file
+    (is
      (seq
       (check-acls
        db
        "https://example.org/people/alice"
        "https://example.org/effects/read-user-dir"
-       "https://example.org/~alice/foo.txt"
-       #{"userdir:read"} rules)))
+       "https://example.org/~alice/private.txt"
+       #{"read"} rules)))
+
+    ;; Bob cannot read Alice's private file
+    (is
+     (not
+      (seq
+       (check-acls
+        db
+        "https://example.org/people/bob"
+        "https://example.org/effects/read-user-dir"
+        "https://example.org/~alice/private.txt"
+        #{"read"} rules))))
 
     (are [subject effect resource access-token-effective-scope ok?]
         (let [actual (check-acls db subject effect resource access-token-effective-scope rules)]
