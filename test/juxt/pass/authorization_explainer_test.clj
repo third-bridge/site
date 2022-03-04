@@ -54,7 +54,7 @@
    subject effect resource access-token-effective-scope))
 
 (defn allowed-resources
-  [db subject effect rules]
+  [db subject effects rules]
   (xt/q
    db
    {:find '[resource]
@@ -64,13 +64,15 @@
       [effect ::site/type "Effect"]
       [acl ::pass/effect effect]
 
+      [(contains? effects effect)]
+
       (allowed? acl subject effect resource)]
 
     :rules rules
 
-    :in '[subject effect]}
+    :in '[subject effects]}
 
-   subject effect))
+   subject effects))
 
 (def ALICE
   {:xt/id "https://example.org/people/alice",
@@ -276,5 +278,14 @@
            (allowed-resources
             db
             "https://example.org/people/alice"
-            "https://example.org/effects/read-user-dir"
-            (vec (concat READ_USER_DIR_RULES)))))))
+            #{"https://example.org/effects/read-user-dir"
+              "https://example.org/effects/read-shared"}
+            (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES)))))
+
+    (is (= #{["https://example.org/~alice/shared.txt"]}
+           (allowed-resources
+            db
+            "https://example.org/people/bob"
+            #{"https://example.org/effects/read-user-dir"
+              "https://example.org/effects/read-shared"}
+            (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES)))))))
