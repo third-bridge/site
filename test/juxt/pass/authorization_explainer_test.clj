@@ -88,11 +88,17 @@
    ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
    ::pass/effect-args [{}]})
 
+(def READ_SHARED_EFFECT
+  {:xt/id "https://example.org/effects/read-shared"
+   ::site/type "Effect"
+   ::pass/scope "read"})
+
 (def ALICE_CAN_READ
   {:xt/id "https://example.org/acls/alice-can-read"
    ::site/type "ACL"
    ::pass/subject "https://example.org/people/alice"
-   ::pass/effect #{"https://example.org/effects/read-user-dir"}})
+   ::pass/effect #{"https://example.org/effects/read-shared"
+                   "https://example.org/effects/read-user-dir"}})
 
 (def ALICE_CAN_WRITE_USER_DIR_CONTENT
   {:xt/id "https://example.org/acls/alice-can-write-user-dir-content"
@@ -104,8 +110,15 @@
   {:xt/id "https://example.org/acls/bob-can-read"
    ::site/type "ACL"
    ::pass/subject "https://example.org/people/bob"
-   ::pass/effect #{;;"https://example.org/effects/read-granted"
+   ::pass/effect #{"https://example.org/effects/read-shared"
                    "https://example.org/effects/read-user-dir"}})
+
+(def ALICES_SHARES_FILE_WITH_BOB
+  {:xt/id "https://example.org/acls/alice-shares-file-with-bob"
+   ::site/type "ACL"
+   ::pass/subject "https://example.org/people/bob"
+   ::pass/effect "https://example.org/effects/read-shared"
+   ::pass/resource "https://example.org/~alice/shared.txt"})
 
 (def BOB_CAN_WRITE_USER_DIR_CONTENT
   {:xt/id "https://example.org/acls/bob-can-write-user-dir-content"
@@ -133,6 +146,12 @@
      [(re-matches resource-pattern resource) [_ user]]
      [(= user username)]]])
 
+(def READ_SHARED_RULES
+  '[[(allowed? acl subject effect resource)
+     [acl ::pass/subject subject]
+     [effect :xt/id "https://example.org/effects/read-shared"]
+     [acl ::pass/resource resource]]])
+
 (deftest user-dir-test
   (submit-and-await!
    [
@@ -142,14 +161,16 @@
     [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
     [::xt/put ALICE_USER_DIR_SHARED_FILE]
     [::xt/put READ_USER_DIR_EFFECT]
+    [::xt/put READ_SHARED_EFFECT]
     [::xt/put WRITE_USER_DIR_EFFECT]
 
     [::xt/put ALICE_CAN_READ]
     [::xt/put ALICE_CAN_WRITE_USER_DIR_CONTENT]
+    [::xt/put ALICES_SHARES_FILE_WITH_BOB]
     [::xt/put BOB_CAN_READ]
     [::xt/put BOB_CAN_WRITE_USER_DIR_CONTENT]])
 
-  (let [rules (vec (concat WRITE_USER_DIR_RULES READ_USER_DIR_RULES))
+  (let [rules (vec (concat WRITE_USER_DIR_RULES READ_USER_DIR_RULES READ_SHARED_RULES))
         db (xt/db *xt-node*)]
 
     ;; Alice can read her own private file.
@@ -184,13 +205,23 @@
         "https://example.org/~alice/private.txt"
         #{"read"} rules))))
 
+    ;; Bob can read the file Alice has shared with him.
+    (is
+     (seq
+      (check-acls
+       db
+       "https://example.org/people/bob"
+       "https://example.org/effects/read-shared"
+       "https://example.org/~alice/shared.txt"
+       #{"read"} rules)))
+
     (are [subject effect resource access-token-effective-scope ok?]
         (let [actual (check-acls db subject effect resource access-token-effective-scope rules)]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can put a file to her user directory
-      "https://example.org/people/alice"
-      "https://example.org/effects/write-user-dir"
+        "https://example.org/people/alice"
+        "https://example.org/effects/write-user-dir"
         "https://example.org/~alice/foo.txt"
         #{"userdir:write" "other:scope"} true
 
