@@ -170,19 +170,26 @@
 (deftest user-dir-test
   (submit-and-await!
    [
-    [::xt/put ALICE]
-    [::xt/put BOB]
-    [::xt/put CARL]
-    [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
-    [::xt/put ALICE_USER_DIR_SHARED_FILE]
+    ;; Actions
     [::xt/put READ_USER_DIR_ACTION]
     [::xt/put READ_SHARED_ACTION]
     [::xt/put WRITE_USER_DIR_ACTION]
+
+    ;; Actors
+    [::xt/put ALICE]
+    [::xt/put BOB]
+    [::xt/put CARL]
+
+    ;; Resources
+    [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
+    [::xt/put ALICE_USER_DIR_SHARED_FILE]
+
+    ;; Permissions
     [::xt/put ALICE_CAN_READ]
     [::xt/put ALICE_CAN_WRITE_USER_DIR_CONTENT]
-    [::xt/put ALICES_SHARES_FILE_WITH_BOB]
     [::xt/put BOB_CAN_READ]
-    [::xt/put BOB_CAN_WRITE_USER_DIR_CONTENT]])
+    [::xt/put BOB_CAN_WRITE_USER_DIR_CONTENT]
+    [::xt/put ALICES_SHARES_FILE_WITH_BOB]])
 
   (let [rules (vec (concat WRITE_USER_DIR_RULES READ_USER_DIR_RULES READ_SHARED_RULES))
         db (xt/db *xt-node*)]
@@ -253,19 +260,28 @@
       "https://example.org/~carl/foo.txt"
       false)
 
-    (is (= #{["https://example.org/~alice/shared.txt"]
-             ["https://example.org/~alice/private.txt"]}
-           (allowed-resources
-            db
-            "https://example.org/people/alice"
-            #{"https://example.org/actions/read-user-dir"
-              "https://example.org/actions/read-shared"}
-            (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES)))))
+    (are [subject actions rules expected]
+        (is (= expected (allowed-resources db subject actions rules)))
 
-    (is (= #{["https://example.org/~alice/shared.txt"]}
-           (allowed-resources
-            db
-            "https://example.org/people/bob"
-            #{"https://example.org/actions/read-user-dir"
-              "https://example.org/actions/read-shared"}
-            (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES)))))))
+      ;; Alice can see all her files.
+      "https://example.org/people/alice"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+      #{["https://example.org/~alice/shared.txt"]
+        ["https://example.org/~alice/private.txt"]}
+
+      ;; Bob can only see the file he's been shared by Alice.
+      "https://example.org/people/bob"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+      #{["https://example.org/~alice/shared.txt"]})
+
+    ;; TODO
+    ;; Next up. Sharing itself. Is Alice allowed to share her files?
+    ;; read-only, read/write
+
+
+
+    ))
