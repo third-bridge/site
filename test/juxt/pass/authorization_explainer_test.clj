@@ -152,7 +152,8 @@
      [effect :xt/id "https://example.org/effects/read-shared"]
      [acl ::pass/resource resource]]])
 
-;; TODO: Rename effect to permission ?
+;; TODO: Rename ACL to permission ?
+;; TODO: Rename effect to action ?
 ;; TODO: Create an effect that allows us to list all files matching some criteria
 
 (deftest user-dir-test
