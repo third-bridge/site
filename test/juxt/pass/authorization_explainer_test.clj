@@ -69,6 +69,29 @@
 
    subject actions))
 
+(defn allowed-subjects
+  "Given a resource and a set of actions, which subjects can access and via which
+  actions?"
+  [db resource actions rules]
+  (->> (xt/q
+        db
+        {:find '[subject action]
+         :keys '[subject action]
+         :where
+         '[
+           [permission ::site/type "Permission"]
+           [action ::site/type "Action"]
+           [permission ::pass/action action]
+           [(contains? actions action)]
+
+           (allowed? permission subject action resource)]
+
+         :rules rules
+
+         :in '[resource actions]}
+
+        resource actions)))
+
 (def ALICE
   {:xt/id "https://example.org/people/alice",
    ::site/type "User"
@@ -167,61 +190,39 @@
      [action :xt/id "https://example.org/actions/read-shared"]
      [permission ::pass/resource resource]]])
 
-(defn allowed-subjects
-  "Given a resource and a set of actions, which subjects can access and via which
-  actions?"
-  [db resource actions rules]
-  (->> (xt/q
-        db
-        {:find '[subject action]
-         :keys '[subject action]
-         :where
-         '[
-           [permission ::site/type "Permission"]
-           [action ::site/type "Action"]
-           [permission ::pass/action action]
-           [(contains? actions action)]
 
-           (allowed? permission subject action resource)]
 
-         :rules rules
+#_((t/join-fixtures [with-xt])
+   (fn []
+     (submit-and-await!
+      [
+       ;; Actions
+       [::xt/put READ_USER_DIR_ACTION]
+       [::xt/put READ_SHARED_ACTION]
+       [::xt/put WRITE_USER_DIR_ACTION]
 
-         :in '[resource actions]}
+       ;; Actors
+       [::xt/put ALICE]
+       [::xt/put BOB]
+       [::xt/put CARL]
 
-        resource actions))
-  )
+       ;; Resources
+       [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
+       [::xt/put ALICE_USER_DIR_SHARED_FILE]
 
-((t/join-fixtures [with-xt])
- (fn []
-   (submit-and-await!
-    [
-     ;; Actions
-     [::xt/put READ_USER_DIR_ACTION]
-     [::xt/put READ_SHARED_ACTION]
-     [::xt/put WRITE_USER_DIR_ACTION]
+       ;; Permissions
+       [::xt/put ALICE_CAN_READ]
+       [::xt/put ALICE_CAN_WRITE_USER_DIR_CONTENT]
+       [::xt/put BOB_CAN_READ]
+       [::xt/put BOB_CAN_WRITE_USER_DIR_CONTENT]
+       [::xt/put ALICES_SHARES_FILE_WITH_BOB]])
 
-     ;; Actors
-     [::xt/put ALICE]
-     [::xt/put BOB]
-     [::xt/put CARL]
-
-     ;; Resources
-     [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
-     [::xt/put ALICE_USER_DIR_SHARED_FILE]
-
-     ;; Permissions
-     [::xt/put ALICE_CAN_READ]
-     [::xt/put ALICE_CAN_WRITE_USER_DIR_CONTENT]
-     [::xt/put BOB_CAN_READ]
-     [::xt/put BOB_CAN_WRITE_USER_DIR_CONTENT]
-     [::xt/put ALICES_SHARES_FILE_WITH_BOB]])
-
-   (allowed-subjects
-    (xt/db *xt-node*)
-    (:xt/id ALICE_USER_DIR_SHARED_FILE)
-    (set (map :xt/id [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
-    (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES)))
-   ))
+     (allowed-subjects
+      (xt/db *xt-node*)
+      (:xt/id ALICE_USER_DIR_SHARED_FILE)
+      (set (map :xt/id [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
+      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES)))
+     ))
 
 (deftest user-dir-test
   (submit-and-await!
