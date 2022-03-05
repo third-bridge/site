@@ -167,6 +167,62 @@
      [action :xt/id "https://example.org/actions/read-shared"]
      [permission ::pass/resource resource]]])
 
+(defn allowed-subjects
+  "Given a resource and a set of actions, which subjects can access and via which
+  actions?"
+  [db resource actions rules]
+  (->> (xt/q
+        db
+        {:find '[subject action]
+         :keys '[subject action]
+         :where
+         '[
+           [permission ::site/type "Permission"]
+           [action ::site/type "Action"]
+           [permission ::pass/action action]
+           [(contains? actions action)]
+
+           (allowed? permission subject action resource)]
+
+         :rules rules
+
+         :in '[resource actions]}
+
+        resource actions))
+  )
+
+((t/join-fixtures [with-xt])
+ (fn []
+   (submit-and-await!
+    [
+     ;; Actions
+     [::xt/put READ_USER_DIR_ACTION]
+     [::xt/put READ_SHARED_ACTION]
+     [::xt/put WRITE_USER_DIR_ACTION]
+
+     ;; Actors
+     [::xt/put ALICE]
+     [::xt/put BOB]
+     [::xt/put CARL]
+
+     ;; Resources
+     [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
+     [::xt/put ALICE_USER_DIR_SHARED_FILE]
+
+     ;; Permissions
+     [::xt/put ALICE_CAN_READ]
+     [::xt/put ALICE_CAN_WRITE_USER_DIR_CONTENT]
+     [::xt/put BOB_CAN_READ]
+     [::xt/put BOB_CAN_WRITE_USER_DIR_CONTENT]
+     [::xt/put ALICES_SHARES_FILE_WITH_BOB]])
+
+   (allowed-subjects
+    (xt/db *xt-node*)
+    (:xt/id ALICE_USER_DIR_SHARED_FILE)
+    (set (map :xt/id [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
+    (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES)))
+   ))
+
 (deftest user-dir-test
   (submit-and-await!
    [
@@ -199,89 +255,110 @@
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
-      "https://example.org/people/alice"
-      "https://example.org/actions/read-user-dir"
-      "https://example.org/~alice/private.txt"
-      true
+        "https://example.org/people/alice"
+        "https://example.org/actions/read-user-dir"
+        "https://example.org/~alice/private.txt"
+        true
 
-      ;; Alice can read the file in her user directory which she has shared with
-      ;; Bob.
-      "https://example.org/people/alice"
-      "https://example.org/actions/read-user-dir"
-      "https://example.org/~alice/shared.txt"
-      true
+        ;; Alice can read the file in her user directory which she has shared with
+        ;; Bob.
+        "https://example.org/people/alice"
+        "https://example.org/actions/read-user-dir"
+        "https://example.org/~alice/shared.txt"
+        true
 
-      ;; Bob cannot read Alice's private file.
-      "https://example.org/people/bob"
-      "https://example.org/actions/read-user-dir"
-      "https://example.org/~alice/private.txt"
-      false
+        ;; Bob cannot read Alice's private file.
+        "https://example.org/people/bob"
+        "https://example.org/actions/read-user-dir"
+        "https://example.org/~alice/private.txt"
+        false
 
-      ;; Bob can read the file Alice has shared with him.
-      "https://example.org/people/bob"
-      "https://example.org/actions/read-shared"
-      "https://example.org/~alice/shared.txt"
-      true
+        ;; Bob can read the file Alice has shared with him.
+        "https://example.org/people/bob"
+        "https://example.org/actions/read-shared"
+        "https://example.org/~alice/shared.txt"
+        true
 
-      ;; Alice can put a file to her user directory
-      "https://example.org/people/alice"
-      "https://example.org/actions/write-user-dir"
-      "https://example.org/~alice/foo.txt"
-      true
+        ;; Alice can put a file to her user directory
+        "https://example.org/people/alice"
+        "https://example.org/actions/write-user-dir"
+        "https://example.org/~alice/foo.txt"
+        true
 
-      ;; Alice can't put a file to Bob's user directory
-      "https://example.org/people/alice"
-      "https://example.org/actions/write-user-dir"
-      "https://example.org/~bob/foo.txt"
-      false
+        ;; Alice can't put a file to Bob's user directory
+        "https://example.org/people/alice"
+        "https://example.org/actions/write-user-dir"
+        "https://example.org/~bob/foo.txt"
+        false
 
-      ;; Alice can't put a file outside her user directory
-      "https://example.org/people/alice"
-      "https://example.org/actions/write-user-dir"
-      "https://example.org/index.html"
-      false
+        ;; Alice can't put a file outside her user directory
+        "https://example.org/people/alice"
+        "https://example.org/actions/write-user-dir"
+        "https://example.org/index.html"
+        false
 
-      ;; Bob can put a file to his user directory
-      "https://example.org/people/bob"
-      "https://example.org/actions/write-user-dir"
-      "https://example.org/~bob/foo.txt"
-      true
+        ;; Bob can put a file to his user directory
+        "https://example.org/people/bob"
+        "https://example.org/actions/write-user-dir"
+        "https://example.org/~bob/foo.txt"
+        true
 
-      ;; Bob can't put a file to Alice's directory
-      "https://example.org/people/bob"
-      "https://example.org/actions/write-user-dir"
-      "https://example.org/~alice/foo.txt"
-      false
+        ;; Bob can't put a file to Alice's directory
+        "https://example.org/people/bob"
+        "https://example.org/actions/write-user-dir"
+        "https://example.org/~alice/foo.txt"
+        false
 
-      ;; Carl cannot put a file to his user directory, as he hasn't been
-      ;; granted the write-user-dir action.
-      "https://example.org/people/carl"
-      "https://example.org/actions/write-user-dir"
-      "https://example.org/~carl/foo.txt"
-      false)
+        ;; Carl cannot put a file to his user directory, as he hasn't been
+        ;; granted the write-user-dir action.
+        "https://example.org/people/carl"
+        "https://example.org/actions/write-user-dir"
+        "https://example.org/~carl/foo.txt"
+        false)
 
     (are [subject actions rules expected]
         (is (= expected (allowed-resources db subject actions rules)))
 
       ;; Alice can see all her files.
-      "https://example.org/people/alice"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-      #{["https://example.org/~alice/shared.txt"]
-        ["https://example.org/~alice/private.txt"]}
+        "https://example.org/people/alice"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+        #{["https://example.org/~alice/shared.txt"]
+          ["https://example.org/~alice/private.txt"]}
 
-      ;; Bob can only see the file Alice has shared with him.
-      "https://example.org/people/bob"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-      #{["https://example.org/~alice/shared.txt"]})
+        ;; Bob can only see the file Alice has shared with him.
+        "https://example.org/people/bob"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+        #{["https://example.org/~alice/shared.txt"]})
+
+    ;; Given a resource and a set of actions, which subjects can access
+    ;; and via which actions?
+
+    (are [resource actions rules expected]
+        (is (= expected (allowed-subjects db resource actions rules)))
+
+        "https://example.org/~alice/shared.txt"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+        #{{:subject "https://example.org/people/bob",
+           :action "https://example.org/actions/read-shared"}
+          {:subject "https://example.org/people/alice",
+           :action "https://example.org/actions/read-user-dir"}}
+
+        "https://example.org/~alice/private.txt"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+        #{{:subject "https://example.org/people/alice",
+           :action "https://example.org/actions/read-user-dir"}})
 
     ;; TODO
     ;; Next up. Sharing itself. Is Alice even permitted to share her files?
     ;; read-only, read/write
-
 
     ;; TODO
     ;; Consent. Alice consents that her file be read but only for certain purposes
