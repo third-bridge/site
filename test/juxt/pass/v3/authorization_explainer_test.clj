@@ -375,37 +375,44 @@
 
 ;; TODO: View restricted info
 
-#_((t/join-fixtures [with-xt])
+((t/join-fixtures [with-xt])
 
  (fn []
-   (let [READ_ACTION
-         {:xt/id "https://example.org/actions/read"
+   (let [READ_USERNAME_ACTION
+         {:xt/id "https://example.org/actions/read-username"
           ::site/type "Action"
-          ::pass/pull '[*]}
+          ::pass/pull [::username]}
 
          READ_SECRETS_ACTION
          {:xt/id "https://example.org/actions/read-secrets"
           ::site/type "Action"
-          ::pass/pull [::username]}
+          ::pass/pull [::secret]}
 
-         BOB_CAN_READ_SECRETS
+         BOB_CAN_READ_ALICE_USERNAME
+         {:xt/id "https://example.org/permissions/bob-can-read-alice-username"
+          ::site/type "Permission"
+          ::pass/subject "https://example.org/people/bob"
+          ::pass/action "https://example.org/actions/read-username"
+          ::pass/resource "https://example.org/people/alice"}
+
+         BOB_CAN_READ_ALICE_SECRETS
          {:xt/id "https://example.org/permissions/bob-can-read-alice-secrets"
           ::site/type "Permission"
           ::pass/subject "https://example.org/people/bob"
           ::pass/action "https://example.org/actions/read-secrets"
           ::pass/resource "https://example.org/people/alice"}
 
-         CARL_CANNOT_READ_SECRETS
-         {:xt/id "https://example.org/permissions/carl-cannot-read-alice-secrets"
+         CARL_CAN_READ_ALICE_USERNAME
+         {:xt/id "https://example.org/permissions/carl-can-read-alice-username"
           ::site/type "Permission"
           ::pass/subject "https://example.org/people/carl"
-          ::pass/action "https://example.org/actions/read"
+          ::pass/action "https://example.org/actions/read-username"
           ::pass/resource "https://example.org/people/alice"}
 
          RULES
          '[[(allowed? permission subject action resource)
             [permission ::pass/subject subject]
-            [action :xt/id "https://example.org/actions/read"]
+            [action :xt/id "https://example.org/actions/read-username"]
             [permission ::pass/resource resource]]
 
            [(allowed? permission subject action resource)
@@ -429,17 +436,18 @@
        [::xt/put BOB]
        [::xt/put CARL]
 
-       [::xt/put READ_ACTION]
+       [::xt/put READ_USERNAME_ACTION]
        [::xt/put READ_SECRETS_ACTION]
-       [::xt/put BOB_CAN_READ_SECRETS]
-       [::xt/put CARL_CANNOT_READ_SECRETS]
+       [::xt/put BOB_CAN_READ_ALICE_USERNAME]
+       [::xt/put BOB_CAN_READ_ALICE_SECRETS]
+       [::xt/put CARL_CAN_READ_ALICE_USERNAME]
 
        ])
 
      ;; Bob can read Alice's secret
      (let [db (xt/db *xt-node*)]
        (authorized-pull
-        db (:xt/id CARL) (:xt/id READ_ACTION) (:xt/id ALICE)
+        db (:xt/id CARL) #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)} (:xt/id ALICE)
         (vec (concat RULES)))))
 
    ;; ... but Carl cannot
