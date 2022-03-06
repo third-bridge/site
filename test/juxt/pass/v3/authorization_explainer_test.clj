@@ -30,11 +30,12 @@
 ;; We'll create a similar system here, using subjects/actions/resources.
 
 (defn check-permissions
-  "Given a subject, an action and resource, return all related permissions."
+  "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
   [db subject actions resource rules]
   (xt/q
    db
-   {:find '[permission]
+   {:find '[(pull permission [*]) (pull action [*])]
+    :keys '[permission action]
     :where
     '[
       [permission ::site/type "Permission"]
@@ -92,6 +93,15 @@
          :in '[resource actions]}
 
         resource actions)))
+
+(defn authorized-pull
+  [db subject actions resource rules]
+  (let [check-result (check-permissions db subject actions resource rules)
+        pull-expr (vec (mapcat
+                        (fn [{:keys [action]}]
+                          (::pass/pull action))
+                        check-result))]
+    (xt/pull db pull-expr resource)))
 
 (def ALICE
   {:xt/id "https://example.org/people/alice",
@@ -375,10 +385,8 @@
 
 ;; TODO: View restricted info
 
-((t/join-fixtures [with-xt])
-
- (fn []
-   (let [READ_USERNAME_ACTION
+(deftest constrained-pull-test
+  (let [READ_USERNAME_ACTION
          {:xt/id "https://example.org/actions/read-username"
           ::site/type "Action"
           ::pass/pull [::username]}
@@ -420,13 +428,6 @@
             [action :xt/id "https://example.org/actions/read-secrets"]
             [permission ::pass/resource resource]]]
 
-         authorized-pull
-         (fn [db subject actions resource rules]
-           (mapv
-            (fn [[permission]]
-              (xt/entity db permission)
-              )
-            (check-permissions db subject actions resource rules)))
          ]
 
      (submit-and-await!
@@ -446,10 +447,20 @@
 
      ;; Bob can read Alice's secret
      (let [db (xt/db *xt-node*)]
-       (authorized-pull
-        db (:xt/id CARL) #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)} (:xt/id ALICE)
-        (vec (concat RULES)))))
+       (are [subject expected]
+           (let [actual (authorized-pull
+                         db (:xt/id subject) #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)} (:xt/id ALICE)
+                         (vec (concat RULES)))]
+             (is (= expected actual)))
 
-   ;; ... but Carl cannot
+         BOB {::username "alice" ::secret "foo"}
+         CARL {::username "alice"}))))
 
-   ))
+#_((t/join-fixtures [with-xt])
+
+   (fn []
+
+
+     ;; ... but Carl cannot
+
+     ))
