@@ -1,6 +1,6 @@
 ;; Copyright © 2022, JUXT LTD.
 
-(ns juxt.pass.authorization-explainer-test
+(ns juxt.pass.v3.authorization-explainer-test
   (:require
    [clojure.test :refer [deftest is are testing use-fixtures] :as t]
    [juxt.test.util :refer [with-xt with-handler submit-and-await!
@@ -361,7 +361,11 @@
     ;; Next up. Sharing itself. Is Alice even permitted to share her files?
     ;; read-only, read/write
 
-    ;; TODO
-    ;; Consent. Alice consents that her file be read but only for certain purposes
+    ;; TODO Consent. Alice consents that her PII be used but only for certain
+    ;; purposes (e.g. not marketing).
 
+    ;; TODO: INTERNAL classification, different security models, see
+    ;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
+
+    ;; TODO: Extend to GraphQL
     ))
