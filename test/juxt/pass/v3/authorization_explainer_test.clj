@@ -103,7 +103,7 @@
 (defn pull-allowed-resource
   "Given a subject, a set of possible actions and a resource, pull the allowed
   attributes."
-  [db subject actions purpose resource rules]
+  [db {:keys [subject actions purpose resource rules]}]
   (let [check-result (check-permissions
                       db
                       {:subject subject
@@ -119,7 +119,7 @@
 
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
-  [db subject actions purpose rules]
+  [db {:keys [subject actions purpose rules]}]
   (let [results
         (xt/q
          db
@@ -295,84 +295,84 @@
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
-        "https://example.org/people/alice"
-        #{"https://example.org/actions/read-user-dir"}
-        "https://example.org/~alice/private.txt"
-        true
+      "https://example.org/people/alice"
+      #{"https://example.org/actions/read-user-dir"}
+      "https://example.org/~alice/private.txt"
+      true
 
-        ;; Alice can read the file in her user directory which she has shared with
-        ;; Bob.
-        "https://example.org/people/alice"
-        #{"https://example.org/actions/read-user-dir"}
-        "https://example.org/~alice/shared.txt"
-        true
+      ;; Alice can read the file in her user directory which she has shared with
+      ;; Bob.
+      "https://example.org/people/alice"
+      #{"https://example.org/actions/read-user-dir"}
+      "https://example.org/~alice/shared.txt"
+      true
 
-        ;; Bob cannot read Alice's private file.
-        "https://example.org/people/bob"
-        #{"https://example.org/actions/read-user-dir"}
-        "https://example.org/~alice/private.txt"
-        false
+      ;; Bob cannot read Alice's private file.
+      "https://example.org/people/bob"
+      #{"https://example.org/actions/read-user-dir"}
+      "https://example.org/~alice/private.txt"
+      false
 
-        ;; Bob can read the file Alice has shared with him.
-        "https://example.org/people/bob"
-        #{"https://example.org/actions/read-shared"}
-        "https://example.org/~alice/shared.txt"
-        true
+      ;; Bob can read the file Alice has shared with him.
+      "https://example.org/people/bob"
+      #{"https://example.org/actions/read-shared"}
+      "https://example.org/~alice/shared.txt"
+      true
 
-        ;; Alice can put a file to her user directory
-        "https://example.org/people/alice"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~alice/foo.txt"
-        true
+      ;; Alice can put a file to her user directory
+      "https://example.org/people/alice"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~alice/foo.txt"
+      true
 
-        ;; Alice can't put a file to Bob's user directory
-        "https://example.org/people/alice"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~bob/foo.txt"
-        false
+      ;; Alice can't put a file to Bob's user directory
+      "https://example.org/people/alice"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~bob/foo.txt"
+      false
 
-        ;; Alice can't put a file outside her user directory
-        "https://example.org/people/alice"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/index.html"
-        false
+      ;; Alice can't put a file outside her user directory
+      "https://example.org/people/alice"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/index.html"
+      false
 
-        ;; Bob can put a file to his user directory
-        "https://example.org/people/bob"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~bob/foo.txt"
-        true
+      ;; Bob can put a file to his user directory
+      "https://example.org/people/bob"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~bob/foo.txt"
+      true
 
-        ;; Bob can't put a file to Alice's directory
-        "https://example.org/people/bob"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~alice/foo.txt"
-        false
+      ;; Bob can't put a file to Alice's directory
+      "https://example.org/people/bob"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~alice/foo.txt"
+      false
 
-        ;; Carl cannot put a file to his user directory, as he hasn't been
-        ;; granted the write-user-dir action.
-        "https://example.org/people/carl"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~carl/foo.txt"
-        false)
+      ;; Carl cannot put a file to his user directory, as he hasn't been
+      ;; granted the write-user-dir action.
+      "https://example.org/people/carl"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~carl/foo.txt"
+      false)
 
     (are [subject actions rules expected]
         (is (= expected (allowed-resources db {:subject subject :actions actions :rules rules})))
 
       ;; Alice can see all her files.
-        "https://example.org/people/alice"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-        #{["https://example.org/~alice/shared.txt"]
-          ["https://example.org/~alice/private.txt"]}
+      "https://example.org/people/alice"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+      #{["https://example.org/~alice/shared.txt"]
+        ["https://example.org/~alice/private.txt"]}
 
-        ;; Bob can only see the file Alice has shared with him.
-        "https://example.org/people/bob"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-        #{["https://example.org/~alice/shared.txt"]})
+      ;; Bob can only see the file Alice has shared with him.
+      "https://example.org/people/bob"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+      #{["https://example.org/~alice/shared.txt"]})
 
     ;; Given a resource and a set of actions, which subjects can access
     ;; and via which actions?
@@ -384,67 +384,67 @@
                           :actions actions
                           :rules rules})))
 
-        "https://example.org/~alice/shared.txt"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-        #{{:subject "https://example.org/people/bob",
-           :action "https://example.org/actions/read-shared"}
-          {:subject "https://example.org/people/alice",
-           :action "https://example.org/actions/read-user-dir"}}
+      "https://example.org/~alice/shared.txt"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+      #{{:subject "https://example.org/people/bob",
+         :action "https://example.org/actions/read-shared"}
+        {:subject "https://example.org/people/alice",
+         :action "https://example.org/actions/read-user-dir"}}
 
-        "https://example.org/~alice/private.txt"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-        #{{:subject "https://example.org/people/alice",
-           :action "https://example.org/actions/read-user-dir"}})))
+      "https://example.org/~alice/private.txt"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+      #{{:subject "https://example.org/people/alice",
+         :action "https://example.org/actions/read-user-dir"}})))
 
 (deftest constrained-pull-test
   (let [READ_USERNAME_ACTION
-         {:xt/id "https://example.org/actions/read-username"
-          ::site/type "Action"
-          ::pass/pull [::username]}
+        {:xt/id "https://example.org/actions/read-username"
+         ::site/type "Action"
+         ::pass/pull [::username]}
 
-         READ_SECRETS_ACTION
-         {:xt/id "https://example.org/actions/read-secrets"
-          ::site/type "Action"
-          ::pass/pull [::secret]}
+        READ_SECRETS_ACTION
+        {:xt/id "https://example.org/actions/read-secrets"
+         ::site/type "Action"
+         ::pass/pull [::secret]}
 
-         BOB_CAN_READ_ALICE_USERNAME
-         {:xt/id "https://example.org/permissions/bob-can-read-alice-username"
-          ::site/type "Permission"
-          ::pass/subject "https://example.org/people/bob"
-          ::pass/action "https://example.org/actions/read-username"
-          ::pass/purpose nil
-          ::pass/resource "https://example.org/people/alice"}
+        BOB_CAN_READ_ALICE_USERNAME
+        {:xt/id "https://example.org/permissions/bob-can-read-alice-username"
+         ::site/type "Permission"
+         ::pass/subject "https://example.org/people/bob"
+         ::pass/action "https://example.org/actions/read-username"
+         ::pass/purpose nil
+         ::pass/resource "https://example.org/people/alice"}
 
-         BOB_CAN_READ_ALICE_SECRETS
-         {:xt/id "https://example.org/permissions/bob-can-read-alice-secrets"
-          ::site/type "Permission"
-          ::pass/subject "https://example.org/people/bob"
-          ::pass/action "https://example.org/actions/read-secrets"
-          ::pass/purpose nil
-          ::pass/resource "https://example.org/people/alice"}
+        BOB_CAN_READ_ALICE_SECRETS
+        {:xt/id "https://example.org/permissions/bob-can-read-alice-secrets"
+         ::site/type "Permission"
+         ::pass/subject "https://example.org/people/bob"
+         ::pass/action "https://example.org/actions/read-secrets"
+         ::pass/purpose nil
+         ::pass/resource "https://example.org/people/alice"}
 
-         CARLOS_CAN_READ_ALICE_USERNAME
-         {:xt/id "https://example.org/permissions/carl-can-read-alice-username"
-          ::site/type "Permission"
-          ::pass/subject "https://example.org/people/carl"
-          ::pass/action "https://example.org/actions/read-username"
-          ::pass/purpose nil
-          ::pass/resource "https://example.org/people/alice"}
+        CARLOS_CAN_READ_ALICE_USERNAME
+        {:xt/id "https://example.org/permissions/carl-can-read-alice-username"
+         ::site/type "Permission"
+         ::pass/subject "https://example.org/people/carl"
+         ::pass/action "https://example.org/actions/read-username"
+         ::pass/purpose nil
+         ::pass/resource "https://example.org/people/alice"}
 
-         RULES
-         '[[(allowed? permission subject action resource)
-            [permission ::pass/subject subject]
-            [action :xt/id "https://example.org/actions/read-username"]
-            [permission ::pass/resource resource]]
+        RULES
+        '[[(allowed? permission subject action resource)
+           [permission ::pass/subject subject]
+           [action :xt/id "https://example.org/actions/read-username"]
+           [permission ::pass/resource resource]]
 
-           [(allowed? permission subject action resource)
-            [permission ::pass/subject subject]
-            [action :xt/id "https://example.org/actions/read-secrets"]
-            [permission ::pass/resource resource]]]]
+          [(allowed? permission subject action resource)
+           [permission ::pass/subject subject]
+           [action :xt/id "https://example.org/actions/read-secrets"]
+           [permission ::pass/resource resource]]]]
 
     (submit-and-await!
      [
@@ -460,20 +460,19 @@
       [::xt/put CARLOS_CAN_READ_ALICE_USERNAME]
       ])
 
-     ;; Bob can read Alice's secret
-     (let [db (xt/db *xt-node*)]
-       (are [subject expected]
-           (let [actual (pull-allowed-resource
-                         db
-                         (:xt/id subject)
-                         #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
-                         nil
-                         (:xt/id ALICE)
-                         (vec (concat RULES)))]
-             (is (= expected actual)))
+    ;; Bob can read Alice's secret
+    (let [db (xt/db *xt-node*)]
+      (are [subject expected]
+          (let [actual (pull-allowed-resource
+                        db
+                        {:subject (:xt/id subject)
+                         :actions #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
+                         :resource (:xt/id ALICE)
+                         :rules (vec (concat RULES))})]
+            (is (= expected actual)))
 
-         BOB {::username "alice" ::secret "foo"}
-         CARLOS {::username "alice"}))))
+        BOB {::username "alice" ::secret "foo"}
+        CARLOS {::username "alice"}))))
 
 (deftest pull-allowed-resources-test
   (let [READ_MESSAGE_CONTENT_ACTION
@@ -605,11 +604,10 @@
           (fn [subject]
             (pull-allowed-resources
              (xt/db *xt-node*)
-             (:xt/id subject)
-             #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-               (:xt/id READ_MESSAGE_METADATA_ACTION)}
-             nil
-             RULES))]
+             {:subject (:xt/id subject)
+              :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                         (:xt/id READ_MESSAGE_METADATA_ACTION)}
+              :rules RULES}))]
 
       ;; Alice and Bob can read all the messages in the group
       (let [messages (get-messages ALICE)]
@@ -684,20 +682,18 @@
           (fn [subject action]
             (pull-allowed-resources
              (xt/db *xt-node*)
-             (:xt/id subject)
-             #{(:xt/id action)}
-             nil
-             rules))
+             {:subject (:xt/id subject)
+              :actions #{(:xt/id action)}
+              :rules rules}))
 
           get-medical-record
           (fn [subject action]
             (pull-allowed-resource
              (xt/db *xt-node*)
-             (:xt/id subject)
-             #{(:xt/id action)}
-             nil
-             "https://example.org/alice/medical-record"
-             rules))]
+             {:subject (:xt/id subject)
+              :actions #{(:xt/id action)}
+              :resource "https://example.org/alice/medical-record"
+              :rules rules}))]
 
       (is (zero? (count (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION))))
       (is (= 1 (count (get-medical-records OSCAR EMERGENCY_READ_MEDICAL_RECORD_ACTION))))
@@ -709,75 +705,75 @@
 
 #_((t/join-fixtures [with-xt])
 
- (fn []
-   (let [READ_MEDICAL_RECORD_ACTION
-         {:xt/id "https://example.org/actions/read-medical-record"
-          ::site/type "Action"
-          ::pass/pull ['*]}
+   (fn []
+     (let [READ_MEDICAL_RECORD_ACTION
+           {:xt/id "https://example.org/actions/read-medical-record"
+            ::site/type "Action"
+            ::pass/pull ['*]}
 
-         rules
-         '[[(allowed? permission subject action purpose resource)
-            [permission ::pass/subject subject]
-            [permission ::pass/purpose purpose]
-            [action :xt/id "https://example.org/actions/read-medical-record"]
-            [resource ::site/type "MedicalRecord"]]
+           rules
+           '[[(allowed? permission subject action purpose resource)
+              [permission ::pass/subject subject]
+              [permission ::pass/purpose purpose]
+              [action :xt/id "https://example.org/actions/read-medical-record"]
+              [resource ::site/type "MedicalRecord"]]
 
-           ]]
+             ]]
 
-     (submit-and-await!
-      [
-       ;; Actions
-       [::xt/put READ_MEDICAL_RECORD_ACTION]
+       (submit-and-await!
+        [
+         ;; Actions
+         [::xt/put READ_MEDICAL_RECORD_ACTION]
 
-       ;; Actors
-       [::xt/put ALICE]
-       [::xt/put OSCAR]
+         ;; Actors
+         [::xt/put ALICE]
+         [::xt/put OSCAR]
 
-       ;; Purposes
-       [::xt/put
-        {:xt/id "https://example.org/purposes/emergency"
-         ::description "Emergency access to vital personal information."
-         ::gdpr-interest "VITAL"
-         ::site/type "Purpose"}]
+         ;; Purposes
+         [::xt/put
+          {:xt/id "https://example.org/purposes/emergency"
+           ::description "Emergency access to vital personal information."
+           ::gdpr-interest "VITAL"
+           ::site/type "Purpose"}]
 
-       ;; Permissions
-       [::xt/put
-        {:xt/id "https://example.org/alice/medical-record/grants/oscar"
-         ::site/type "Permission"
-         ::pass/subject (:xt/id OSCAR)
-         ::pass/action (:xt/id READ_MEDICAL_RECORD_ACTION)
-         ::pass/purpose "https://example.org/purposes/emergency"
-         }]
+         ;; Permissions
+         [::xt/put
+          {:xt/id "https://example.org/alice/medical-record/grants/oscar"
+           ::site/type "Permission"
+           ::pass/subject (:xt/id OSCAR)
+           ::pass/action (:xt/id READ_MEDICAL_RECORD_ACTION)
+           ::pass/purpose "https://example.org/purposes/emergency"
+           }]
 
-       ;; Resources
-       [::xt/put
-        {:xt/id "https://example.org/alice/medical-record"
-         ::site/type "MedicalRecord"
-         ::content "Medical info"}]])
+         ;; Resources
+         [::xt/put
+          {:xt/id "https://example.org/alice/medical-record"
+           ::site/type "MedicalRecord"
+           ::content "Medical info"}]])
 
-     (let [get-medical-records
-           (fn [subject action]
-             (pull-allowed-resources
-              (xt/db *xt-node*)
-              (:xt/id subject)
-              #{(:xt/id action)}
-              nil
-              rules))
+       (let [get-medical-records
+             (fn [subject action]
+               (pull-allowed-resources
+                (xt/db *xt-node*)
+                (:xt/id subject)
+                #{(:xt/id action)}
+                nil
+                rules))
 
-           get-medical-record
-           (fn [subject action]
-             (pull-allowed-resource
-              (xt/db *xt-node*)
-              (:xt/id subject)
-              #{(:xt/id action)}
-              "https://example.org/alice/medical-record"
-              nil
-              rules))]
+             get-medical-record
+             (fn [subject action]
+               (pull-allowed-resource
+                (xt/db *xt-node*)
+                (:xt/id subject)
+                #{(:xt/id action)}
+                "https://example.org/alice/medical-record"
+                nil
+                rules))]
 
-       (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION)
+         (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION)
 
-))
-   ))
+         ))
+     ))
 
 ;; TODO: User defined queries (although not projections)
 
