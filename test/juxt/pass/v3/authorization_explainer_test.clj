@@ -704,83 +704,85 @@
 ;; An alternative way of achieving the same result is to specify a purpose when
 ;; granting a permission.
 
+(deftest purpose-test
+  (let [READ_MEDICAL_RECORD_ACTION
+        {:xt/id "https://example.org/actions/read-medical-record"
+         ::site/type "Action"
+         ::pass/pull ['*]}
+
+        rules
+        '[[(allowed? permission subject action resource)
+           [permission ::pass/subject subject]
+           [permission ::pass/purpose purpose]
+           [action :xt/id "https://example.org/actions/read-medical-record"]
+           [resource ::site/type "MedicalRecord"]]]]
+
+    (submit-and-await!
+     [
+      ;; Actions
+      [::xt/put READ_MEDICAL_RECORD_ACTION]
+
+      ;; Actors
+      [::xt/put ALICE]
+      [::xt/put OSCAR]
+
+      ;; Purposes
+      [::xt/put
+       {:xt/id "https://example.org/purposes/emergency"
+        ::description "Emergency access to vital personal information."
+        ::gdpr-interest "VITAL"
+        ::site/type "Purpose"}]
+
+      ;; Permissions
+      [::xt/put
+       {:xt/id "https://example.org/alice/medical-record/grants/oscar"
+        ::site/type "Permission"
+        ::pass/subject (:xt/id OSCAR)
+        ::pass/action (:xt/id READ_MEDICAL_RECORD_ACTION)
+        ::pass/purpose "https://example.org/purposes/emergency"
+        }]
+
+      ;; Resources
+      [::xt/put
+       {:xt/id "https://example.org/alice/medical-record"
+        ::site/type "MedicalRecord"
+        ::content "Medical info"}]])
+
+    (let [get-medical-records
+          (fn [subject action purpose]
+            (pull-allowed-resources
+             (xt/db *xt-node*)
+             {:subject (:xt/id subject)
+              :actions #{(:xt/id action)}
+              :purpose purpose
+              :rules rules}))
+
+          get-medical-record
+          (fn [subject action purpose]
+            (pull-allowed-resource
+             (xt/db *xt-node*)
+             {:subject (:xt/id subject)
+              :actions #{(:xt/id action)}
+              :purpose purpose
+              :resource "https://example.org/alice/medical-record"
+              :rules rules}))]
+
+      (is (= 1 (count (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency"))))
+      (is (zero? (count (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing"))))
+      (is (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency"))
+      (is (nil? (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing"))))))
+
 #_((t/join-fixtures [with-xt])
-
-   (fn []
-     (let [READ_MEDICAL_RECORD_ACTION
-           {:xt/id "https://example.org/actions/read-medical-record"
-            ::site/type "Action"
-            ::pass/pull ['*]}
-
-           rules
-           '[[(allowed? permission subject action purpose resource)
-              [permission ::pass/subject subject]
-              [permission ::pass/purpose purpose]
-              [action :xt/id "https://example.org/actions/read-medical-record"]
-              [resource ::site/type "MedicalRecord"]]
-
-             ]]
-
-       (submit-and-await!
-        [
-         ;; Actions
-         [::xt/put READ_MEDICAL_RECORD_ACTION]
-
-         ;; Actors
-         [::xt/put ALICE]
-         [::xt/put OSCAR]
-
-         ;; Purposes
-         [::xt/put
-          {:xt/id "https://example.org/purposes/emergency"
-           ::description "Emergency access to vital personal information."
-           ::gdpr-interest "VITAL"
-           ::site/type "Purpose"}]
-
-         ;; Permissions
-         [::xt/put
-          {:xt/id "https://example.org/alice/medical-record/grants/oscar"
-           ::site/type "Permission"
-           ::pass/subject (:xt/id OSCAR)
-           ::pass/action (:xt/id READ_MEDICAL_RECORD_ACTION)
-           ::pass/purpose "https://example.org/purposes/emergency"
-           }]
-
-         ;; Resources
-         [::xt/put
-          {:xt/id "https://example.org/alice/medical-record"
-           ::site/type "MedicalRecord"
-           ::content "Medical info"}]])
-
-       (let [get-medical-records
-             (fn [subject action]
-               (pull-allowed-resources
-                (xt/db *xt-node*)
-                (:xt/id subject)
-                #{(:xt/id action)}
-                nil
-                rules))
-
-             get-medical-record
-             (fn [subject action]
-               (pull-allowed-resource
-                (xt/db *xt-node*)
-                (:xt/id subject)
-                #{(:xt/id action)}
-                "https://example.org/alice/medical-record"
-                nil
-                rules))]
-
-         (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION)
-
-         ))
-     ))
+ (fn []
+   ))
 
 ;; TODO: User defined queries (although not projections)
 
 ;; TODO
 ;; Next up. Sharing itself. Is Alice even permitted to share her files?
 ;; read-only, read/write
+;; Answer @jms's question: is it possible for Alice to grant a resource for
+;; which she hasn't herself access?
 
 ;; TODO: INTERNAL classification, different security models, see
 ;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
