@@ -597,92 +597,86 @@
         (is (= 6 (count messages)))
         (is (= #{::from ::to ::date} (set (keys (first messages)))))))))
 
-;; TODO GDPR Consent. Alice consents that her PII be used but only for certain
-;; purposes (e.g. not marketing).
+;; Alice has a medical record. She wants to allow Oscar access to it, but only
+;; in emergencies (to provide to a doctor in case of urgent need).
 
-;; Alice has a medical record. She let's Oscar from HR access it, but only in
-;; emergencies (to provide to a doctor in case of urgent need).
+;; One way of achieving this is to segment actions by purpose.
+
+(deftest purpose-with-distinct-actions-test
+  (let [READ_MEDICAL_RECORD
+        {:xt/id "https://example.org/actions/read-medical-record"
+         ::site/type "Action"
+         ::pass/pull ['*]}
+
+        EMERGENCY_READ_MEDICAL_RECORD
+        {:xt/id "https://example.org/actions/emergency-read-medical-record"
+         ::site/type "Action"
+         ::pass/pull ['*]}
+
+        ALICE_GRANTS_OSCAR_ACCESS
+        {:xt/id "https://example.org/alice/medical-record/grants/oscar"
+         ::site/type "Permission"
+         ::pass/subject (:xt/id OSCAR)
+         ::pass/action #{(:xt/id EMERGENCY_READ_MEDICAL_RECORD)}}
+
+        RULES
+        '[[(allowed? permission subject action resource)
+           [permission ::pass/subject subject]
+           [action :xt/id "https://example.org/actions/read-medical-record"]
+           [resource ::site/type "MedicalRecord"]]
+
+          [(allowed? permission subject action resource)
+           [permission ::pass/subject subject]
+           [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
+           [resource ::site/type "MedicalRecord"]]
+
+          ]]
+
+    (submit-and-await!
+     [
+      ;; Actions
+      [::xt/put READ_MEDICAL_RECORD]
+      [::xt/put EMERGENCY_READ_MEDICAL_RECORD]
+
+      ;; Actors
+      [::xt/put ALICE]
+      [::xt/put OSCAR]
+
+      ;; Permissions
+      [::xt/put ALICE_GRANTS_OSCAR_ACCESS]
+
+      ;; Resources
+      [::xt/put
+       {:xt/id "https://example.org/alice/medical-record"
+        ::site/type "MedicalRecord"
+        ::content "Medical info"}]])
+
+    (let [get-medical-records
+          (fn [subject action]
+            (pull-allowed-resources
+             (xt/db *xt-node*)
+             (:xt/id subject)
+             #{(:xt/id action)}
+             RULES))
+
+          get-medical-record
+          (fn [subject action]
+            (pull-allowed-resource
+             (xt/db *xt-node*)
+             (:xt/id subject)
+             #{(:xt/id action)}
+             "https://example.org/alice/medical-record"
+             RULES))]
+
+      (is (zero? (count (get-medical-records OSCAR READ_MEDICAL_RECORD))))
+      (is (= 1 (count (get-medical-records OSCAR EMERGENCY_READ_MEDICAL_RECORD))))
+      (is (not (get-medical-record OSCAR READ_MEDICAL_RECORD)))
+      (is (get-medical-record OSCAR EMERGENCY_READ_MEDICAL_RECORD)))))
 
 ((t/join-fixtures [with-xt])
 
  (fn []
-   (let [READ_MEDICAL_RECORD
-         {:xt/id "https://example.org/actions/read-medical-record"
-          ::site/type "Action"
-          ::pass/pull ['*]}
 
-         EMERGENCY_READ_MEDICAL_RECORD
-         {:xt/id "https://example.org/actions/emergency-read-medical-record"
-          ::site/type "Action"
-          ::pass/pull ['*]}
-
-         ALICE_GRANTS_OSCAR_ACCESS
-         {:xt/id "https://example.org/alice/medical-record/grants/oscar"
-          ::site/type "Permission"
-          ::pass/subject (:xt/id OSCAR)
-          ::pass/action #{(:xt/id EMERGENCY_READ_MEDICAL_RECORD)}}
-
-         RULES
-         '[[(allowed? permission subject action resource)
-            [permission ::pass/subject subject]
-            [action :xt/id "https://example.org/actions/read-medical-record"]
-            [resource ::site/type "MedicalRecord"]]
-
-           [(allowed? permission subject action resource)
-            [permission ::pass/subject subject]
-            [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
-            [resource ::site/type "MedicalRecord"]]
-
-           ]]
-
-     (submit-and-await!
-      [
-       ;; Actions
-       [::xt/put READ_MEDICAL_RECORD]
-       [::xt/put EMERGENCY_READ_MEDICAL_RECORD]
-
-       ;; Actors
-       [::xt/put ALICE]
-       [::xt/put OSCAR]
-
-       ;; Permissions
-       [::xt/put ALICE_GRANTS_OSCAR_ACCESS]
-
-       ;; Resources
-       [::xt/put
-        {:xt/id "https://example.org/alice/medical-record"
-         ::site/type "MedicalRecord"
-         ::content "Medical info"}]])
-
-     (let [get-medical-records
-           (fn [subject action]
-             (pull-allowed-resources
-              (xt/db *xt-node*)
-              (:xt/id subject)
-              #{(:xt/id action)}
-              RULES))
-
-           get-medical-record
-           (fn [subject action]
-             (pull-allowed-resource
-              (xt/db *xt-node*)
-              (:xt/id subject)
-              #{(:xt/id action)}
-              "https://example.org/alice/medical-record"
-              RULES))]
-
-       (get-medical-records OSCAR READ_MEDICAL_RECORD)
-
-       (get-medical-records OSCAR EMERGENCY_READ_MEDICAL_RECORD)
-
-       (get-medical-record OSCAR READ_MEDICAL_RECORD)
-
-       (get-medical-record OSCAR EMERGENCY_READ_MEDICAL_RECORD)
-
-       )
-
-     ()
-     )
    ))
 
 ;; TODO
