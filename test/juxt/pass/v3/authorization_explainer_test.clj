@@ -94,6 +94,34 @@
 
         resource actions)))
 
+(defn pull-allowed-resources
+  "Given a subject and a set of possible actions, which resources are allowed?"
+  [db subject actions rules]
+  (let [results
+        (xt/q
+         db
+         {:find '[resource (pull action [::xt/id ::pass/pull]) permission]
+          :keys '[resource action permission]
+          :where
+          '[
+            [permission ::site/type "Permission"]
+            [action ::site/type "Action"]
+            [permission ::pass/action action]
+            [(contains? actions action)]
+
+            (allowed? permission subject action resource)]
+
+          :rules rules
+
+          :in '[subject actions]}
+
+         subject actions)
+        pull-expr (vec (mapcat (comp ::pass/pull :action) results))]
+
+    (->> results
+         (map :resource)
+         (xt/pull-many db pull-expr))))
+
 (defn authorized-pull
   [db subject actions resource rules]
   (let [check-result (check-permissions db subject actions resource rules)
@@ -113,10 +141,15 @@
    ::site/type "User"
    ::username "bob"})
 
-(def CARL
+(def CARLOS
   {:xt/id "https://example.org/people/carl",
    ::site/type "User"
    ::username "carl"})
+
+(def FAYTHE
+  {:xt/id "https://example.org/people/faythe",
+   ::site/type "User"
+   ::username "faythe"})
 
 (def ALICE_USER_DIR_PRIVATE_FILE
   {:xt/id "https://example.org/~alice/private.txt"
@@ -215,7 +248,7 @@
        ;; Actors
        [::xt/put ALICE]
        [::xt/put BOB]
-       [::xt/put CARL]
+       [::xt/put CARLOS]
 
        ;; Resources
        [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
@@ -246,7 +279,7 @@
     ;; Actors
     [::xt/put ALICE]
     [::xt/put BOB]
-    [::xt/put CARL]
+    [::xt/put CARLOS]
 
     ;; Resources
     [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
@@ -410,7 +443,7 @@
           ::pass/action "https://example.org/actions/read-secrets"
           ::pass/resource "https://example.org/people/alice"}
 
-         CARL_CAN_READ_ALICE_USERNAME
+         CARLOS_CAN_READ_ALICE_USERNAME
          {:xt/id "https://example.org/permissions/carl-can-read-alice-username"
           ::site/type "Permission"
           ::pass/subject "https://example.org/people/carl"
@@ -435,13 +468,13 @@
        ;; Actors
        [::xt/put (assoc ALICE ::secret "foo")]
        [::xt/put BOB]
-       [::xt/put CARL]
+       [::xt/put CARLOS]
 
        [::xt/put READ_USERNAME_ACTION]
        [::xt/put READ_SECRETS_ACTION]
        [::xt/put BOB_CAN_READ_ALICE_USERNAME]
        [::xt/put BOB_CAN_READ_ALICE_SECRETS]
-       [::xt/put CARL_CAN_READ_ALICE_USERNAME]
+       [::xt/put CARLOS_CAN_READ_ALICE_USERNAME]
 
        ])
 
@@ -454,13 +487,137 @@
              (is (= expected actual)))
 
          BOB {::username "alice" ::secret "foo"}
-         CARL {::username "alice"}))))
+         CARLOS {::username "alice"}))))
 
-#_((t/join-fixtures [with-xt])
+((t/join-fixtures [with-xt])
 
-   (fn []
+ (fn []
 
+   (let [READ_MESSAGE_CONTENT_ACTION
+         {:xt/id "https://example.org/actions/read-message-content"
+          ::site/type "Action"
+          ::pass/pull [::content]}
 
-     ;; ... but Carl cannot
+         READ_MESSAGE_METADATA_ACTION
+         {:xt/id "https://example.org/actions/read-message-metadata"
+          ::site/type "Action"
+          ::pass/pull [::from ::to ::date]}
 
-     ))
+         ALICE_BELONGS_GROUP_A
+         {:xt/id "https://example.org/group/a/alice"
+          ::site/type "Permission"
+          ::pass/subject (:xt/id ALICE)
+          ::group :a
+          ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                          (:xt/id READ_MESSAGE_METADATA_ACTION)}}
+
+         BOB_BELONGS_GROUP_A
+         {:xt/id "https://example.org/group/a/bob"
+          ::site/type "Permission"
+          ::pass/subject (:xt/id BOB)
+          ::group :a
+          ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                          (:xt/id READ_MESSAGE_METADATA_ACTION)}}
+
+         RULES
+         '[[(allowed? permission subject action resource)
+            [permission ::pass/subject subject]
+            [action :xt/id "https://example.org/actions/read-message-content"]
+            [permission ::group group]
+            [resource ::group group]
+            [resource ::site/type "Message"]]
+
+           [(allowed? permission subject action resource)
+            [permission ::pass/subject subject]
+            [action :xt/id "https://example.org/actions/read-message-metadata"]
+            [permission ::group group]
+            [resource ::group group]
+            [resource ::site/type "Message"]]]]
+
+     (submit-and-await!
+      [
+       ;; Actions
+       [::xt/put READ_MESSAGE_CONTENT_ACTION]
+       [::xt/put READ_MESSAGE_METADATA_ACTION]
+
+       ;; Actors
+       [::xt/put ALICE]
+       [::xt/put BOB]
+       [::xt/put CARLOS]
+       [::xt/put FAYTHE]
+
+       ;; Permissions
+       [::xt/put ALICE_BELONGS_GROUP_A]
+       [::xt/put BOB_BELONGS_GROUP_A]
+
+       ;; Messages
+       [::xt/put
+        {:xt/id "https://example.org/messages/1"
+         ::site/type "Message"
+         ::group :a
+         ::from (:xt/id ALICE)
+         ::to (:xt/id BOB)
+         ::date "2022-03-07T13:00:00"
+         ::content "Hello Bob!"}]
+
+       [::xt/put
+        {:xt/id "https://example.org/messages/2"
+         ::site/type "Message"
+         ::group :a
+         ::from (:xt/id BOB)
+         ::to (:xt/id ALICE)
+         ::date "2022-03-07T13:00:10"
+         ::content "Hi Alice, how are you?"}]
+
+       [::xt/put
+        {:xt/id "https://example.org/messages/3"
+         ::site/type "Message"
+         ::group :a
+         ::from (:xt/id ALICE)
+         ::to (:xt/id BOB)
+         ::date "2022-03-07T13:00:20"
+         ::content "Great thanks. I've reset your password, btw."}]
+
+       [::xt/put
+        {:xt/id "https://example.org/messages/4"
+         ::site/type "Message"
+         ::group :a
+         ::from (:xt/id BOB)
+         ::to (:xt/id ALICE)
+         ::date "2022-03-07T13:00:40"
+         ::content "Thanks, what is it?"}]
+
+       [::xt/put
+        {:xt/id "https://example.org/messages/5"
+         ::site/type "Message"
+         ::group :a
+         ::from (:xt/id ALICE)
+         ::to (:xt/id BOB)
+         ::date "2022-03-07T13:00:50"
+         ::content "It's 'BananaTree@1230', you should change it a some point."}]
+
+       [::xt/put
+        {:xt/id "https://example.org/messages/6"
+         ::site/type "Message"
+         ::group :a
+         ::from (:xt/id BOB)
+         ::to (:xt/id ALICE)
+         ::date "2022-03-07T13:00:50"
+         ::content "Thanks Alice, that's very kind of you - see you at lunch!"}]
+
+       ;; Alice and Bob are in a group. They can read each other's messages.
+
+       ;; Carlos cannot see any of the messages
+
+       ;; Faythe can read meta-data of the conversation between Alice and Bob
+       ;; but not the content of the messages.
+
+       ])
+
+     ;; Bob can read Alice's secret
+     (pull-allowed-resources
+      (xt/db *xt-node*)
+      (:xt/id ALICE)
+      #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+        (:xt/id READ_MESSAGE_METADATA_ACTION)}
+      RULES))))
