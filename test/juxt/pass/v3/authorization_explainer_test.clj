@@ -519,6 +519,15 @@
           ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                           (:xt/id READ_MESSAGE_METADATA_ACTION)}}
 
+         ;; Faythe is a trusted admin of Group A. She can see the metadata but
+         ;; not the content of messages.
+         FAYTHE_MONITORS_GROUP_A
+         {:xt/id "https://example.org/group/a/faythe"
+          ::site/type "Permission"
+          ::pass/subject (:xt/id FAYTHE)
+          ::group :a
+          ::pass/action #{(:xt/id READ_MESSAGE_METADATA_ACTION)}}
+
          RULES
          '[[(allowed? permission subject action resource)
             [permission ::pass/subject subject]
@@ -549,6 +558,7 @@
        ;; Permissions
        [::xt/put ALICE_BELONGS_GROUP_A]
        [::xt/put BOB_BELONGS_GROUP_A]
+       [::xt/put FAYTHE_MONITORS_GROUP_A]
 
        ;; Messages
        [::xt/put
@@ -614,10 +624,21 @@
 
        ])
 
-     ;; Bob can read Alice's secret
-     (pull-allowed-resources
-      (xt/db *xt-node*)
-      (:xt/id ALICE)
-      #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-        (:xt/id READ_MESSAGE_METADATA_ACTION)}
-      RULES))))
+     (let [get-messages
+           (fn [subject]
+             (pull-allowed-resources
+              (xt/db *xt-node*)
+              (:xt/id subject)
+              #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                (:xt/id READ_MESSAGE_METADATA_ACTION)}
+              RULES))]
+
+       ;; Alice and Bob can read all the messages in the group
+       (get-messages ALICE)
+       (get-messages BOB)
+
+       ;; Carlos can't see anything
+       (get-messages CARLOS)
+
+       ;; Faythe only sees the metadata
+       (get-messages FAYTHE)))))
