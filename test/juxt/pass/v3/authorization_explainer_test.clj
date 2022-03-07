@@ -34,7 +34,7 @@
 
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
-  [db subject actions resource rules]
+  [db subject actions purpose resource rules]
   (xt/q
    db
    {:find '[(pull permission [*]) (pull action [*])]
@@ -44,18 +44,19 @@
       [permission ::site/type "Permission"]
       [action ::site/type "Action"]
       [permission ::pass/action action]
+      [permission ::pass/purpose purpose]
       [(contains? actions action)]
       (allowed? permission subject action resource)]
 
     :rules rules
 
-    :in '[subject actions resource]}
+    :in '[subject actions purpose resource]}
 
-   subject actions resource))
+   subject actions purpose resource))
 
 (defn allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
-  [db subject actions rules]
+  [db subject actions purpose rules]
   (xt/q
    db
    {:find '[resource]
@@ -64,20 +65,21 @@
       [permission ::site/type "Permission"]
       [action ::site/type "Action"]
       [permission ::pass/action action]
+      [permission ::pass/purpose purpose]
       [(contains? actions action)]
 
       (allowed? permission subject action resource)]
 
     :rules rules
 
-    :in '[subject actions]}
+    :in '[subject actions purpose]}
 
-   subject actions))
+   subject actions purpose))
 
 (defn allowed-subjects
   "Given a resource and a set of actions, which subjects can access and via which
   actions?"
-  [db resource actions rules]
+  [db resource actions purpose rules]
   (->> (xt/q
         db
         {:find '[subject action]
@@ -87,21 +89,22 @@
            [permission ::site/type "Permission"]
            [action ::site/type "Action"]
            [permission ::pass/action action]
+           [permission ::pass/purpose purpose]
            [(contains? actions action)]
 
            (allowed? permission subject action resource)]
 
          :rules rules
 
-         :in '[resource actions]}
+         :in '[resource actions purpose]}
 
-        resource actions)))
+        resource actions purpose)))
 
 (defn pull-allowed-resource
   "Given a subject, a set of possible actions and a resource, pull the allowed
   attributes."
-  [db subject actions resource rules]
-  (let [check-result (check-permissions db subject actions resource rules)
+  [db subject actions purpose resource rules]
+  (let [check-result (check-permissions db subject actions purpose resource rules)
         pull-expr (vec (mapcat
                         (fn [{:keys [action]}]
                           (::pass/pull action))
@@ -110,26 +113,27 @@
 
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
-  [db subject actions rules]
+  [db subject actions purpose rules]
   (let [results
         (xt/q
          db
-         {:find '[resource (pull action [::xt/id ::pass/pull]) permission]
-          :keys '[resource action permission]
+         {:find '[resource (pull action [::xt/id ::pass/pull]) purpose permission]
+          :keys '[resource action purpose permission]
           :where
           '[
             [permission ::site/type "Permission"]
             [action ::site/type "Action"]
             [permission ::pass/action action]
+            [permission ::pass/purpose purpose]
             [(contains? actions action)]
 
             (allowed? permission subject action resource)]
 
           :rules rules
 
-          :in '[subject actions]}
+          :in '[subject actions purpose]}
 
-         subject actions)
+         subject actions purpose)
         pull-expr (vec (mapcat (comp ::pass/pull :action) results))]
 
     (->> results
@@ -189,33 +193,38 @@
    ::site/type "Permission"
    ::pass/subject "https://example.org/people/alice"
    ::pass/action #{"https://example.org/actions/read-shared"
-                   "https://example.org/actions/read-user-dir"}})
+                   "https://example.org/actions/read-user-dir"}
+   ::pass/purpose :any})
 
 (def ALICE_CAN_WRITE_USER_DIR_CONTENT
   {:xt/id "https://example.org/permissions/alice-can-write-user-dir-content"
    ::site/type "Permission"
    ::pass/subject "https://example.org/people/alice"
-   ::pass/action "https://example.org/actions/write-user-dir"})
+   ::pass/action "https://example.org/actions/write-user-dir"
+   ::pass/purpose :any})
 
 (def BOB_CAN_READ
   {:xt/id "https://example.org/permissions/bob-can-read"
    ::site/type "Permission"
    ::pass/subject "https://example.org/people/bob"
    ::pass/action #{"https://example.org/actions/read-shared"
-                   "https://example.org/actions/read-user-dir"}})
+                   "https://example.org/actions/read-user-dir"}
+   ::pass/purpose :any})
 
 (def ALICES_SHARES_FILE_WITH_BOB
   {:xt/id "https://example.org/permissions/alice-shares-file-with-bob"
    ::site/type "Permission"
    ::pass/subject "https://example.org/people/bob"
    ::pass/action "https://example.org/actions/read-shared"
+   ::pass/purpose :any
    ::pass/resource "https://example.org/~alice/shared.txt"})
 
 (def BOB_CAN_WRITE_USER_DIR_CONTENT
   {:xt/id "https://example.org/permissions/bob-can-write-user-dir-content"
    ::site/type "Permission"
    ::pass/subject "https://example.org/people/bob"
-   ::pass/action "https://example.org/actions/write-user-dir"})
+   ::pass/action "https://example.org/actions/write-user-dir"
+   ::pass/purpose :any})
 
 (def WRITE_USER_DIR_RULES
   '[[(allowed? permission subject action resource)
@@ -272,7 +281,7 @@
         db (xt/db *xt-node*)]
 
     (are [subject actions resource ok?]
-        (let [actual (check-permissions db subject actions resource rules)]
+        (let [actual (check-permissions db subject actions :any resource rules)]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
@@ -338,7 +347,7 @@
       false)
 
     (are [subject actions rules expected]
-        (is (= expected (allowed-resources db subject actions rules)))
+        (is (= expected (allowed-resources db subject actions :any rules)))
 
       ;; Alice can see all her files.
       "https://example.org/people/alice"
@@ -359,7 +368,7 @@
     ;; and via which actions?
 
     (are [resource actions rules expected]
-        (is (= expected (allowed-subjects db resource actions rules)))
+        (is (= expected (allowed-subjects db resource actions :any rules)))
 
       "https://example.org/~alice/shared.txt"
       #{"https://example.org/actions/read-user-dir"
@@ -393,6 +402,7 @@
           ::site/type "Permission"
           ::pass/subject "https://example.org/people/bob"
           ::pass/action "https://example.org/actions/read-username"
+          ::pass/purpose :any
           ::pass/resource "https://example.org/people/alice"}
 
          BOB_CAN_READ_ALICE_SECRETS
@@ -400,6 +410,7 @@
           ::site/type "Permission"
           ::pass/subject "https://example.org/people/bob"
           ::pass/action "https://example.org/actions/read-secrets"
+          ::pass/purpose :any
           ::pass/resource "https://example.org/people/alice"}
 
          CARLOS_CAN_READ_ALICE_USERNAME
@@ -407,6 +418,7 @@
           ::site/type "Permission"
           ::pass/subject "https://example.org/people/carl"
           ::pass/action "https://example.org/actions/read-username"
+          ::pass/purpose :any
           ::pass/resource "https://example.org/people/alice"}
 
          RULES
@@ -418,29 +430,31 @@
            [(allowed? permission subject action resource)
             [permission ::pass/subject subject]
             [action :xt/id "https://example.org/actions/read-secrets"]
-            [permission ::pass/resource resource]]]
+            [permission ::pass/resource resource]]]]
 
-         ]
+    (submit-and-await!
+     [
+      ;; Actors
+      [::xt/put (assoc ALICE ::secret "foo")]
+      [::xt/put BOB]
+      [::xt/put CARLOS]
 
-     (submit-and-await!
-      [
-       ;; Actors
-       [::xt/put (assoc ALICE ::secret "foo")]
-       [::xt/put BOB]
-       [::xt/put CARLOS]
-
-       [::xt/put READ_USERNAME_ACTION]
-       [::xt/put READ_SECRETS_ACTION]
-       [::xt/put BOB_CAN_READ_ALICE_USERNAME]
-       [::xt/put BOB_CAN_READ_ALICE_SECRETS]
-       [::xt/put CARLOS_CAN_READ_ALICE_USERNAME]
-       ])
+      [::xt/put READ_USERNAME_ACTION]
+      [::xt/put READ_SECRETS_ACTION]
+      [::xt/put BOB_CAN_READ_ALICE_USERNAME]
+      [::xt/put BOB_CAN_READ_ALICE_SECRETS]
+      [::xt/put CARLOS_CAN_READ_ALICE_USERNAME]
+      ])
 
      ;; Bob can read Alice's secret
      (let [db (xt/db *xt-node*)]
        (are [subject expected]
            (let [actual (pull-allowed-resource
-                         db (:xt/id subject) #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)} (:xt/id ALICE)
+                         db
+                         (:xt/id subject)
+                         #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
+                         :any
+                         (:xt/id ALICE)
                          (vec (concat RULES)))]
              (is (= expected actual)))
 
@@ -464,7 +478,8 @@
          ::pass/subject (:xt/id ALICE)
          ::group :a
          ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                         (:xt/id READ_MESSAGE_METADATA_ACTION)}}
+                         (:xt/id READ_MESSAGE_METADATA_ACTION)}
+         ::pass/purpose :any}
 
         BOB_BELONGS_GROUP_A
         {:xt/id "https://example.org/group/a/bob"
@@ -472,7 +487,8 @@
          ::pass/subject (:xt/id BOB)
          ::group :a
          ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                         (:xt/id READ_MESSAGE_METADATA_ACTION)}}
+                         (:xt/id READ_MESSAGE_METADATA_ACTION)}
+         ::pass/purpose :any}
 
         ;; Faythe is a trusted admin of Group A. She can see the metadata but
         ;; not the content of messages.
@@ -481,7 +497,8 @@
          ::site/type "Permission"
          ::pass/subject (:xt/id FAYTHE)
          ::group :a
-         ::pass/action #{(:xt/id READ_MESSAGE_METADATA_ACTION)}}
+         ::pass/action #{(:xt/id READ_MESSAGE_METADATA_ACTION)}
+         ::pass/purpose :any}
 
         RULES
         '[[(allowed? permission subject action resource)
@@ -577,6 +594,7 @@
              (:xt/id subject)
              #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                (:xt/id READ_MESSAGE_METADATA_ACTION)}
+             :any
              RULES))]
 
       ;; Alice and Bob can read all the messages in the group
@@ -639,7 +657,8 @@
        {:xt/id "https://example.org/alice/medical-record/grants/oscar"
         ::site/type "Permission"
         ::pass/subject (:xt/id OSCAR)
-        ::pass/action #{(:xt/id EMERGENCY_READ_MEDICAL_RECORD_ACTION)}}]
+        ::pass/action #{(:xt/id EMERGENCY_READ_MEDICAL_RECORD_ACTION)}
+        ::pass/purpose :any}]
 
       ;; Resources
       [::xt/put
@@ -653,6 +672,7 @@
              (xt/db *xt-node*)
              (:xt/id subject)
              #{(:xt/id action)}
+             :any
              rules))
 
           get-medical-record
@@ -661,6 +681,7 @@
              (xt/db *xt-node*)
              (:xt/id subject)
              #{(:xt/id action)}
+             :any
              "https://example.org/alice/medical-record"
              rules))]
 
@@ -669,11 +690,82 @@
       (is (not (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION)))
       (is (get-medical-record OSCAR EMERGENCY_READ_MEDICAL_RECORD_ACTION)))))
 
+;; An alternative way of achieving the same result is to specify a purpose when
+;; granting a permission.
+
 #_((t/join-fixtures [with-xt])
 
  (fn []
+   (let [READ_MEDICAL_RECORD_ACTION
+         {:xt/id "https://example.org/actions/read-medical-record"
+          ::site/type "Action"
+          ::pass/pull ['*]}
 
+         rules
+         '[[(allowed? permission subject action purpose resource)
+            [permission ::pass/subject subject]
+            [permission ::pass/purpose purpose]
+            [action :xt/id "https://example.org/actions/read-medical-record"]
+            [resource ::site/type "MedicalRecord"]]
+
+           ]]
+
+     (submit-and-await!
+      [
+       ;; Actions
+       [::xt/put READ_MEDICAL_RECORD_ACTION]
+
+       ;; Actors
+       [::xt/put ALICE]
+       [::xt/put OSCAR]
+
+       ;; Purposes
+       [::xt/put
+        {:xt/id "https://example.org/purposes/emergency"
+         ::description "Emergency access to vital personal information."
+         ::gdpr-interest "VITAL"
+         ::site/type "Purpose"}]
+
+       ;; Permissions
+       [::xt/put
+        {:xt/id "https://example.org/alice/medical-record/grants/oscar"
+         ::site/type "Permission"
+         ::pass/subject (:xt/id OSCAR)
+         ::pass/action (:xt/id READ_MEDICAL_RECORD_ACTION)
+         ::pass/purpose "https://example.org/purposes/emergency"
+         }]
+
+       ;; Resources
+       [::xt/put
+        {:xt/id "https://example.org/alice/medical-record"
+         ::site/type "MedicalRecord"
+         ::content "Medical info"}]])
+
+     (let [get-medical-records
+           (fn [subject action]
+             (pull-allowed-resources
+              (xt/db *xt-node*)
+              (:xt/id subject)
+              #{(:xt/id action)}
+              :any
+              rules))
+
+           get-medical-record
+           (fn [subject action]
+             (pull-allowed-resource
+              (xt/db *xt-node*)
+              (:xt/id subject)
+              #{(:xt/id action)}
+              "https://example.org/alice/medical-record"
+              :any
+              rules))]
+
+       (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION)
+
+))
    ))
+
+;; TODO: User defined queries (although not projections)
 
 ;; TODO
 ;; Next up. Sharing itself. Is Alice even permitted to share her files?
