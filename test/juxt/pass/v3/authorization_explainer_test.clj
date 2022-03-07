@@ -793,8 +793,6 @@
    :ok
    ))
 
-;; TODO: User defined queries (although not projections)
-
 ;; TODO
 ;; Next up. Sharing itself. Is Alice even permitted to share her files?
 ;; read-only, read/write
