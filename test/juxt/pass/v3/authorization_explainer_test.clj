@@ -370,10 +370,7 @@
         "https://example.org/actions/read-shared"}
       (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
       #{{:subject "https://example.org/people/alice",
-         :action "https://example.org/actions/read-user-dir"}})
-
-    ))
-
+         :action "https://example.org/actions/read-user-dir"}})))
 
 ;; TODO
 ;; Next up. Sharing itself. Is Alice even permitted to share her files?
@@ -386,8 +383,6 @@
 ;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
 
 ;; TODO: Extend to GraphQL
-
-;; TODO: View restricted info
 
 (deftest constrained-pull-test
   (let [READ_USERNAME_ACTION
@@ -571,7 +566,7 @@
         ::from (:xt/id ALICE)
         ::to (:xt/id BOB)
         ::date "2022-03-07T13:00:50"
-        ::content "It's 'BananaTree@1230', you should change it a some point."}]
+        ::content "It's 'BananaTree@1230', you should definitely change it at some point."}]
 
       [::xt/put
        {:xt/id "https://example.org/messages/6"
