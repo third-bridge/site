@@ -29,6 +29,9 @@
 
 ;; We'll create a similar system here, using subjects/actions/resources.
 
+;; Note: if you're not familiar with the Alice and Bob characters, see
+;; https://en.wikipedia.org/wiki/Alice_and_Bob#Cast_of_characters
+
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
   [db subject actions resource rules]
