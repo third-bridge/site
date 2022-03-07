@@ -97,7 +97,7 @@
 
         resource actions)))
 
-(defn authorized-pull
+(defn pull-allowed-resource
   "Given a subject, a set of possible actions and a resource, pull the allowed
   attributes."
   [db subject actions resource rules]
@@ -439,7 +439,7 @@
      ;; Bob can read Alice's secret
      (let [db (xt/db *xt-node*)]
        (are [subject expected]
-           (let [actual (authorized-pull
+           (let [actual (pull-allowed-resource
                          db (:xt/id subject) #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)} (:xt/id ALICE)
                          (vec (concat RULES)))]
              (is (= expected actual)))
@@ -660,12 +660,28 @@
               (xt/db *xt-node*)
               (:xt/id subject)
               #{(:xt/id action)}
-              RULES)
-             )]
+              RULES))
+
+           get-medical-record
+           (fn [subject action]
+             (pull-allowed-resource
+              (xt/db *xt-node*)
+              (:xt/id subject)
+              #{(:xt/id action)}
+              "https://example.org/alice/medical-record"
+              RULES))]
 
        (get-medical-records OSCAR READ_MEDICAL_RECORD)
 
-       (get-medical-records OSCAR EMERGENCY_READ_MEDICAL_RECORD))
+       (get-medical-records OSCAR EMERGENCY_READ_MEDICAL_RECORD)
+
+       (get-medical-record OSCAR READ_MEDICAL_RECORD)
+
+       (get-medical-record OSCAR EMERGENCY_READ_MEDICAL_RECORD)
+
+       )
+
+     ()
      )
    ))
 
