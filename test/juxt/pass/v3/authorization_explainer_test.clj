@@ -194,14 +194,14 @@
    ::pass/subject "https://example.org/people/alice"
    ::pass/action #{"https://example.org/actions/read-shared"
                    "https://example.org/actions/read-user-dir"}
-   ::pass/purpose :any})
+   ::pass/purpose nil})
 
 (def ALICE_CAN_WRITE_USER_DIR_CONTENT
   {:xt/id "https://example.org/permissions/alice-can-write-user-dir-content"
    ::site/type "Permission"
    ::pass/subject "https://example.org/people/alice"
    ::pass/action "https://example.org/actions/write-user-dir"
-   ::pass/purpose :any})
+   ::pass/purpose nil})
 
 (def BOB_CAN_READ
   {:xt/id "https://example.org/permissions/bob-can-read"
@@ -209,14 +209,14 @@
    ::pass/subject "https://example.org/people/bob"
    ::pass/action #{"https://example.org/actions/read-shared"
                    "https://example.org/actions/read-user-dir"}
-   ::pass/purpose :any})
+   ::pass/purpose nil})
 
 (def ALICES_SHARES_FILE_WITH_BOB
   {:xt/id "https://example.org/permissions/alice-shares-file-with-bob"
    ::site/type "Permission"
    ::pass/subject "https://example.org/people/bob"
    ::pass/action "https://example.org/actions/read-shared"
-   ::pass/purpose :any
+   ::pass/purpose nil
    ::pass/resource "https://example.org/~alice/shared.txt"})
 
 (def BOB_CAN_WRITE_USER_DIR_CONTENT
@@ -224,7 +224,7 @@
    ::site/type "Permission"
    ::pass/subject "https://example.org/people/bob"
    ::pass/action "https://example.org/actions/write-user-dir"
-   ::pass/purpose :any})
+   ::pass/purpose nil})
 
 (def WRITE_USER_DIR_RULES
   '[[(allowed? permission subject action resource)
@@ -281,7 +281,7 @@
         db (xt/db *xt-node*)]
 
     (are [subject actions resource ok?]
-        (let [actual (check-permissions db subject actions :any resource rules)]
+        (let [actual (check-permissions db subject actions nil resource rules)]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
@@ -347,7 +347,7 @@
       false)
 
     (are [subject actions rules expected]
-        (is (= expected (allowed-resources db subject actions :any rules)))
+        (is (= expected (allowed-resources db subject actions nil rules)))
 
       ;; Alice can see all her files.
       "https://example.org/people/alice"
@@ -368,7 +368,7 @@
     ;; and via which actions?
 
     (are [resource actions rules expected]
-        (is (= expected (allowed-subjects db resource actions :any rules)))
+        (is (= expected (allowed-subjects db resource actions nil rules)))
 
       "https://example.org/~alice/shared.txt"
       #{"https://example.org/actions/read-user-dir"
@@ -402,7 +402,7 @@
           ::site/type "Permission"
           ::pass/subject "https://example.org/people/bob"
           ::pass/action "https://example.org/actions/read-username"
-          ::pass/purpose :any
+          ::pass/purpose nil
           ::pass/resource "https://example.org/people/alice"}
 
          BOB_CAN_READ_ALICE_SECRETS
@@ -410,7 +410,7 @@
           ::site/type "Permission"
           ::pass/subject "https://example.org/people/bob"
           ::pass/action "https://example.org/actions/read-secrets"
-          ::pass/purpose :any
+          ::pass/purpose nil
           ::pass/resource "https://example.org/people/alice"}
 
          CARLOS_CAN_READ_ALICE_USERNAME
@@ -418,7 +418,7 @@
           ::site/type "Permission"
           ::pass/subject "https://example.org/people/carl"
           ::pass/action "https://example.org/actions/read-username"
-          ::pass/purpose :any
+          ::pass/purpose nil
           ::pass/resource "https://example.org/people/alice"}
 
          RULES
@@ -453,7 +453,7 @@
                          db
                          (:xt/id subject)
                          #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
-                         :any
+                         nil
                          (:xt/id ALICE)
                          (vec (concat RULES)))]
              (is (= expected actual)))
@@ -479,7 +479,7 @@
          ::group :a
          ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                          (:xt/id READ_MESSAGE_METADATA_ACTION)}
-         ::pass/purpose :any}
+         ::pass/purpose nil}
 
         BOB_BELONGS_GROUP_A
         {:xt/id "https://example.org/group/a/bob"
@@ -488,7 +488,7 @@
          ::group :a
          ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                          (:xt/id READ_MESSAGE_METADATA_ACTION)}
-         ::pass/purpose :any}
+         ::pass/purpose nil}
 
         ;; Faythe is a trusted admin of Group A. She can see the metadata but
         ;; not the content of messages.
@@ -498,7 +498,7 @@
          ::pass/subject (:xt/id FAYTHE)
          ::group :a
          ::pass/action #{(:xt/id READ_MESSAGE_METADATA_ACTION)}
-         ::pass/purpose :any}
+         ::pass/purpose nil}
 
         RULES
         '[[(allowed? permission subject action resource)
@@ -594,7 +594,7 @@
              (:xt/id subject)
              #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                (:xt/id READ_MESSAGE_METADATA_ACTION)}
-             :any
+             nil
              RULES))]
 
       ;; Alice and Bob can read all the messages in the group
@@ -658,7 +658,7 @@
         ::site/type "Permission"
         ::pass/subject (:xt/id OSCAR)
         ::pass/action #{(:xt/id EMERGENCY_READ_MEDICAL_RECORD_ACTION)}
-        ::pass/purpose :any}]
+        ::pass/purpose nil}]
 
       ;; Resources
       [::xt/put
@@ -672,7 +672,7 @@
              (xt/db *xt-node*)
              (:xt/id subject)
              #{(:xt/id action)}
-             :any
+             nil
              rules))
 
           get-medical-record
@@ -681,7 +681,7 @@
              (xt/db *xt-node*)
              (:xt/id subject)
              #{(:xt/id action)}
-             :any
+             nil
              "https://example.org/alice/medical-record"
              rules))]
 
@@ -747,7 +747,7 @@
               (xt/db *xt-node*)
               (:xt/id subject)
               #{(:xt/id action)}
-              :any
+              nil
               rules))
 
            get-medical-record
@@ -757,7 +757,7 @@
               (:xt/id subject)
               #{(:xt/id action)}
               "https://example.org/alice/medical-record"
-              :any
+              nil
               rules))]
 
        (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION)
