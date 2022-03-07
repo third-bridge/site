@@ -56,7 +56,7 @@
 
 (defn allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
-  [db subject actions purpose rules]
+  [db {:keys [subject actions purpose rules]}]
   (xt/q
    db
    {:find '[resource]
@@ -290,7 +290,6 @@
         (let [actual (check-permissions
                       db {:subject subject
                           :actions actions
-                          :purpose nil
                           :resource resource
                           :rules rules})]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
@@ -358,7 +357,7 @@
         false)
 
     (are [subject actions rules expected]
-        (is (= expected (allowed-resources db subject actions nil rules)))
+        (is (= expected (allowed-resources db {:subject subject :actions actions :rules rules})))
 
       ;; Alice can see all her files.
         "https://example.org/people/alice"
