@@ -156,6 +156,11 @@
    ::site/type "User"
    ::username "faythe"})
 
+(def OSCAR
+  {:xt/id "https://example.org/people/oscar",
+   ::site/type "User"
+   ::username "oscar"})
+
 (def ALICE_USER_DIR_PRIVATE_FILE
   {:xt/id "https://example.org/~alice/private.txt"
    ::site/type "Resource"})
@@ -371,18 +376,6 @@
       (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
       #{{:subject "https://example.org/people/alice",
          :action "https://example.org/actions/read-user-dir"}})))
-
-;; TODO
-;; Next up. Sharing itself. Is Alice even permitted to share her files?
-;; read-only, read/write
-
-;; TODO Consent. Alice consents that her PII be used but only for certain
-;; purposes (e.g. not marketing).
-
-;; TODO: INTERNAL classification, different security models, see
-;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
-
-;; TODO: Extend to GraphQL
 
 (deftest constrained-pull-test
   (let [READ_USERNAME_ACTION
@@ -604,8 +597,83 @@
         (is (= 6 (count messages)))
         (is (= #{::from ::to ::date} (set (keys (first messages)))))))))
 
-#_((t/join-fixtures [with-xt])
+;; TODO GDPR Consent. Alice consents that her PII be used but only for certain
+;; purposes (e.g. not marketing).
 
-   (fn []
+;; Alice has a medical record. She let's Oscar from HR access it, but only in
+;; emergencies (to provide to a doctor in case of urgent need).
 
-     ))
+((t/join-fixtures [with-xt])
+
+ (fn []
+   (let [READ_MEDICAL_RECORD
+         {:xt/id "https://example.org/actions/read-medical-record"
+          ::site/type "Action"
+          ::pass/pull ['*]}
+
+         EMERGENCY_READ_MEDICAL_RECORD
+         {:xt/id "https://example.org/actions/emergency-read-medical-record"
+          ::site/type "Action"
+          ::pass/pull ['*]}
+
+         ALICE_GRANTS_OSCAR_ACCESS
+         {:xt/id "https://example.org/alice/medical-record/grants/oscar"
+          ::site/type "Permission"
+          ::pass/subject (:xt/id OSCAR)
+          ::pass/action #{(:xt/id EMERGENCY_READ_MEDICAL_RECORD)}}
+
+         RULES
+         '[[(allowed? permission subject action resource)
+            [permission ::pass/subject subject]
+            [action :xt/id "https://example.org/actions/read-medical-record"]
+            [resource ::site/type "MedicalRecord"]]
+
+           [(allowed? permission subject action resource)
+            [permission ::pass/subject subject]
+            [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
+            [resource ::site/type "MedicalRecord"]]
+
+           ]]
+
+     (submit-and-await!
+      [
+       ;; Actions
+       [::xt/put READ_MEDICAL_RECORD]
+       [::xt/put EMERGENCY_READ_MEDICAL_RECORD]
+
+       ;; Actors
+       [::xt/put ALICE]
+       [::xt/put OSCAR]
+
+       ;; Permissions
+       [::xt/put ALICE_GRANTS_OSCAR_ACCESS]
+
+       ;; Resources
+       [::xt/put
+        {:xt/id "https://example.org/alice/medical-record"
+         ::site/type "MedicalRecord"
+         ::content "Medical info"}]])
+
+     (let [get-medical-records
+           (fn [subject action]
+             (pull-allowed-resources
+              (xt/db *xt-node*)
+              (:xt/id subject)
+              #{(:xt/id action)}
+              RULES)
+             )]
+
+       (get-medical-records OSCAR READ_MEDICAL_RECORD)
+
+       (get-medical-records OSCAR EMERGENCY_READ_MEDICAL_RECORD))
+     )
+   ))
+
+;; TODO
+;; Next up. Sharing itself. Is Alice even permitted to share her files?
+;; read-only, read/write
+
+;; TODO: INTERNAL classification, different security models, see
+;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
+
+;; TODO: Extend to GraphQL
