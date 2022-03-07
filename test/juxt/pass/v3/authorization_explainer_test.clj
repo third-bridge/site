@@ -236,40 +236,6 @@
      [action :xt/id "https://example.org/actions/read-shared"]
      [permission ::pass/resource resource]]])
 
-
-
-#_((t/join-fixtures [with-xt])
-   (fn []
-     (submit-and-await!
-      [
-       ;; Actions
-       [::xt/put READ_USER_DIR_ACTION]
-       [::xt/put READ_SHARED_ACTION]
-       [::xt/put WRITE_USER_DIR_ACTION]
-
-       ;; Actors
-       [::xt/put ALICE]
-       [::xt/put BOB]
-       [::xt/put CARLOS]
-
-       ;; Resources
-       [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
-       [::xt/put ALICE_USER_DIR_SHARED_FILE]
-
-       ;; Permissions
-       [::xt/put ALICE_CAN_READ]
-       [::xt/put ALICE_CAN_WRITE_USER_DIR_CONTENT]
-       [::xt/put BOB_CAN_READ]
-       [::xt/put BOB_CAN_WRITE_USER_DIR_CONTENT]
-       [::xt/put ALICES_SHARES_FILE_WITH_BOB]])
-
-     (allowed-subjects
-      (xt/db *xt-node*)
-      (:xt/id ALICE_USER_DIR_SHARED_FILE)
-      (set (map :xt/id [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
-      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES)))
-     ))
-
 (deftest user-dir-test
   (submit-and-await!
    [
@@ -477,7 +443,6 @@
        [::xt/put BOB_CAN_READ_ALICE_USERNAME]
        [::xt/put BOB_CAN_READ_ALICE_SECRETS]
        [::xt/put CARLOS_CAN_READ_ALICE_USERNAME]
-
        ])
 
      ;; Bob can read Alice's secret
@@ -612,16 +577,7 @@
         ::from (:xt/id BOB)
         ::to (:xt/id ALICE)
         ::date "2022-03-07T13:00:50"
-        ::content "Thanks Alice, that's very kind of you - see you at lunch!"}]
-
-      ;; Alice and Bob are in a group. They can read each other's messages.
-
-      ;; Carlos cannot see any of the messages
-
-      ;; Faythe can read meta-data of the conversation between Alice and Bob
-      ;; but not the content of the messages.
-
-      ])
+        ::content "Thanks Alice, that's very kind of you - see you at lunch!"}]])
 
     (let [get-messages
           (fn [subject]
@@ -641,10 +597,11 @@
         (is (= 6 (count messages)))
         (is (= #{::from ::to ::date ::content} (set (keys (first messages))))))
 
-      ;; Carlos can't see anything
-      (is (= 0 (count (get-messages CARLOS))))
+      ;; Carlos cannot see any of the messages
+      (is (zero? (count (get-messages CARLOS))))
 
-      ;; Faythe only sees the metadata
+      ;; Faythe can read meta-data of the conversation between Alice and Bob but
+      ;; not the content of the messages.
       (let [messages (get-messages FAYTHE)]
         (is (= 6 (count messages)))
         (is (= #{::from ::to ::date} (set (keys (first messages)))))))))
