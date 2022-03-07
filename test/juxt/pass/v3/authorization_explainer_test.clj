@@ -79,7 +79,7 @@
 (defn allowed-subjects
   "Given a resource and a set of actions, which subjects can access and via which
   actions?"
-  [db resource actions purpose rules]
+  [db {:keys [resource actions purpose rules]}]
   (->> (xt/q
         db
         {:find '[subject action]
@@ -378,7 +378,11 @@
     ;; and via which actions?
 
     (are [resource actions rules expected]
-        (is (= expected (allowed-subjects db resource actions nil rules)))
+        (is (= expected (allowed-subjects
+                         db
+                         {:resource resource
+                          :actions actions
+                          :rules rules})))
 
         "https://example.org/~alice/shared.txt"
         #{"https://example.org/actions/read-user-dir"
