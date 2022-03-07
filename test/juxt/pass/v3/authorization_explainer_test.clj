@@ -435,7 +435,7 @@
          ::pass/purpose nil
          ::pass/resource "https://example.org/people/alice"}
 
-        RULES
+        rules
         '[[(allowed? permission subject action resource)
            [permission ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-username"]
@@ -463,16 +463,17 @@
     ;; Bob can read Alice's secret
     (let [db (xt/db *xt-node*)]
       (are [subject expected]
-          (let [actual (pull-allowed-resource
-                        db
-                        {:subject (:xt/id subject)
-                         :actions #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
-                         :resource (:xt/id ALICE)
-                         :rules (vec (concat RULES))})]
+          (let [actual
+                (pull-allowed-resource
+                 db
+                 {:subject (:xt/id subject)
+                  :actions #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
+                  :resource (:xt/id ALICE)
+                  :rules rules})]
             (is (= expected actual)))
 
-        BOB {::username "alice" ::secret "foo"}
-        CARLOS {::username "alice"}))))
+          BOB {::username "alice" ::secret "foo"}
+          CARLOS {::username "alice"}))))
 
 (deftest pull-allowed-resources-test
   (let [READ_MESSAGE_CONTENT_ACTION
@@ -513,7 +514,7 @@
          ::pass/action #{(:xt/id READ_MESSAGE_METADATA_ACTION)}
          ::pass/purpose nil}
 
-        RULES
+        rules
         '[[(allowed? permission subject action resource)
            [permission ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-message-content"]
@@ -607,7 +608,7 @@
              {:subject (:xt/id subject)
               :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                          (:xt/id READ_MESSAGE_METADATA_ACTION)}
-              :rules RULES}))]
+              :rules rules}))]
 
       ;; Alice and Bob can read all the messages in the group
       (let [messages (get-messages ALICE)]
