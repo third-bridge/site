@@ -603,23 +603,17 @@
 ;; One way of achieving this is to segment actions by purpose.
 
 (deftest purpose-with-distinct-actions-test
-  (let [READ_MEDICAL_RECORD
+  (let [READ_MEDICAL_RECORD_ACTION
         {:xt/id "https://example.org/actions/read-medical-record"
          ::site/type "Action"
          ::pass/pull ['*]}
 
-        EMERGENCY_READ_MEDICAL_RECORD
+        EMERGENCY_READ_MEDICAL_RECORD_ACTION
         {:xt/id "https://example.org/actions/emergency-read-medical-record"
          ::site/type "Action"
          ::pass/pull ['*]}
 
-        ALICE_GRANTS_OSCAR_ACCESS
-        {:xt/id "https://example.org/alice/medical-record/grants/oscar"
-         ::site/type "Permission"
-         ::pass/subject (:xt/id OSCAR)
-         ::pass/action #{(:xt/id EMERGENCY_READ_MEDICAL_RECORD)}}
-
-        RULES
+        rules
         '[[(allowed? permission subject action resource)
            [permission ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-medical-record"]
@@ -628,22 +622,24 @@
           [(allowed? permission subject action resource)
            [permission ::pass/subject subject]
            [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
-           [resource ::site/type "MedicalRecord"]]
-
-          ]]
+           [resource ::site/type "MedicalRecord"]]]]
 
     (submit-and-await!
      [
       ;; Actions
-      [::xt/put READ_MEDICAL_RECORD]
-      [::xt/put EMERGENCY_READ_MEDICAL_RECORD]
+      [::xt/put READ_MEDICAL_RECORD_ACTION]
+      [::xt/put EMERGENCY_READ_MEDICAL_RECORD_ACTION]
 
       ;; Actors
       [::xt/put ALICE]
       [::xt/put OSCAR]
 
       ;; Permissions
-      [::xt/put ALICE_GRANTS_OSCAR_ACCESS]
+      [::xt/put
+       {:xt/id "https://example.org/alice/medical-record/grants/oscar"
+        ::site/type "Permission"
+        ::pass/subject (:xt/id OSCAR)
+        ::pass/action #{(:xt/id EMERGENCY_READ_MEDICAL_RECORD_ACTION)}}]
 
       ;; Resources
       [::xt/put
@@ -657,7 +653,7 @@
              (xt/db *xt-node*)
              (:xt/id subject)
              #{(:xt/id action)}
-             RULES))
+             rules))
 
           get-medical-record
           (fn [subject action]
@@ -666,14 +662,14 @@
              (:xt/id subject)
              #{(:xt/id action)}
              "https://example.org/alice/medical-record"
-             RULES))]
+             rules))]
 
-      (is (zero? (count (get-medical-records OSCAR READ_MEDICAL_RECORD))))
-      (is (= 1 (count (get-medical-records OSCAR EMERGENCY_READ_MEDICAL_RECORD))))
-      (is (not (get-medical-record OSCAR READ_MEDICAL_RECORD)))
-      (is (get-medical-record OSCAR EMERGENCY_READ_MEDICAL_RECORD)))))
+      (is (zero? (count (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION))))
+      (is (= 1 (count (get-medical-records OSCAR EMERGENCY_READ_MEDICAL_RECORD_ACTION))))
+      (is (not (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION)))
+      (is (get-medical-record OSCAR EMERGENCY_READ_MEDICAL_RECORD_ACTION)))))
 
-((t/join-fixtures [with-xt])
+#_((t/join-fixtures [with-xt])
 
  (fn []
 
