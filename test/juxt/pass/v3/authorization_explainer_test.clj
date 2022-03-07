@@ -119,23 +119,25 @@
 
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
-  [db {:keys [subject actions purpose rules]}]
+  [db {:keys [subject actions purpose rules include-rules]}]
   (let [results
         (xt/q
          db
          {:find '[resource (pull action [::xt/id ::pass/pull]) purpose permission]
           :keys '[resource action purpose permission]
           :where
-          '[
-            [permission ::site/type "Permission"]
-            [action ::site/type "Action"]
-            [permission ::pass/action action]
-            [permission ::pass/purpose purpose]
-            [(contains? actions action)]
+          (cond-> '[
+                    [permission ::site/type "Permission"]
+                    [action ::site/type "Action"]
+                    [permission ::pass/action action]
+                    [permission ::pass/purpose purpose]
+                    [(contains? actions action)]
 
-            (allowed? permission subject action resource)]
+                    (allowed? permission subject action resource)]
+            include-rules
+            (conj '(include? subject action resource)))
 
-          :rules rules
+          :rules (vec (concat rules include-rules))
 
           :in '[subject actions purpose]}
 
@@ -626,7 +628,21 @@
       ;; not the content of the messages.
       (let [messages (get-messages FAYTHE)]
         (is (= 6 (count messages)))
-        (is (= #{::from ::to ::date} (set (keys (first messages)))))))))
+        (is (= #{::from ::to ::date} (set (keys (first messages))))))
+
+      ;; We can specify an :include-rules entry to pull-allowed-resources to
+      ;; restrict the resources that are found to some additional
+      ;; criteria. Currently this is as close as we get to providing full query
+      ;; capabilities.
+      (is (= 3 (count
+               (pull-allowed-resources
+                (xt/db *xt-node*)
+                {:subject (:xt/id ALICE)
+                 :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                            (:xt/id READ_MESSAGE_METADATA_ACTION)}
+                 :rules rules
+                 :include-rules [['(include? subject action resource)
+                                  ['resource ::from (:xt/id ALICE)]]]})))))))
 
 ;; Alice has a medical record. She wants to allow Oscar access to it, but only
 ;; in emergencies (to provide to a doctor in case of urgent need).
@@ -774,6 +790,7 @@
 
 #_((t/join-fixtures [with-xt])
  (fn []
+   :ok
    ))
 
 ;; TODO: User defined queries (although not projections)
