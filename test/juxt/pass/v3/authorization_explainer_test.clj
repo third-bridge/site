@@ -94,6 +94,17 @@
 
         resource actions)))
 
+(defn authorized-pull
+  "Given a subject, a set of possible actions and a resource, pull the allowed
+  attributes."
+  [db subject actions resource rules]
+  (let [check-result (check-permissions db subject actions resource rules)
+        pull-expr (vec (mapcat
+                        (fn [{:keys [action]}]
+                          (::pass/pull action))
+                        check-result))]
+    (xt/pull db pull-expr resource)))
+
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
   [db subject actions rules]
@@ -121,15 +132,6 @@
     (->> results
          (map :resource)
          (xt/pull-many db pull-expr))))
-
-(defn authorized-pull
-  [db subject actions resource rules]
-  (let [check-result (check-permissions db subject actions resource rules)
-        pull-expr (vec (mapcat
-                        (fn [{:keys [action]}]
-                          (::pass/pull action))
-                        check-result))]
-    (xt/pull db pull-expr resource)))
 
 (def ALICE
   {:xt/id "https://example.org/people/alice",
@@ -489,156 +491,166 @@
          BOB {::username "alice" ::secret "foo"}
          CARLOS {::username "alice"}))))
 
-((t/join-fixtures [with-xt])
+(deftest pull-allowed-resources-test
+  (let [READ_MESSAGE_CONTENT_ACTION
+        {:xt/id "https://example.org/actions/read-message-content"
+         ::site/type "Action"
+         ::pass/pull [::content]}
 
- (fn []
+        READ_MESSAGE_METADATA_ACTION
+        {:xt/id "https://example.org/actions/read-message-metadata"
+         ::site/type "Action"
+         ::pass/pull [::from ::to ::date]}
 
-   (let [READ_MESSAGE_CONTENT_ACTION
-         {:xt/id "https://example.org/actions/read-message-content"
-          ::site/type "Action"
-          ::pass/pull [::content]}
-
-         READ_MESSAGE_METADATA_ACTION
-         {:xt/id "https://example.org/actions/read-message-metadata"
-          ::site/type "Action"
-          ::pass/pull [::from ::to ::date]}
-
-         ALICE_BELONGS_GROUP_A
-         {:xt/id "https://example.org/group/a/alice"
-          ::site/type "Permission"
-          ::pass/subject (:xt/id ALICE)
-          ::group :a
-          ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                          (:xt/id READ_MESSAGE_METADATA_ACTION)}}
-
-         BOB_BELONGS_GROUP_A
-         {:xt/id "https://example.org/group/a/bob"
-          ::site/type "Permission"
-          ::pass/subject (:xt/id BOB)
-          ::group :a
-          ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                          (:xt/id READ_MESSAGE_METADATA_ACTION)}}
-
-         ;; Faythe is a trusted admin of Group A. She can see the metadata but
-         ;; not the content of messages.
-         FAYTHE_MONITORS_GROUP_A
-         {:xt/id "https://example.org/group/a/faythe"
-          ::site/type "Permission"
-          ::pass/subject (:xt/id FAYTHE)
-          ::group :a
-          ::pass/action #{(:xt/id READ_MESSAGE_METADATA_ACTION)}}
-
-         RULES
-         '[[(allowed? permission subject action resource)
-            [permission ::pass/subject subject]
-            [action :xt/id "https://example.org/actions/read-message-content"]
-            [permission ::group group]
-            [resource ::group group]
-            [resource ::site/type "Message"]]
-
-           [(allowed? permission subject action resource)
-            [permission ::pass/subject subject]
-            [action :xt/id "https://example.org/actions/read-message-metadata"]
-            [permission ::group group]
-            [resource ::group group]
-            [resource ::site/type "Message"]]]]
-
-     (submit-and-await!
-      [
-       ;; Actions
-       [::xt/put READ_MESSAGE_CONTENT_ACTION]
-       [::xt/put READ_MESSAGE_METADATA_ACTION]
-
-       ;; Actors
-       [::xt/put ALICE]
-       [::xt/put BOB]
-       [::xt/put CARLOS]
-       [::xt/put FAYTHE]
-
-       ;; Permissions
-       [::xt/put ALICE_BELONGS_GROUP_A]
-       [::xt/put BOB_BELONGS_GROUP_A]
-       [::xt/put FAYTHE_MONITORS_GROUP_A]
-
-       ;; Messages
-       [::xt/put
-        {:xt/id "https://example.org/messages/1"
-         ::site/type "Message"
+        ALICE_BELONGS_GROUP_A
+        {:xt/id "https://example.org/group/a/alice"
+         ::site/type "Permission"
+         ::pass/subject (:xt/id ALICE)
          ::group :a
-         ::from (:xt/id ALICE)
-         ::to (:xt/id BOB)
-         ::date "2022-03-07T13:00:00"
-         ::content "Hello Bob!"}]
+         ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                         (:xt/id READ_MESSAGE_METADATA_ACTION)}}
 
-       [::xt/put
-        {:xt/id "https://example.org/messages/2"
-         ::site/type "Message"
+        BOB_BELONGS_GROUP_A
+        {:xt/id "https://example.org/group/a/bob"
+         ::site/type "Permission"
+         ::pass/subject (:xt/id BOB)
          ::group :a
-         ::from (:xt/id BOB)
-         ::to (:xt/id ALICE)
-         ::date "2022-03-07T13:00:10"
-         ::content "Hi Alice, how are you?"}]
+         ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                         (:xt/id READ_MESSAGE_METADATA_ACTION)}}
 
-       [::xt/put
-        {:xt/id "https://example.org/messages/3"
-         ::site/type "Message"
+        ;; Faythe is a trusted admin of Group A. She can see the metadata but
+        ;; not the content of messages.
+        FAYTHE_MONITORS_GROUP_A
+        {:xt/id "https://example.org/group/a/faythe"
+         ::site/type "Permission"
+         ::pass/subject (:xt/id FAYTHE)
          ::group :a
-         ::from (:xt/id ALICE)
-         ::to (:xt/id BOB)
-         ::date "2022-03-07T13:00:20"
-         ::content "Great thanks. I've reset your password, btw."}]
+         ::pass/action #{(:xt/id READ_MESSAGE_METADATA_ACTION)}}
 
-       [::xt/put
-        {:xt/id "https://example.org/messages/4"
-         ::site/type "Message"
-         ::group :a
-         ::from (:xt/id BOB)
-         ::to (:xt/id ALICE)
-         ::date "2022-03-07T13:00:40"
-         ::content "Thanks, what is it?"}]
+        RULES
+        '[[(allowed? permission subject action resource)
+           [permission ::pass/subject subject]
+           [action :xt/id "https://example.org/actions/read-message-content"]
+           [permission ::group group]
+           [resource ::group group]
+           [resource ::site/type "Message"]]
 
-       [::xt/put
-        {:xt/id "https://example.org/messages/5"
-         ::site/type "Message"
-         ::group :a
-         ::from (:xt/id ALICE)
-         ::to (:xt/id BOB)
-         ::date "2022-03-07T13:00:50"
-         ::content "It's 'BananaTree@1230', you should change it a some point."}]
+          [(allowed? permission subject action resource)
+           [permission ::pass/subject subject]
+           [action :xt/id "https://example.org/actions/read-message-metadata"]
+           [permission ::group group]
+           [resource ::group group]
+           [resource ::site/type "Message"]]]]
 
-       [::xt/put
-        {:xt/id "https://example.org/messages/6"
-         ::site/type "Message"
-         ::group :a
-         ::from (:xt/id BOB)
-         ::to (:xt/id ALICE)
-         ::date "2022-03-07T13:00:50"
-         ::content "Thanks Alice, that's very kind of you - see you at lunch!"}]
+    (submit-and-await!
+     [
+      ;; Actions
+      [::xt/put READ_MESSAGE_CONTENT_ACTION]
+      [::xt/put READ_MESSAGE_METADATA_ACTION]
 
-       ;; Alice and Bob are in a group. They can read each other's messages.
+      ;; Actors
+      [::xt/put ALICE]
+      [::xt/put BOB]
+      [::xt/put CARLOS]
+      [::xt/put FAYTHE]
 
-       ;; Carlos cannot see any of the messages
+      ;; Permissions
+      [::xt/put ALICE_BELONGS_GROUP_A]
+      [::xt/put BOB_BELONGS_GROUP_A]
+      [::xt/put FAYTHE_MONITORS_GROUP_A]
 
-       ;; Faythe can read meta-data of the conversation between Alice and Bob
-       ;; but not the content of the messages.
+      ;; Messages
+      [::xt/put
+       {:xt/id "https://example.org/messages/1"
+        ::site/type "Message"
+        ::group :a
+        ::from (:xt/id ALICE)
+        ::to (:xt/id BOB)
+        ::date "2022-03-07T13:00:00"
+        ::content "Hello Bob!"}]
 
-       ])
+      [::xt/put
+       {:xt/id "https://example.org/messages/2"
+        ::site/type "Message"
+        ::group :a
+        ::from (:xt/id BOB)
+        ::to (:xt/id ALICE)
+        ::date "2022-03-07T13:00:10"
+        ::content "Hi Alice, how are you?"}]
 
-     (let [get-messages
-           (fn [subject]
-             (pull-allowed-resources
-              (xt/db *xt-node*)
-              (:xt/id subject)
-              #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                (:xt/id READ_MESSAGE_METADATA_ACTION)}
-              RULES))]
+      [::xt/put
+       {:xt/id "https://example.org/messages/3"
+        ::site/type "Message"
+        ::group :a
+        ::from (:xt/id ALICE)
+        ::to (:xt/id BOB)
+        ::date "2022-03-07T13:00:20"
+        ::content "Great thanks. I've reset your password, btw."}]
 
-       ;; Alice and Bob can read all the messages in the group
-       (get-messages ALICE)
-       (get-messages BOB)
+      [::xt/put
+       {:xt/id "https://example.org/messages/4"
+        ::site/type "Message"
+        ::group :a
+        ::from (:xt/id BOB)
+        ::to (:xt/id ALICE)
+        ::date "2022-03-07T13:00:40"
+        ::content "Thanks, what is it?"}]
 
-       ;; Carlos can't see anything
-       (get-messages CARLOS)
+      [::xt/put
+       {:xt/id "https://example.org/messages/5"
+        ::site/type "Message"
+        ::group :a
+        ::from (:xt/id ALICE)
+        ::to (:xt/id BOB)
+        ::date "2022-03-07T13:00:50"
+        ::content "It's 'BananaTree@1230', you should change it a some point."}]
 
-       ;; Faythe only sees the metadata
-       (get-messages FAYTHE)))))
+      [::xt/put
+       {:xt/id "https://example.org/messages/6"
+        ::site/type "Message"
+        ::group :a
+        ::from (:xt/id BOB)
+        ::to (:xt/id ALICE)
+        ::date "2022-03-07T13:00:50"
+        ::content "Thanks Alice, that's very kind of you - see you at lunch!"}]
+
+      ;; Alice and Bob are in a group. They can read each other's messages.
+
+      ;; Carlos cannot see any of the messages
+
+      ;; Faythe can read meta-data of the conversation between Alice and Bob
+      ;; but not the content of the messages.
+
+      ])
+
+    (let [get-messages
+          (fn [subject]
+            (pull-allowed-resources
+             (xt/db *xt-node*)
+             (:xt/id subject)
+             #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+               (:xt/id READ_MESSAGE_METADATA_ACTION)}
+             RULES))]
+
+      ;; Alice and Bob can read all the messages in the group
+      (let [messages (get-messages ALICE)]
+        (is (= 6 (count messages)))
+        (is (= #{::from ::to ::date ::content} (set (keys (first messages))))))
+
+      (let [messages (get-messages BOB)]
+        (is (= 6 (count messages)))
+        (is (= #{::from ::to ::date ::content} (set (keys (first messages))))))
+
+      ;; Carlos can't see anything
+      (is (= 0 (count (get-messages CARLOS))))
+
+      ;; Faythe only sees the metadata
+      (let [messages (get-messages FAYTHE)]
+        (is (= 6 (count messages)))
+        (is (= #{::from ::to ::date} (set (keys (first messages)))))))))
+
+#_((t/join-fixtures [with-xt])
+
+   (fn []
+
+     ))
