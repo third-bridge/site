@@ -134,7 +134,7 @@
                                                           :rules rules})]
       (when (seq check-permissions-result)
         (mapv (fn [{:keys [permission action]}]
-                [::xt/put {:xt/id :foo}])
+                [::xt/put (first action-args)])
               check-permissions-result)))
 
     (catch Exception e

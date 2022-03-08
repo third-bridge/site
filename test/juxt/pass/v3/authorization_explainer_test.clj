@@ -746,6 +746,10 @@
 
      (assert (xt/entity (xt/db *xt-node*) ALICE))
 
+     :ok
+
+     (xt/entity (xt/db *xt-node*) ALICE)
+
      )))
 
 
