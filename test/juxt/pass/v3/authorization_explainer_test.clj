@@ -643,8 +643,7 @@
        {:xt/id "https://example.org/purposes/emergency"
         ::site/type "Purpose"
         ::description "Emergency access to vital personal information."
-        ::gdpr-interest "VITAL"
-        }]
+        ::gdpr-interest "VITAL"}]
 
       ;; Permissions
       [::xt/put
@@ -652,8 +651,7 @@
         ::site/type "Permission"
         ::pass/subject (:xt/id OSCAR)
         ::pass/action (:xt/id READ_MEDICAL_RECORD_ACTION)
-        ::pass/purpose "https://example.org/purposes/emergency"
-        }]
+        ::pass/purpose "https://example.org/purposes/emergency"}]
 
       ;; Resources
       [::xt/put
