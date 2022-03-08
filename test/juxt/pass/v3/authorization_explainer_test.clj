@@ -8,6 +8,7 @@
    [xtdb.api :as xt]))
 
 (alias 'pass (create-ns 'juxt.pass.alpha))
+(alias 'pass.malli (create-ns 'juxt.pass.alpha.malli))
 (alias 'site (create-ns 'juxt.site.alpha))
 
 (use-fixtures :each with-xt)
@@ -689,14 +690,14 @@
 ;; TODO
 ;; Next up. Sharing itself. Is Alice even permitted to share her files?
 ;; read-only, read/write
-;; Answer @jms's question: is it possible for Alice to grant a resource for
+;; Answer @jms's question: is it possible for Sue to grant a resource for
 ;; which she hasn't herself access?
 
 ((t/join-fixtures [with-xt])
  (fn []
    (let [SUE "https://example.org/people/sue"
          ALICE "https://example.org/people/alice"
-         CREATE_USER "https://example.org/actions/create-user"
+         CREATE_PERSON "https://example.org/actions/create-person"
          CREATE_IDENTITY "https://example.org/actions/create-identity"
          rules ['[(allowed? permission subject action resource)
                   [permission ::pass/subject subject]
@@ -716,9 +717,21 @@
 
        ;; Actions
        [::xt/put
-        {:xt/id CREATE_USER
+        {:xt/id CREATE_PERSON
          ::site/type "Action"
-         ::pass/action-args [{}]}]
+         ::pass/action-args
+         [{::pass.malli/schema
+           [:map
+            [::site/type [:= "Person"]]
+            [::username [:string]]]
+
+           ::pass/process
+           [
+            ;; Though we could use a Malli value transformer here, at this stage is
+            ;; doesn't feel beneficial to lean too heavily on Malli's extensive
+            ;; feature set.
+            [::pass/merge {::site/type "Person"}]
+            [::pass.malli/validate]]}]}]
 
        [::xt/put
         {:xt/id CREATE_IDENTITY
@@ -727,10 +740,10 @@
 
        ;; Permissions
        [::xt/put
-        {:xt/id "https://example.org/permissions/sue/create-user"
+        {:xt/id "https://example.org/permissions/sue/create-person"
          ::site/type "Permission"
          ::pass/subject SUE
-         ::pass/action CREATE_USER
+         ::pass/action CREATE_PERSON
          ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
        ;; Functions
@@ -740,18 +753,26 @@
      ;; Sue creates the user Alice, with an identity
      (authz/check-permissions
       (xt/db *xt-node*)
-      {:subject SUE :actions #{CREATE_USER} :rules rules})
+      {:subject SUE :actions #{CREATE_PERSON} :rules rules})
 
      (authz/submit-call-action-sync
       *xt-node*
       {:subject SUE
-       :action CREATE_USER
+       :action CREATE_PERSON
        :rules rules
-       :args [{:xt/id ALICE ::site/type "Person" ::username "alice"}]})
+       :args [{:xt/id ALICE ::username "alice"}]})
 
      (assert (xt/entity (xt/db *xt-node*) ALICE))
 
      (xt/entity (xt/db *xt-node*) ALICE)
+
+     ;; This fails because we haven't provided the ::username
+     (authz/submit-call-action-sync
+      *xt-node*
+      {:subject SUE
+       :action CREATE_PERSON
+       :rules rules
+       :args [{:xt/id ALICE}]})
 
      )))
 

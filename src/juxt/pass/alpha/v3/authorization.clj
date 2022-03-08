@@ -3,9 +3,11 @@
 (ns juxt.pass.alpha.v3.authorization
   (:require
    [xtdb.api :as xt]
-   [clojure.tools.logging :as log]))
+   [clojure.tools.logging :as log]
+   [malli.core :as m]))
 
 (alias 'pass (create-ns 'juxt.pass.alpha))
+(alias 'pass.malli (create-ns 'juxt.pass.alpha.malli))
 (alias 'site (create-ns 'juxt.site.alpha))
 
 (defn check-permissions
@@ -125,19 +127,55 @@
          (map :resource)
          (xt/pull-many db pull-expr))))
 
+(defmulti apply-processor (fn [processor m arg-def] (first processor)))
+
+(defmethod apply-processor :default [[kw] m _]
+  (log/warnf "No processor for %s" kw)
+  m)
+
+(defmethod apply-processor ::pass/merge [[_ m-to-merge] val _]
+  (merge val m-to-merge))
+
+(defmethod apply-processor ::pass.malli/validate [[_ form] val {::pass.malli/keys [schema]}]
+  (assert schema)
+  (when-not (m/validate schema val)
+    (throw
+     (ex-info
+      "Failed validation check"
+      (m/explain schema val))))
+  val)
+
+(defn process-arg [arg arg-def]
+  (reduce
+   (fn [acc processor]
+     (apply-processor processor acc arg-def))
+   arg
+   (::pass/process arg-def)))
 
 (defn call-action [db subject action resource rules action-args]
   (try
     ;; Check that we /can/ call the action
     (let [check-permissions-result (check-permissions db {:subject subject
                                                           :actions #{action}
-                                                          :rules rules})]
-      (if (seq check-permissions-result)
-        (mapv (fn [{:keys [permission action]}]
-                [::xt/put (first action-args)])
-              check-permissions-result)
+                                                          :rules rules})
+          action-doc (xt/entity db action)
+          _ (when-not action-doc (throw (ex-info "Action not found in db" {:action action})))
+          action-arg-defs (::pass/action-args action-doc [])
+          _ (when-not (= (count action-arg-defs) (count action-args))
+              (throw
+               (ex-info
+                "Arguments given to call-action do not match the number of arguments defined on the action"
+                {:count-action-arg-defs (count action-arg-defs)
+                 :count-action-args (count action-args)})))]
 
-        (throw (ex-info "Don't have permission!" {}))))
+      (when-not (seq check-permissions-result)
+        (throw (ex-info "Don't have permission!" {})))
+
+      (mapv
+       (fn [arg arg-def]
+         [::xt/put (process-arg arg arg-def)])
+
+       action-args action-arg-defs))
 
     (catch Exception e
       (log/errorf e "Error when calling action: %s" action)
