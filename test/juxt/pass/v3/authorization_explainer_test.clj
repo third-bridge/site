@@ -40,6 +40,23 @@
    ::site/type "User"
    ::username "oscar"})
 
+;; TODO: INTERNAL classification, different security models, see
+;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
+;; PUBLIC
+
+;; User directories
+
+;; A long time ago, web servers supported 'user directories'. If you had an
+;; account on a host and your username was 'alice', you could put files into a
+;; public_html directory in your home directory and this would be published over
+;; the WWW under http://host/~alice/. The tilde (~) indicates that the files
+;; belong to the account owner. See
+;; https://httpd.apache.org/docs/2.4/howto/public_html.html for further details.
+
+;; We'll create a similar system here, using subjects/actions/resources.
+
+;; TODO: Not a great first example! Try something easier to start with.
+
 (def ALICE_USER_DIR_PRIVATE_FILE
   {:xt/id "https://example.org/~alice/private.txt"
    ::site/type "Resource"})
@@ -127,17 +144,6 @@
      [permission ::pass/subject subject]
      [action :xt/id "https://example.org/actions/read-shared"]
      [permission ::pass/resource resource]]])
-
-;; A long time ago, web servers supported 'user directories'. If you had an
-;; account on a host and your username was 'alice', you could put files into a
-;; public_html directory in your home directory and this would be published over
-;; the WWW under http://host/~alice/. The tilde (~) indicates that the files
-;; belong to the account owner. See
-;; https://httpd.apache.org/docs/2.4/howto/public_html.html for further details.
-
-;; We'll create a similar system here, using subjects/actions/resources.
-
-;; TODO: Not a great first example! Try something easier to start with.
 
 (deftest user-dir-test
   (submit-and-await!
@@ -258,13 +264,13 @@
       #{["https://example.org/~alice/shared.txt"]})
 
     ;; Carl sees nothing
-      "https://example.org/people/carl"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-      #{}
+    "https://example.org/people/carl"
+    #{"https://example.org/actions/read-user-dir"
+      "https://example.org/actions/read-shared"}
+    (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+    #{}
 
-      ;; Given a resource and a set of actions, which subjects can access
+    ;; Given a resource and a set of actions, which subjects can access
     ;; and via which actions?
 
     (are [resource actions rules expected]
@@ -685,10 +691,6 @@
      :ok
      ))
 
-;; TODO: INTERNAL classification, different security models, see
-;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
-;; PUBLIC
-
 ;; TODO
 ;; Next up. Sharing itself. Is Alice even permitted to share her files?
 ;; read-only, read/write
@@ -696,5 +698,5 @@
 ;; which she hasn't herself access?
 
 ;; TODO: Extend to GraphQL
-;
-; TODO: Subject access from 'inside' versus 'outside' the perimeter
+;;
+;; TODO: Subject access from 'inside' versus 'outside' the perimeter
