@@ -2,9 +2,9 @@
 
 (ns juxt.pass.v3.authorization-explainer-test
   (:require
-   [clojure.test :refer [deftest is are testing use-fixtures] :as t]
-   [juxt.test.util :refer [with-xt with-handler submit-and-await!
-                           *xt-node* *handler*]]
+   [clojure.test :refer [deftest is are use-fixtures] :as t]
+   [juxt.pass.alpha.v3.authorization :as authz]
+   [juxt.test.util :refer [with-xt submit-and-await! *xt-node*]]
    [xtdb.api :as xt]))
 
 (alias 'pass (create-ns 'juxt.pass.alpha))
@@ -12,142 +12,8 @@
 
 (use-fixtures :each with-xt)
 
-;; As a warmup, let's start with some contrived data and demonstrate how
-;; authorization works in Site.
-
-;; In Site's authorization system, a subject might cause an action on a resource
-;; (which might cause it to change in some way). The authorization system must
-;; first check that the subject (user) is allowed to cause a given action on the
-;; resource.
-
-;; A long time ago, web servers supported 'user directories'. If you had an
-;; account on a host and your username was 'alice', you could put files into a
-;; public_html directory in your home directory and this would be published over
-;; the WWW under http://host/~alice/. The tilde (~) indicates that the files
-;; belong to the account owner. See
-;; https://httpd.apache.org/docs/2.4/howto/public_html.html for further details.
-
-;; We'll create a similar system here, using subjects/actions/resources.
-
 ;; Note: if you're not familiar with the Alice and Bob characters, see
 ;; https://en.wikipedia.org/wiki/Alice_and_Bob#Cast_of_characters
-
-(defn check-permissions
-  "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
-  [db {:keys [subject actions purpose resource rules]}]
-  (xt/q
-   db
-   {:find '[(pull permission [*]) (pull action [*])]
-    :keys '[permission action]
-    :where
-    '[
-      [permission ::site/type "Permission"]
-      [action ::site/type "Action"]
-      [permission ::pass/action action]
-      [permission ::pass/purpose purpose]
-      [(contains? actions action)]
-      (allowed? permission subject action resource)]
-
-    :rules rules
-
-    :in '[subject actions purpose resource]}
-
-   subject actions purpose resource))
-
-(defn allowed-resources
-  "Given a subject and a set of possible actions, which resources are allowed?"
-  [db {:keys [subject actions purpose rules]}]
-  (xt/q
-   db
-   {:find '[resource]
-    :where
-    '[
-      [permission ::site/type "Permission"]
-      [action ::site/type "Action"]
-      [permission ::pass/action action]
-      [permission ::pass/purpose purpose]
-      [(contains? actions action)]
-
-      (allowed? permission subject action resource)]
-
-    :rules rules
-
-    :in '[subject actions purpose]}
-
-   subject actions purpose))
-
-(defn allowed-subjects
-  "Given a resource and a set of actions, which subjects can access and via which
-  actions?"
-  [db {:keys [resource actions purpose rules]}]
-  (->> (xt/q
-        db
-        {:find '[subject action]
-         :keys '[subject action]
-         :where
-         '[
-           [permission ::site/type "Permission"]
-           [action ::site/type "Action"]
-           [permission ::pass/action action]
-           [permission ::pass/purpose purpose]
-           [(contains? actions action)]
-
-           (allowed? permission subject action resource)]
-
-         :rules rules
-
-         :in '[resource actions purpose]}
-
-        resource actions purpose)))
-
-(defn pull-allowed-resource
-  "Given a subject, a set of possible actions and a resource, pull the allowed
-  attributes."
-  [db {:keys [subject actions purpose resource rules]}]
-  (let [check-result (check-permissions
-                      db
-                      {:subject subject
-                       :actions actions
-                       :purpose purpose
-                       :resource resource
-                       :rules rules})
-        pull-expr (vec (mapcat
-                        (fn [{:keys [action]}]
-                          (::pass/pull action))
-                        check-result))]
-    (xt/pull db pull-expr resource)))
-
-(defn pull-allowed-resources
-  "Given a subject and a set of possible actions, which resources are allowed, and
-  get me the documents"
-  [db {:keys [subject actions purpose rules include-rules]}]
-  (let [results
-        (xt/q
-         db
-         {:find '[resource (pull action [::xt/id ::pass/pull]) purpose permission]
-          :keys '[resource action purpose permission]
-          :where
-          (cond-> '[
-                    [permission ::site/type "Permission"]
-                    [action ::site/type "Action"]
-                    [permission ::pass/action action]
-                    [permission ::pass/purpose purpose]
-                    [(contains? actions action)]
-
-                    (allowed? permission subject action resource)]
-            include-rules
-            (conj '(include? subject action resource)))
-
-          :rules (vec (concat rules include-rules))
-
-          :in '[subject actions purpose]}
-
-         subject actions purpose)
-        pull-expr (vec (mapcat (comp ::pass/pull :action) results))]
-
-    (->> results
-         (map :resource)
-         (xt/pull-many db pull-expr))))
 
 (def ALICE
   {:xt/id "https://example.org/people/alice",
@@ -262,6 +128,15 @@
      [action :xt/id "https://example.org/actions/read-shared"]
      [permission ::pass/resource resource]]])
 
+;; A long time ago, web servers supported 'user directories'. If you had an
+;; account on a host and your username was 'alice', you could put files into a
+;; public_html directory in your home directory and this would be published over
+;; the WWW under http://host/~alice/. The tilde (~) indicates that the files
+;; belong to the account owner. See
+;; https://httpd.apache.org/docs/2.4/howto/public_html.html for further details.
+
+;; We'll create a similar system here, using subjects/actions/resources.
+
 ;; TODO: Not a great first example! Try something easier to start with.
 
 (deftest user-dir-test
@@ -292,7 +167,7 @@
         db (xt/db *xt-node*)]
 
     (are [subject actions resource ok?]
-        (let [actual (check-permissions
+        (let [actual (authz/check-permissions
                       db {:subject subject
                           :actions actions
                           :resource resource
@@ -363,7 +238,7 @@
 
     (are [subject actions rules expected]
         (is (= expected
-               (allowed-resources
+               (authz/allowed-resources
                 db
                 {:subject subject :actions actions :rules rules})))
 
@@ -393,7 +268,7 @@
     ;; and via which actions?
 
     (are [resource actions rules expected]
-        (is (= expected (allowed-subjects
+        (is (= expected (authz/allowed-subjects
                          db
                          {:resource resource
                           :actions actions
@@ -479,7 +354,7 @@
     (let [db (xt/db *xt-node*)]
       (are [subject expected]
           (let [actual
-                (pull-allowed-resource
+                (authz/pull-allowed-resource
                  db
                  {:subject (:xt/id subject)
                   :actions #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
@@ -618,7 +493,7 @@
 
     (let [get-messages
           (fn [subject]
-            (pull-allowed-resources
+            (authz/pull-allowed-resources
              (xt/db *xt-node*)
              {:subject (:xt/id subject)
               :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
@@ -648,7 +523,7 @@
       ;; criteria. Currently this is as close as we get to providing full query
       ;; capabilities.
       (is (= 3 (count
-                (pull-allowed-resources
+                (authz/pull-allowed-resources
                  (xt/db *xt-node*)
                  {:subject (:xt/id ALICE)
                   :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
@@ -712,7 +587,7 @@
 
     (let [get-medical-records
           (fn [subject action]
-            (pull-allowed-resources
+            (authz/pull-allowed-resources
              (xt/db *xt-node*)
              {:subject (:xt/id subject)
               :actions #{(:xt/id action)}
@@ -720,7 +595,7 @@
 
           get-medical-record
           (fn [subject action]
-            (pull-allowed-resource
+            (authz/pull-allowed-resource
              (xt/db *xt-node*)
              {:subject (:xt/id subject)
               :actions #{(:xt/id action)}
@@ -782,7 +657,7 @@
 
     (let [get-medical-records
           (fn [subject action purpose]
-            (pull-allowed-resources
+            (authz/pull-allowed-resources
              (xt/db *xt-node*)
              {:subject (:xt/id subject)
               :actions #{(:xt/id action)}
@@ -791,7 +666,7 @@
 
           get-medical-record
           (fn [subject action purpose]
-            (pull-allowed-resource
+            (authz/pull-allowed-resource
              (xt/db *xt-node*)
              {:subject (:xt/id subject)
               :actions #{(:xt/id action)}
