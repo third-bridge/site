@@ -747,8 +747,7 @@
          ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
        ;; Functions
-       (authz/register-call-action-fn)
-       ])
+       (authz/register-call-action-fn)])
 
      ;; Sue creates the user Alice, with an identity
      (authz/check-permissions
