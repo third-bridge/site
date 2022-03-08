@@ -684,16 +684,57 @@
       (is (nil? (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing")))
       (is (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency")))))
 
-#_((t/join-fixtures [with-xt])
-   (fn []
-     :ok
-     ))
+;; Bootstrapping
 
 ;; TODO
 ;; Next up. Sharing itself. Is Alice even permitted to share her files?
 ;; read-only, read/write
 ;; Answer @jms's question: is it possible for Alice to grant a resource for
 ;; which she hasn't herself access?
+
+((t/join-fixtures [with-xt])
+ (fn []
+   (let [SUE "https://example.org/people/sue"
+         CREATE_USER "https://example.org/actions/create-user"
+         CREATE_IDENTITY "https://example.org/actions/create-identity"]
+     (submit-and-await!
+      [
+       ;; People
+       [::xt/put
+        {:xt/id SUE
+         ::site/type "Subject"
+         ::username "sue"}]
+
+       ;; Actions
+       [::xt/put
+        {:xt/id CREATE_USER
+         ::site/type "Action"
+         ::pass/action-args [{}]}]
+
+       [::xt/put
+        {:xt/id CREATE_IDENTITY
+         ::site/type "Action"
+         ::pass/action-args [{}]}]
+
+       ;; Permissions
+       [::xt/put
+        {:xt/id "https://example.org/permissions/sue/create-user"
+         ::site/type "Permission"
+         ::pass/subject SUE
+         ::pass/action CREATE_USER
+         ::pass/purpose "https://example.org/purposes/bootsrapping-system"}]])
+
+     ;; Sue creates the user Alice, with an identity
+     (let [access-token {}
+           tx (xt/submit-tx
+               *xt-node*
+               [[::xt/fn ::pass/call-action access-token CREATE_USER {}]])]
+
+       [(xt/await-tx *xt-node* tx) (xt/tx-committed? *xt-node* tx)])
+
+     )))
+
+
 
 ;; TODO: Extend to GraphQL
 ;;
