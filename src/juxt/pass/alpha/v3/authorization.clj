@@ -2,7 +2,8 @@
 
 (ns juxt.pass.alpha.v3.authorization
   (:require
-   [xtdb.api :as xt]))
+   [xtdb.api :as xt]
+   [clojure.tools.logging :as log]))
 
 (alias 'pass (create-ns 'juxt.pass.alpha))
 (alias 'site (create-ns 'juxt.site.alpha))
@@ -123,3 +124,26 @@
     (->> results
          (map :resource)
          (xt/pull-many db pull-expr))))
+
+
+(defn call-action [db subject action resource rules action-args]
+  (try
+    ;; Check that we /can/ call the action
+    (let [check-permissions-result (check-permissions db {:subject subject
+                                                          :actions #{action}
+                                                          :rules rules})]
+      (when (seq check-permissions-result)
+        (mapv (fn [{:keys [permission action]}]
+                [::xt/put {:xt/id :foo}])
+              check-permissions-result)))
+
+    (catch Exception e
+      (log/errorf e "Error when calling action: %s" action)
+      (throw e))))
+
+
+(defn register-call-action-fn []
+  [::xt/put
+   {:xt/id ::pass/call-action
+    :xt/fn '(fn [xt-ctx subject action resource rules action-args]
+              (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) subject action resource rules action-args))}])

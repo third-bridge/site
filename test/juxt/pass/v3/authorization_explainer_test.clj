@@ -696,7 +696,10 @@
  (fn []
    (let [SUE "https://example.org/people/sue"
          CREATE_USER "https://example.org/actions/create-user"
-         CREATE_IDENTITY "https://example.org/actions/create-identity"]
+         CREATE_IDENTITY "https://example.org/actions/create-identity"
+         rules ['[(allowed? permission subject action resource)
+                  [permission ::pass/subject subject]
+                  ]]]
      (submit-and-await!
       [
        ;; People
@@ -722,15 +725,23 @@
          ::site/type "Permission"
          ::pass/subject SUE
          ::pass/action CREATE_USER
-         ::pass/purpose "https://example.org/purposes/bootsrapping-system"}]])
+         ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
+
+       ;; Functions
+       (authz/register-call-action-fn)
+       ])
 
      ;; Sue creates the user Alice, with an identity
-     (let [access-token {}
-           tx (xt/submit-tx
-               *xt-node*
-               [[::xt/fn ::pass/call-action access-token CREATE_USER {}]])]
+     (authz/check-permissions
+      (xt/db *xt-node*)
+      {:subject SUE :actions #{CREATE_USER} :rules rules})
 
-       [(xt/await-tx *xt-node* tx) (xt/tx-committed? *xt-node* tx)])
+     (let [tx (xt/submit-tx
+               *xt-node*
+               [[::xt/fn ::pass/call-action SUE CREATE_USER nil rules {}]])]
+
+       [(xt/await-tx *xt-node* tx)
+        (xt/tx-committed? *xt-node* tx)])
 
      )))
 
