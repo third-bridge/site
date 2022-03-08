@@ -118,7 +118,8 @@
     (xt/pull db pull-expr resource)))
 
 (defn pull-allowed-resources
-  "Given a subject and a set of possible actions, which resources are allowed?"
+  "Given a subject and a set of possible actions, which resources are allowed, and
+  get me the documents"
   [db {:keys [subject actions purpose rules include-rules]}]
   (let [results
         (xt/q
@@ -261,18 +262,20 @@
      [action :xt/id "https://example.org/actions/read-shared"]
      [permission ::pass/resource resource]]])
 
+;; TODO: Not a great first example! Try something easier to start with.
+
 (deftest user-dir-test
   (submit-and-await!
    [
+    ;; Subjects
+    [::xt/put ALICE]
+    [::xt/put BOB]
+    [::xt/put CARLOS]
+
     ;; Actions
     [::xt/put READ_USER_DIR_ACTION]
     [::xt/put READ_SHARED_ACTION]
     [::xt/put WRITE_USER_DIR_ACTION]
-
-    ;; Actors
-    [::xt/put ALICE]
-    [::xt/put BOB]
-    [::xt/put CARLOS]
 
     ;; Resources
     [::xt/put ALICE_USER_DIR_PRIVATE_FILE]
@@ -359,7 +362,10 @@
       false)
 
     (are [subject actions rules expected]
-        (is (= expected (allowed-resources db {:subject subject :actions actions :rules rules})))
+        (is (= expected
+               (allowed-resources
+                db
+                {:subject subject :actions actions :rules rules})))
 
       ;; Alice can see all her files.
       "https://example.org/people/alice"
@@ -376,7 +382,14 @@
       (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
       #{["https://example.org/~alice/shared.txt"]})
 
-    ;; Given a resource and a set of actions, which subjects can access
+    ;; Carl sees nothing
+      "https://example.org/people/carl"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+      #{}
+
+      ;; Given a resource and a set of actions, which subjects can access
     ;; and via which actions?
 
     (are [resource actions rules expected]
@@ -474,8 +487,8 @@
                   :rules rules})]
             (is (= expected actual)))
 
-          BOB {::username "alice" ::secret "foo"}
-          CARLOS {::username "alice"}))))
+        BOB {::username "alice" ::secret "foo"}
+        CARLOS {::username "alice"}))))
 
 (deftest pull-allowed-resources-test
   (let [READ_MESSAGE_CONTENT_ACTION
@@ -635,14 +648,14 @@
       ;; criteria. Currently this is as close as we get to providing full query
       ;; capabilities.
       (is (= 3 (count
-               (pull-allowed-resources
-                (xt/db *xt-node*)
-                {:subject (:xt/id ALICE)
-                 :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                            (:xt/id READ_MESSAGE_METADATA_ACTION)}
-                 :rules rules
-                 :include-rules [['(include? subject action resource)
-                                  ['resource ::from (:xt/id ALICE)]]]})))))))
+                (pull-allowed-resources
+                 (xt/db *xt-node*)
+                 {:subject (:xt/id ALICE)
+                  :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                             (:xt/id READ_MESSAGE_METADATA_ACTION)}
+                  :rules rules
+                  :include-rules [['(include? subject action message)
+                                   ['message ::from (:xt/id ALICE)]]]})))))))
 
 ;; Alice has a medical record. She wants to allow Oscar access to it, but only
 ;; in emergencies (to provide to a doctor in case of urgent need).
@@ -653,12 +666,14 @@
   (let [READ_MEDICAL_RECORD_ACTION
         {:xt/id "https://example.org/actions/read-medical-record"
          ::site/type "Action"
-         ::pass/pull ['*]}
+         ::pass/pull ['*]
+         ::pass/alert-log false}
 
         EMERGENCY_READ_MEDICAL_RECORD_ACTION
         {:xt/id "https://example.org/actions/emergency-read-medical-record"
          ::site/type "Action"
-         ::pass/pull ['*]}
+         ::pass/pull ['*]
+         ::pass/alert-log true}
 
         rules
         '[[(allowed? permission subject action resource)
@@ -673,13 +688,13 @@
 
     (submit-and-await!
      [
+      ;; Subject
+      [::xt/put ALICE]
+      [::xt/put OSCAR]
+
       ;; Actions
       [::xt/put READ_MEDICAL_RECORD_ACTION]
       [::xt/put EMERGENCY_READ_MEDICAL_RECORD_ACTION]
-
-      ;; Actors
-      [::xt/put ALICE]
-      [::xt/put OSCAR]
 
       ;; Permissions
       [::xt/put
@@ -745,9 +760,10 @@
       ;; Purposes
       [::xt/put
        {:xt/id "https://example.org/purposes/emergency"
+        ::site/type "Purpose"
         ::description "Emergency access to vital personal information."
         ::gdpr-interest "VITAL"
-        ::site/type "Purpose"}]
+        }]
 
       ;; Permissions
       [::xt/put
@@ -783,15 +799,16 @@
               :resource "https://example.org/alice/medical-record"
               :rules rules}))]
 
-      (is (= 1 (count (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency"))))
       (is (zero? (count (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing"))))
-      (is (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency"))
-      (is (nil? (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing"))))))
+      (is (= 1 (count (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency"))))
+
+      (is (nil? (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing")))
+      (is (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency")))))
 
 #_((t/join-fixtures [with-xt])
- (fn []
-   :ok
-   ))
+   (fn []
+     :ok
+     ))
 
 ;; TODO
 ;; Next up. Sharing itself. Is Alice even permitted to share her files?
