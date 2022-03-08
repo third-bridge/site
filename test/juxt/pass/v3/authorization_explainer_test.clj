@@ -810,13 +810,16 @@
      :ok
      ))
 
+;; TODO: INTERNAL classification, different security models, see
+;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
+;; PUBLIC
+
 ;; TODO
 ;; Next up. Sharing itself. Is Alice even permitted to share her files?
 ;; read-only, read/write
 ;; Answer @jms's question: is it possible for Alice to grant a resource for
 ;; which she hasn't herself access?
 
-;; TODO: INTERNAL classification, different security models, see
-;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
-
 ;; TODO: Extend to GraphQL
+;
+; TODO: Subject access from 'inside' versus 'outside' the perimeter
