@@ -69,11 +69,11 @@ new rules with pre-existing ones.
 A ruleset is broadly the same as a _namespace configuration_ in Zanzibar.
 ****
 
-== ACLs
+== Permissions
 
-A datalog query finds ACLs that are _applicable_ to the request.
+A datalog query finds Permissions that are _applicable_ to the request.
 
-Whether an ACL is _applicable_ to a request depends on the requesting subject,
+Whether a Permission is _applicable_ to a request depends on the requesting subject,
 requested action and resource.
 
 ====
@@ -87,37 +87,37 @@ The action is relevant because the cat may not be allowed to eat a mouse on the 
 The resource is relevant because the cat may not be allowed to sit on the sofa.
 ====
 
-An ACL may be selected on the basis of indirect relationships between the
-subject, action, resource and the ACL.
+An Permission may be selected on the basis of indirect relationships between the
+subject, action, resource and the Permission.
 
 For example, there may be another document creating a relationship between the
-subject and a role, and between the role and ACL. Or, there may be a complex
-relationship between sets of subjects and sets of resources. Defining how ACLs
+subject and a role, and between the role and Permission. Or, there may be a complex
+relationship between sets of subjects and sets of resources. Defining how Permissions
 apply to subjects and resources is left to the Site adopter to specify, via
 Datalog rules specified in 'rule sets'.
 
-If there is no applicable ACL, the request is always denied, as per best
+If there is no applicable Permission, the request is always denied, as per best
 practice.
 
-If applicable ACLs exist, the authorization process proceeds. The applicable
-ACLs may yet cause the request to be denied, or approved with certain
+If applicable Permissions exist, the authorization process proceeds. The applicable
+Permissions may yet cause the request to be denied, or approved with certain
 qualifications and constraints.
 
 For example, the scope of access-token may include the ability of a subject to
 add a document to the database. The document may be subject to type validation
 (e.g. from a JSON schema required on request bodies by an API operation
-document). However, the ACLs will work to ensure that the document is valid with
+document). However, the Permissions will work to ensure that the document is valid with
 respect to its values. For example, a document might require a ruleset yet it's
 critical that the ruleset given is allowed, otherwise it might compromise
-security. Or an ACL might enforce ownership of a document, default the owner to
+security. Or a Permission might enforce ownership of a document, default the owner to
 the subject, and may restrict attempts to assign ownership to someone other than
 the subject.
 
 .Discussion
 ****
-An ACL in Site is broadly similar to an ACL in Zanzibar.
+An Permission in Site is broadly similar to an ACL in Zanzibar.
 
-A key benefit of an ACL is that it is represented by an XT document. This means
+A key benefit of a Permission is that it is represented by an XT document. This means
 it can represent a permission which can be granted and revoked across time, and
 such changes can be tracked and audited. So, questions of the type 'at a given
 time, who had access to this resource?' can be answered with a high degree of
