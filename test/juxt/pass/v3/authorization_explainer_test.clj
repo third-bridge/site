@@ -693,87 +693,93 @@
 ;; Answer @jms's question: is it possible for Sue to grant a resource for
 ;; which she hasn't herself access?
 
+(deftest call-action-test
+  (let [SUE "https://example.org/people/sue"
+        ALICE "https://example.org/people/alice"
+        CREATE_PERSON "https://example.org/actions/create-person"
+        CREATE_IDENTITY "https://example.org/actions/create-identity"
+        rules ['[(allowed? permission subject action resource)
+                 [permission ::pass/subject subject]
+                 ]]]
+    (submit-and-await!
+     [
+      ;; People
+      [::xt/put
+       {:xt/id SUE
+        ::site/type "Person"
+        ::username "sue"}]
+
+      [::xt/put
+       {:xt/id CARLOS
+        ::site/type "Person"
+        ::username "carlos"}]
+
+      ;; Actions
+      [::xt/put
+       {:xt/id CREATE_PERSON
+        ::site/type "Action"
+        ::pass/action-args
+        [{::pass.malli/schema
+          [:map
+           [::site/type [:= "Person"]]
+           [::username [:string]]]
+
+          ::pass/process
+          [
+           ;; Though we could use a Malli value transformer here, at this stage is
+           ;; doesn't feel beneficial to lean too heavily on Malli's extensive
+           ;; feature set.
+           [::pass/merge {::site/type "Person"}]
+           [::pass.malli/validate]]}]}]
+
+      [::xt/put
+       {:xt/id CREATE_IDENTITY
+        ::site/type "Action"
+        ::pass/action-args [{}]}]
+
+      ;; Permissions
+      [::xt/put
+       {:xt/id "https://example.org/permissions/sue/create-person"
+        ::site/type "Permission"
+        ::pass/subject SUE
+        ::pass/action CREATE_PERSON
+        ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
+
+      ;; Functions
+      (authz/register-call-action-fn)])
+
+    ;; Sue creates the user Alice, with an identity
+    (is
+     (seq
+      (authz/check-permissions
+       (xt/db *xt-node*)
+       {:subject SUE :actions #{CREATE_PERSON} :rules rules})))
+
+    (authz/submit-call-action-sync
+     *xt-node*
+     {:subject SUE
+      :action CREATE_PERSON
+      :rules rules
+      :args [{:xt/id ALICE ::username "alice"}]})
+
+    (is (xt/entity (xt/db *xt-node*) ALICE))
+
+    ;; This fails because we haven't provided the ::username
+    (is
+     (thrown?
+      AssertionError
+      (authz/submit-call-action-sync
+       *xt-node*
+       {:subject SUE
+        :action CREATE_PERSON
+        :rules rules
+        :args [{:xt/id ALICE}]})))
+
+    ))
+
 ((t/join-fixtures [with-xt])
  (fn []
-   (let [SUE "https://example.org/people/sue"
-         ALICE "https://example.org/people/alice"
-         CREATE_PERSON "https://example.org/actions/create-person"
-         CREATE_IDENTITY "https://example.org/actions/create-identity"
-         rules ['[(allowed? permission subject action resource)
-                  [permission ::pass/subject subject]
-                  ]]]
-     (submit-and-await!
-      [
-       ;; People
-       [::xt/put
-        {:xt/id SUE
-         ::site/type "Person"
-         ::username "sue"}]
-
-       [::xt/put
-        {:xt/id CARLOS
-         ::site/type "Person"
-         ::username "carlos"}]
-
-       ;; Actions
-       [::xt/put
-        {:xt/id CREATE_PERSON
-         ::site/type "Action"
-         ::pass/action-args
-         [{::pass.malli/schema
-           [:map
-            [::site/type [:= "Person"]]
-            [::username [:string]]]
-
-           ::pass/process
-           [
-            ;; Though we could use a Malli value transformer here, at this stage is
-            ;; doesn't feel beneficial to lean too heavily on Malli's extensive
-            ;; feature set.
-            [::pass/merge {::site/type "Person"}]
-            [::pass.malli/validate]]}]}]
-
-       [::xt/put
-        {:xt/id CREATE_IDENTITY
-         ::site/type "Action"
-         ::pass/action-args [{}]}]
-
-       ;; Permissions
-       [::xt/put
-        {:xt/id "https://example.org/permissions/sue/create-person"
-         ::site/type "Permission"
-         ::pass/subject SUE
-         ::pass/action CREATE_PERSON
-         ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
-
-       ;; Functions
-       (authz/register-call-action-fn)])
-
-     ;; Sue creates the user Alice, with an identity
-     (authz/check-permissions
-      (xt/db *xt-node*)
-      {:subject SUE :actions #{CREATE_PERSON} :rules rules})
-
-     (authz/submit-call-action-sync
-      *xt-node*
-      {:subject SUE
-       :action CREATE_PERSON
-       :rules rules
-       :args [{:xt/id ALICE ::username "alice"}]})
-
-     (assert (xt/entity (xt/db *xt-node*) ALICE))
-
-     (xt/entity (xt/db *xt-node*) ALICE)
-
-     ;; This fails because we haven't provided the ::username
-     (authz/submit-call-action-sync
-      *xt-node*
-      {:subject SUE
-       :action CREATE_PERSON
-       :rules rules
-       :args [{:xt/id ALICE}]})
-
-     )))
+   ))
 
 
 
