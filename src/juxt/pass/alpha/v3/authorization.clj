@@ -132,10 +132,12 @@
     (let [check-permissions-result (check-permissions db {:subject subject
                                                           :actions #{action}
                                                           :rules rules})]
-      (when (seq check-permissions-result)
+      (if (seq check-permissions-result)
         (mapv (fn [{:keys [permission action]}]
                 [::xt/put (first action-args)])
-              check-permissions-result)))
+              check-permissions-result)
+
+        (throw (ex-info "Don't have permission!" {}))))
 
     (catch Exception e
       (log/errorf e "Error when calling action: %s" action)

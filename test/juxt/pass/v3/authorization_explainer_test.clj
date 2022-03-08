@@ -709,6 +709,11 @@
          ::site/type "Person"
          ::username "sue"}]
 
+       [::xt/put
+        {:xt/id CARLOS
+         ::site/type "Person"
+         ::username "carlos"}]
+
        ;; Actions
        [::xt/put
         {:xt/id CREATE_USER
@@ -745,8 +750,6 @@
        :args [{:xt/id ALICE ::site/type "Person" ::username "alice"}]})
 
      (assert (xt/entity (xt/db *xt-node*) ALICE))
-
-     :ok
 
      (xt/entity (xt/db *xt-node*) ALICE)
 
