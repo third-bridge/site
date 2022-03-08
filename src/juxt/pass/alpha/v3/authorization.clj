@@ -141,6 +141,13 @@
       (log/errorf e "Error when calling action: %s" action)
       (throw e))))
 
+(defn submit-call-action-sync [xt-node {:keys [subject action resource rules args]}]
+  (let [tx (xt/submit-tx
+            xt-node
+               [[::xt/fn ::pass/call-action subject action resource rules args]])]
+
+       (xt/await-tx xt-node tx)
+       (assert (xt/tx-committed? xt-node tx))))
 
 (defn register-call-action-fn []
   [::xt/put

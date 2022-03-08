@@ -695,6 +695,7 @@
 ((t/join-fixtures [with-xt])
  (fn []
    (let [SUE "https://example.org/people/sue"
+         ALICE "https://example.org/people/alice"
          CREATE_USER "https://example.org/actions/create-user"
          CREATE_IDENTITY "https://example.org/actions/create-identity"
          rules ['[(allowed? permission subject action resource)
@@ -705,7 +706,7 @@
        ;; People
        [::xt/put
         {:xt/id SUE
-         ::site/type "Subject"
+         ::site/type "Person"
          ::username "sue"}]
 
        ;; Actions
@@ -736,12 +737,14 @@
       (xt/db *xt-node*)
       {:subject SUE :actions #{CREATE_USER} :rules rules})
 
-     (let [tx (xt/submit-tx
-               *xt-node*
-               [[::xt/fn ::pass/call-action SUE CREATE_USER nil rules {}]])]
+     (authz/submit-call-action-sync
+      *xt-node*
+      {:subject SUE
+       :action CREATE_USER
+       :rules rules
+       :args [{:xt/id ALICE ::site/type "Person" ::username "alice"}]})
 
-       [(xt/await-tx *xt-node* tx)
-        (xt/tx-committed? *xt-node* tx)])
+     (assert (xt/entity (xt/db *xt-node*) ALICE))
 
      )))
 
