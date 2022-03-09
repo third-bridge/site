@@ -17,29 +17,49 @@
 ;; https://en.wikipedia.org/wiki/Alice_and_Bob#Cast_of_characters
 
 (def ALICE
-  {:xt/id "https://example.org/people/alice",
+  {:xt/id "https://example.org/people/alice"
    ::site/type "User"
    ::username "alice"})
 
+(def ALICE_ACCESS_TOKEN
+  {:xt/id "https://example.org/tokens/alice"
+   ::pass/subject (:xt/id ALICE)})
+
 (def BOB
-  {:xt/id "https://example.org/people/bob",
+  {:xt/id "https://example.org/people/bob"
    ::site/type "User"
    ::username "bob"})
 
+(def BOB_ACCESS_TOKEN
+  {:xt/id "https://example.org/tokens/bob"
+   ::pass/subject (:xt/id BOB)})
+
 (def CARLOS
-  {:xt/id "https://example.org/people/carl",
+  {:xt/id "https://example.org/people/carl"
    ::site/type "User"
    ::username "carl"})
 
+(def CARLOS_ACCESS_TOKEN
+  {:xt/id "https://example.org/tokens/carlos"
+   ::pass/subject (:xt/id CARLOS)})
+
 (def FAYTHE
-  {:xt/id "https://example.org/people/faythe",
+  {:xt/id "https://example.org/people/faythe"
    ::site/type "User"
    ::username "faythe"})
 
+(def FAYTHE_ACCESS_TOKEN
+  {:xt/id "https://example.org/tokens/faythe"
+   ::pass/subject (:xt/id FAYTHE)})
+
 (def OSCAR
-  {:xt/id "https://example.org/people/oscar",
+  {:xt/id "https://example.org/people/oscar"
    ::site/type "User"
    ::username "oscar"})
+
+(def OSCAR_ACCESS_TOKEN
+  {:xt/id "https://example.org/tokens/oscar"
+   ::pass/subject (:xt/id OSCAR)})
 
 ;; TODO: INTERNAL classification, different security models, see
 ;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
@@ -59,12 +79,10 @@
 ;; TODO: Not a great first example! Try something easier to start with.
 
 (def ALICE_USER_DIR_PRIVATE_FILE
-  {:xt/id "https://example.org/~alice/private.txt"
-   ::site/type "Resource"})
+  {:xt/id "https://example.org/~alice/private.txt"})
 
 (def ALICE_USER_DIR_SHARED_FILE
-  {:xt/id "https://example.org/~alice/shared.txt"
-   ::site/type "Resource"})
+  {:xt/id "https://example.org/~alice/shared.txt"})
 
 (def READ_USER_DIR_ACTION
   {:xt/id "https://example.org/actions/read-user-dir"
@@ -120,7 +138,8 @@
    ::pass/purpose nil})
 
 (def WRITE_USER_DIR_RULES
-  '[[(allowed? permission subject action resource)
+  '[[(allowed? permission access-token action resource)
+     [access-token ::pass/subject subject]
      [permission ::pass/subject subject]
      [action :xt/id "https://example.org/actions/write-user-dir"]
      [action ::pass/resource-matches resource-regex]
@@ -130,19 +149,22 @@
      [(= user username)]]])
 
 (def READ_USER_DIR_RULES
-  '[[(allowed? permission subject action resource)
+  '[[(allowed? permission access-token action resource)
+     [access-token ::pass/subject subject]
      [permission ::pass/subject subject]
      [action :xt/id "https://example.org/actions/read-user-dir"]
      [action ::pass/resource-matches resource-regex]
+     [resource :xt/id]
      [subject ::username username]
-     [resource ::site/type "Resource"]
      [(re-pattern resource-regex) resource-pattern]
      [(re-matches resource-pattern resource) [_ user]]
      [(= user username)]]])
 
 (def READ_SHARED_RULES
-  '[[(allowed? permission subject action resource)
+  '[[(allowed? permission access-token action resource)
+     [access-token ::pass/subject subject]
      [permission ::pass/subject subject]
+     [resource :xt/id]
      [action :xt/id "https://example.org/actions/read-shared"]
      [permission ::pass/resource resource]]])
 
@@ -151,8 +173,11 @@
    [
     ;; Subjects
     [::xt/put ALICE]
+    [::xt/put ALICE_ACCESS_TOKEN]
     [::xt/put BOB]
+    [::xt/put BOB_ACCESS_TOKEN]
     [::xt/put CARLOS]
+    [::xt/put CARLOS_ACCESS_TOKEN]
 
     ;; Actions
     [::xt/put READ_USER_DIR_ACTION]
@@ -173,84 +198,84 @@
   (let [rules (vec (concat WRITE_USER_DIR_RULES READ_USER_DIR_RULES READ_SHARED_RULES))
         db (xt/db *xt-node*)]
 
-    (are [subject actions resource ok?]
+    (are [access-token actions resource ok?]
         (let [actual (authz/check-permissions
-                      db {:subject subject
+                      db {:access-token access-token
                           :actions actions
                           :resource resource
                           :rules rules})]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
-      "https://example.org/people/alice"
+      "https://example.org/tokens/alice"
       #{"https://example.org/actions/read-user-dir"}
       "https://example.org/~alice/private.txt"
       true
 
       ;; Alice can read the file in her user directory which she has shared with
       ;; Bob.
-      "https://example.org/people/alice"
+      "https://example.org/tokens/alice"
       #{"https://example.org/actions/read-user-dir"}
       "https://example.org/~alice/shared.txt"
       true
 
       ;; Bob cannot read Alice's private file.
-      "https://example.org/people/bob"
+      "https://example.org/tokens/bob"
       #{"https://example.org/actions/read-user-dir"}
       "https://example.org/~alice/private.txt"
       false
 
       ;; Bob can read the file Alice has shared with him.
-      "https://example.org/people/bob"
+      "https://example.org/tokens/bob"
       #{"https://example.org/actions/read-shared"}
       "https://example.org/~alice/shared.txt"
       true
 
       ;; Alice can put a file to her user directory
-      "https://example.org/people/alice"
+      "https://example.org/tokens/alice"
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/~alice/foo.txt"
       true
 
       ;; Alice can't put a file to Bob's user directory
-      "https://example.org/people/alice"
+      "https://example.org/tokens/alice"
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/~bob/foo.txt"
       false
 
       ;; Alice can't put a file outside her user directory
-      "https://example.org/people/alice"
+      "https://example.org/tokens/alice"
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/index.html"
       false
 
       ;; Bob can put a file to his user directory
-      "https://example.org/people/bob"
+      "https://example.org/tokens/bob"
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/~bob/foo.txt"
       true
 
       ;; Bob can't put a file to Alice's directory
-      "https://example.org/people/bob"
+      "https://example.org/tokens/bob"
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/~alice/foo.txt"
       false
 
       ;; Carl cannot put a file to his user directory, as he hasn't been
       ;; granted the write-user-dir action.
-      "https://example.org/people/carl"
+      "https://example.org/tokens/carl"
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/~carl/foo.txt"
       false)
 
-    (are [subject actions rules expected]
+    (are [access-token actions rules expected]
         (is (= expected
                (authz/allowed-resources
                 db
-                {:subject subject :actions actions :rules rules})))
+                {:access-token access-token :actions actions :rules rules})))
 
       ;; Alice can see all her files.
-      "https://example.org/people/alice"
+      "https://example.org/tokens/alice"
       #{"https://example.org/actions/read-user-dir"
         "https://example.org/actions/read-shared"}
       (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
@@ -258,14 +283,14 @@
         ["https://example.org/~alice/private.txt"]}
 
       ;; Bob can only see the file Alice has shared with him.
-      "https://example.org/people/bob"
+      "https://example.org/tokens/bob"
       #{"https://example.org/actions/read-user-dir"
         "https://example.org/actions/read-shared"}
       (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
       #{["https://example.org/~alice/shared.txt"]})
 
     ;; Carl sees nothing
-    "https://example.org/people/carl"
+    "https://example.org/tokens/carl"
     #{"https://example.org/actions/read-user-dir"
       "https://example.org/actions/read-shared"}
     (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
@@ -333,13 +358,15 @@
          ::pass/resource "https://example.org/people/alice"}
 
         rules
-        '[[(allowed? permission subject action resource)
+        '[[(allowed? permission access-token action resource)
            [permission ::pass/subject subject]
+           [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-username"]
            [permission ::pass/resource resource]]
 
-          [(allowed? permission subject action resource)
+          [(allowed? permission access-token action resource)
            [permission ::pass/subject subject]
+           [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-secrets"]
            [permission ::pass/resource resource]]]]
 
@@ -347,8 +374,11 @@
      [
       ;; Actors
       [::xt/put (assoc ALICE ::secret "foo")]
+      [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put BOB]
+      [::xt/put BOB_ACCESS_TOKEN]
       [::xt/put CARLOS]
+      [::xt/put CARLOS_ACCESS_TOKEN]
 
       [::xt/put READ_USERNAME_ACTION]
       [::xt/put READ_SECRETS_ACTION]
@@ -359,18 +389,18 @@
 
     ;; Bob can read Alice's secret
     (let [db (xt/db *xt-node*)]
-      (are [subject expected]
+      (are [access-token expected]
           (let [actual
                 (authz/pull-allowed-resource
                  db
-                 {:subject (:xt/id subject)
+                 {:access-token (:xt/id access-token)
                   :actions #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
                   :resource (:xt/id ALICE)
                   :rules rules})]
             (is (= expected actual)))
 
-        BOB {::username "alice" ::secret "foo"}
-        CARLOS {::username "alice"}))))
+        BOB_ACCESS_TOKEN {::username "alice" ::secret "foo"}
+        CARLOS_ACCESS_TOKEN {::username "alice"}))))
 
 (deftest pull-allowed-resources-test
   (let [READ_MESSAGE_CONTENT_ACTION
@@ -412,15 +442,17 @@
          ::pass/purpose nil}
 
         rules
-        '[[(allowed? permission subject action resource)
+        '[[(allowed? permission access-token action resource)
            [permission ::pass/subject subject]
+           [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-message-content"]
            [permission ::group group]
            [resource ::group group]
            [resource ::site/type "Message"]]
 
-          [(allowed? permission subject action resource)
+          [(allowed? permission access-token action resource)
            [permission ::pass/subject subject]
+           [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-message-metadata"]
            [permission ::group group]
            [resource ::group group]
@@ -434,9 +466,13 @@
 
       ;; Actors
       [::xt/put ALICE]
+      [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put BOB]
+      [::xt/put BOB_ACCESS_TOKEN]
       [::xt/put CARLOS]
+      [::xt/put CARLOS_ACCESS_TOKEN]
       [::xt/put FAYTHE]
+      [::xt/put FAYTHE_ACCESS_TOKEN]
 
       ;; Permissions
       [::xt/put ALICE_BELONGS_GROUP_A]
@@ -499,29 +535,29 @@
         ::content "Thanks Alice, that's very kind of you - see you at lunch!"}]])
 
     (let [get-messages
-          (fn [subject]
+          (fn [access-token]
             (authz/pull-allowed-resources
              (xt/db *xt-node*)
-             {:subject (:xt/id subject)
+             {:access-token (:xt/id access-token)
               :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                          (:xt/id READ_MESSAGE_METADATA_ACTION)}
               :rules rules}))]
 
       ;; Alice and Bob can read all the messages in the group
-      (let [messages (get-messages ALICE)]
+      (let [messages (get-messages ALICE_ACCESS_TOKEN)]
         (is (= 6 (count messages)))
         (is (= #{::from ::to ::date ::content} (set (keys (first messages))))))
 
-      (let [messages (get-messages BOB)]
+      (let [messages (get-messages BOB_ACCESS_TOKEN)]
         (is (= 6 (count messages)))
         (is (= #{::from ::to ::date ::content} (set (keys (first messages))))))
 
       ;; Carlos cannot see any of the messages
-      (is (zero? (count (get-messages CARLOS))))
+      (is (zero? (count (get-messages CARLOS_ACCESS_TOKEN))))
 
       ;; Faythe can read meta-data of the conversation between Alice and Bob but
       ;; not the content of the messages.
-      (let [messages (get-messages FAYTHE)]
+      (let [messages (get-messages FAYTHE_ACCESS_TOKEN)]
         (is (= 6 (count messages)))
         (is (= #{::from ::to ::date} (set (keys (first messages))))))
 
@@ -532,11 +568,11 @@
       (is (= 3 (count
                 (authz/pull-allowed-resources
                  (xt/db *xt-node*)
-                 {:subject (:xt/id ALICE)
+                 {:access-token (:xt/id ALICE_ACCESS_TOKEN)
                   :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                              (:xt/id READ_MESSAGE_METADATA_ACTION)}
                   :rules rules
-                  :include-rules [['(include? subject action message)
+                  :include-rules [['(include? access-token action message)
                                    ['message ::from (:xt/id ALICE)]]]})))))))
 
 ;; Alice has a medical record. She wants to allow Oscar access to it, but only
@@ -558,13 +594,15 @@
          ::pass/alert-log true}
 
         rules
-        '[[(allowed? permission subject action resource)
+        '[[(allowed? permission access-token action resource)
            [permission ::pass/subject subject]
+           [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-medical-record"]
            [resource ::site/type "MedicalRecord"]]
 
-          [(allowed? permission subject action resource)
+          [(allowed? permission access-token action resource)
            [permission ::pass/subject subject]
+           [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
            [resource ::site/type "MedicalRecord"]]]]
 
@@ -572,7 +610,9 @@
      [
       ;; Subject
       [::xt/put ALICE]
+      [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put OSCAR]
+      [::xt/put OSCAR_ACCESS_TOKEN]
 
       ;; Actions
       [::xt/put READ_MEDICAL_RECORD_ACTION]
@@ -593,26 +633,26 @@
         ::content "Medical info"}]])
 
     (let [get-medical-records
-          (fn [subject action]
+          (fn [access-token action]
             (authz/pull-allowed-resources
              (xt/db *xt-node*)
-             {:subject (:xt/id subject)
+             {:access-token (:xt/id access-token)
               :actions #{(:xt/id action)}
               :rules rules}))
 
           get-medical-record
-          (fn [subject action]
+          (fn [access-token action]
             (authz/pull-allowed-resource
              (xt/db *xt-node*)
-             {:subject (:xt/id subject)
+             {:access-token (:xt/id access-token)
               :actions #{(:xt/id action)}
               :resource "https://example.org/alice/medical-record"
               :rules rules}))]
 
-      (is (zero? (count (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION))))
-      (is (= 1 (count (get-medical-records OSCAR EMERGENCY_READ_MEDICAL_RECORD_ACTION))))
-      (is (not (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION)))
-      (is (get-medical-record OSCAR EMERGENCY_READ_MEDICAL_RECORD_ACTION)))))
+      (is (zero? (count (get-medical-records OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION))))
+      (is (= 1 (count (get-medical-records OSCAR_ACCESS_TOKEN EMERGENCY_READ_MEDICAL_RECORD_ACTION))))
+      (is (not (get-medical-record OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION)))
+      (is (get-medical-record OSCAR_ACCESS_TOKEN EMERGENCY_READ_MEDICAL_RECORD_ACTION)))))
 
 ;; An alternative way of achieving the same result is to specify a purpose when
 ;; granting a permission.
@@ -624,8 +664,9 @@
          ::pass/pull ['*]}
 
         rules
-        '[[(allowed? permission subject action resource)
+        '[[(allowed? permission access-token action resource)
            [permission ::pass/subject subject]
+           [access-token ::pass/subject subject]
            [permission ::pass/purpose purpose]
            [action :xt/id "https://example.org/actions/read-medical-record"]
            [resource ::site/type "MedicalRecord"]]]]
@@ -637,7 +678,9 @@
 
       ;; Actors
       [::xt/put ALICE]
+      [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put OSCAR]
+      [::xt/put OSCAR_ACCESS_TOKEN]
 
       ;; Purposes
       [::xt/put
@@ -661,29 +704,29 @@
         ::content "Medical info"}]])
 
     (let [get-medical-records
-          (fn [subject action purpose]
+          (fn [access-token action purpose]
             (authz/pull-allowed-resources
              (xt/db *xt-node*)
-             {:subject (:xt/id subject)
+             {:access-token (:xt/id access-token)
               :actions #{(:xt/id action)}
               :purpose purpose
               :rules rules}))
 
           get-medical-record
-          (fn [subject action purpose]
+          (fn [access-token action purpose]
             (authz/pull-allowed-resource
              (xt/db *xt-node*)
-             {:subject (:xt/id subject)
+             {:access-token (:xt/id access-token)
               :actions #{(:xt/id action)}
               :purpose purpose
               :resource "https://example.org/alice/medical-record"
               :rules rules}))]
 
-      (is (zero? (count (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing"))))
-      (is (= 1 (count (get-medical-records OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency"))))
+      (is (zero? (count (get-medical-records OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing"))))
+      (is (= 1 (count (get-medical-records OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency"))))
 
-      (is (nil? (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing")))
-      (is (get-medical-record OSCAR READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency")))))
+      (is (nil? (get-medical-record OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing")))
+      (is (get-medical-record OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency")))))
 
 ;; Bootstrapping
 
@@ -695,11 +738,14 @@
 
 (deftest call-action-test
   (let [SUE "https://example.org/people/sue"
-        ALICE "https://example.org/people/alice"
+        SUE_ACCESS_TOKEN "https://example.org/tokens/sue"
+        CARLOS "https://example.org/people/carlos"
+        CARLOS_ACCESS_TOKEN "https://example.org/tokens/carlos"
         CREATE_PERSON "https://example.org/actions/create-person"
         CREATE_IDENTITY "https://example.org/actions/create-identity"
-        rules ['[(allowed? permission subject action resource)
+        rules ['[(allowed? permission access-token action resource)
                  [permission ::pass/subject subject]
+                 [access-token ::pass/subject subject]
                  ]]]
     (submit-and-await!
      [
@@ -708,11 +754,18 @@
        {:xt/id SUE
         ::site/type "Person"
         ::username "sue"}]
+      [::xt/put
+       {:xt/id SUE_ACCESS_TOKEN
+        ::pass/subject SUE
+        ::username "sue"}]
 
       [::xt/put
        {:xt/id CARLOS
         ::site/type "Person"
         ::username "carlos"}]
+      [::xt/put
+       {:xt/id CARLOS_ACCESS_TOKEN
+        ::pass/subject CARLOS}]
 
       ;; Actions
       [::xt/put
@@ -753,11 +806,11 @@
      (seq
       (authz/check-permissions
        (xt/db *xt-node*)
-       {:subject SUE :actions #{CREATE_PERSON} :rules rules})))
+       {:access-token SUE_ACCESS_TOKEN :actions #{CREATE_PERSON} :rules rules})))
 
     (authz/submit-call-action-sync
      *xt-node*
-     {:subject SUE
+     {:access-token SUE_ACCESS_TOKEN
       :action CREATE_PERSON
       :rules rules
       :args [{:xt/id ALICE ::username "alice"}]})
@@ -770,15 +823,105 @@
       AssertionError
       (authz/submit-call-action-sync
        *xt-node*
-       {:subject SUE
+       {:access-token SUE_ACCESS_TOKEN
         :action CREATE_PERSON
         :rules rules
         :args [{:xt/id ALICE}]})))
 
     ))
 
-((t/join-fixtures [with-xt])
+#_((t/join-fixtures [with-xt])
  (fn []
+   (let [SUE "https://example.org/people/sue"
+        SUE_ACCESS_TOKEN "https://example.org/tokens/sue"
+        CARLOS "https://example.org/people/carlos"
+        CARLOS_ACCESS_TOKEN "https://example.org/tokens/carlos"
+        CREATE_PERSON "https://example.org/actions/create-person"
+        CREATE_IDENTITY "https://example.org/actions/create-identity"
+        rules ['[(allowed? permission access-token action resource)
+                 [permission ::pass/subject subject]
+                 [access-token ::pass/subject subject]
+                 ]]]
+    (submit-and-await!
+     [
+      ;; People
+      [::xt/put
+       {:xt/id SUE
+        ::site/type "Person"
+        ::username "sue"}]
+      [::xt/put
+       {:xt/id SUE_ACCESS_TOKEN
+        ::pass/subject SUE
+        ::username "sue"}]
+
+      [::xt/put
+       {:xt/id CARLOS
+        ::site/type "Person"
+        ::username "carlos"}]
+      [::xt/put
+       {:xt/id CARLOS_ACCESS_TOKEN
+        ::pass/subject CARLOS}]
+
+      ;; Actions
+      [::xt/put
+       {:xt/id CREATE_PERSON
+        ::site/type "Action"
+        ::pass/action-args
+        [{::pass.malli/schema
+          [:map
+           [::site/type [:= "Person"]]
+           [::username [:string]]]
+
+          ::pass/process
+          [
+           ;; Though we could use a Malli value transformer here, at this stage is
+           ;; doesn't feel beneficial to lean too heavily on Malli's extensive
+           ;; feature set.
+           [::pass/merge {::site/type "Person"}]
+           [::pass.malli/validate]]}]}]
+
+      [::xt/put
+       {:xt/id CREATE_IDENTITY
+        ::site/type "Action"
+        ::pass/action-args [{}]}]
+
+      ;; Permissions
+      [::xt/put
+       {:xt/id "https://example.org/permissions/sue/create-person"
+        ::site/type "Permission"
+        ::pass/subject SUE
+        ::pass/action CREATE_PERSON
+        ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
+
+      ;; Functions
+      (authz/register-call-action-fn)])
+
+    ;; Sue creates the user Alice, with an identity
+    (authz/check-permissions
+     (xt/db *xt-node*)
+     {:access-token SUE_ACCESS_TOKEN :actions #{CREATE_PERSON} :rules rules})
+
+    #_(authz/submit-call-action-sync
+     *xt-node*
+     {:access-token SUE_ACCESS_TOKEN
+      :action CREATE_PERSON
+      :rules rules
+      :args [{:xt/id ALICE ::username "alice"}]})
+
+    #_(is (xt/entity (xt/db *xt-node*) ALICE))
+
+    ;; This fails because we haven't provided the ::username
+    #_(is
+     (thrown?
+      AssertionError
+      (authz/submit-call-action-sync
+       *xt-node*
+       {:access-token SUE_ACCESS_TOKEN
+        :action CREATE_PERSON
+        :rules rules
+        :args [{:xt/id ALICE}]})))
+
+    )
    ))
 
 

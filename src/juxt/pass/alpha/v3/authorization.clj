@@ -12,7 +12,7 @@
 
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
-  [db {:keys [subject actions purpose resource rules]}]
+  [db {:keys [access-token actions purpose resource rules]}]
   (xt/q
    db
    {:find '[(pull permission [*]) (pull action [*])]
@@ -24,17 +24,17 @@
       [permission ::pass/action action]
       [permission ::pass/purpose purpose]
       [(contains? actions action)]
-      (allowed? permission subject action resource)]
+      (allowed? permission access-token action resource)]
 
     :rules rules
 
-    :in '[subject actions purpose resource]}
+    :in '[access-token actions purpose resource]}
 
-   subject actions purpose resource))
+   access-token actions purpose resource))
 
 (defn allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
-  [db {:keys [subject actions purpose rules]}]
+  [db {:keys [access-token actions purpose rules]}]
   (xt/q
    db
    {:find '[resource]
@@ -46,13 +46,13 @@
       [permission ::pass/purpose purpose]
       [(contains? actions action)]
 
-      (allowed? permission subject action resource)]
+      (allowed? permission access-token action resource)]
 
     :rules rules
 
-    :in '[subject actions purpose]}
+    :in '[access-token actions purpose]}
 
-   subject actions purpose))
+   access-token actions purpose))
 
 (defn allowed-subjects
   "Given a resource and a set of actions, which subjects can access and via which
@@ -69,8 +69,9 @@
            [permission ::pass/action action]
            [permission ::pass/purpose purpose]
            [(contains? actions action)]
+           [access-token ::pass/subject subject]
 
-           (allowed? permission subject action resource)]
+           (allowed? permission access-token action resource)]
 
          :rules rules
 
@@ -81,10 +82,10 @@
 (defn pull-allowed-resource
   "Given a subject, a set of possible actions and a resource, pull the allowed
   attributes."
-  [db {:keys [subject actions purpose resource rules]}]
+  [db {:keys [access-token actions purpose resource rules]}]
   (let [check-result (check-permissions
                       db
-                      {:subject subject
+                      {:access-token access-token
                        :actions actions
                        :purpose purpose
                        :resource resource
@@ -98,7 +99,7 @@
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed, and
   get me the documents"
-  [db {:keys [subject actions purpose rules include-rules]}]
+  [db {:keys [access-token actions purpose rules include-rules]}]
   (let [results
         (xt/q
          db
@@ -112,15 +113,15 @@
                     [permission ::pass/purpose purpose]
                     [(contains? actions action)]
 
-                    (allowed? permission subject action resource)]
+                    (allowed? permission access-token action resource)]
             include-rules
-            (conj '(include? subject action resource)))
+            (conj '(include? access-token action resource)))
 
           :rules (vec (concat rules include-rules))
 
-          :in '[subject actions purpose]}
+          :in '[access-token actions purpose]}
 
-         subject actions purpose)
+         access-token actions purpose)
         pull-expr (vec (mapcat (comp ::pass/pull :action) results))]
 
     (->> results
@@ -152,12 +153,16 @@
    arg
    (::pass/process arg-def)))
 
-(defn call-action [db subject action resource rules action-args]
+(defn call-action [db access-token action resource rules action-args]
   (try
     ;; Check that we /can/ call the action
-    (let [check-permissions-result (check-permissions db {:subject subject
-                                                          :actions #{action}
-                                                          :rules rules})
+    (let [check-permissions-result
+          (check-permissions
+           db
+           {:access-token access-token
+            :actions #{action}
+            :rules rules
+            :resource resource})
           action-doc (xt/entity db action)
           _ (when-not action-doc (throw (ex-info "Action not found in db" {:action action})))
           action-arg-defs (::pass/action-args action-doc [])
@@ -181,10 +186,10 @@
       (log/errorf e "Error when calling action: %s" action)
       (throw e))))
 
-(defn submit-call-action-sync [xt-node {:keys [subject action resource rules args]}]
+(defn submit-call-action-sync [xt-node {:keys [access-token action resource rules args]}]
   (let [tx (xt/submit-tx
             xt-node
-               [[::xt/fn ::pass/call-action subject action resource rules args]])]
+               [[::xt/fn ::pass/call-action access-token action resource rules args]])]
 
        (xt/await-tx xt-node tx)
        (assert (xt/tx-committed? xt-node tx))))
@@ -192,5 +197,5 @@
 (defn register-call-action-fn []
   [::xt/put
    {:xt/id ::pass/call-action
-    :xt/fn '(fn [xt-ctx subject action resource rules action-args]
-              (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) subject action resource rules action-args))}])
+    :xt/fn '(fn [xt-ctx access-token action resource rules action-args]
+              (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) access-token action resource rules action-args))}])
