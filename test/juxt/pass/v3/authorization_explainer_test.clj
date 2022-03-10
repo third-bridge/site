@@ -835,8 +835,18 @@
      :ok
    ))
 
-
-
 ;; TODO: Extend to GraphQL
 ;;
 ;; TODO: Subject access from 'inside' versus 'outside' the perimeter
+;;
+;; TODO: Continue bootstrapping so Alice can do stuff
+;;
+;; TODO: Create action list-persons which can be in the scope read:internal ?
+;; Or can list-persons as an action be granted to INTERNAL?
+;; Does list-persons refer to a resource? I suppose so, it's read:resource on /people/
+
+;; Create a list-persons action
+;; Create /people/ resource
+;; Grant list-persons on /people/ to Alice
+;; Can a GET from Alice to /people/ trigger a list-persons actions?
+;; Can a list-persons action be configured to do a a query?
