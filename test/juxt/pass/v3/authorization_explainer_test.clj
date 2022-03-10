@@ -876,11 +876,15 @@
                  [access-token ::pass/subject subject]]]]
     (submit-and-await!
      [
+      ;; Applications
+      [::xt/put ADMIN_APP]
+
       ;; People
       [::xt/put SUE]
-      [::xt/put SUE_ACCESS_TOKEN]
-
       [::xt/put CARLOS]
+
+      ;; Access tokens
+      [::xt/put SUE_ACCESS_TOKEN]
       [::xt/put CARLOS_ACCESS_TOKEN]
 
       ;; Actions
@@ -899,14 +903,15 @@
       (authz/register-call-action-fn)])
 
     ;; Sue creates the user Alice, with an identity
-    (is
-     (seq
-      (authz/check-permissions
-       (xt/db *xt-node*)
-       {:access-token (:xt/id SUE_ACCESS_TOKEN)
-        :scope #{"write:admin"}
-        :actions #{(:xt/id CREATE_PERSON)}
-        :rules rules})))
+    (let [db (xt/db *xt-node*)]
+      (is
+       (seq
+        (authz/check-permissions
+         db
+         {:access-token (:xt/id SUE_ACCESS_TOKEN)
+          :scope (effective-scope db (:xt/id SUE_ACCESS_TOKEN));;#{"write:admin"}
+          :actions #{(:xt/id CREATE_PERSON)}
+          :rules rules}))))
 
     (authz/submit-call-action-sync
      *xt-node*
