@@ -57,7 +57,8 @@
    ::pass/client-id "101"
    ::pass/client-secret "SecretArmadillo"})
 
-;; Access tokens
+;; All access is via an access token. Access tokens are created for individual
+;; subjects using a specific application.
 
 (def ALICE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/alice"
@@ -190,6 +191,8 @@
      [resource :xt/id]
      [action :xt/id "https://example.org/actions/read-shared"]
      [permission ::pass/resource resource]]])
+
+;; Scopes. Actions inhabit scopes.
 
 (deftest user-dir-test
   (submit-and-await!
