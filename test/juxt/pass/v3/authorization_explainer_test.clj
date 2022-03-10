@@ -758,9 +758,26 @@
    ::pass/subject (:xt/id SUE)
    ::username "sue"})
 
+(def CREATE_PERSON
+  {:xt/id "https://example.org/actions/create-person"
+   ::site/type "Action"
+   ::pass/action-args
+   [{::pass.malli/schema
+     [:map
+      [::site/type [:= "Person"]]
+      [::username [:string]]]
+
+     ::pass/process
+     [
+      ;; Though we could use a Malli value transformer here, at this stage is
+      ;; doesn't feel beneficial to lean too heavily on Malli's extensive
+      ;; feature set.
+      [::pass/merge {::site/type "Person"}]
+      [::pass.malli/validate]]}]})
+
 (deftest call-action-test
   (let [
-        CREATE_PERSON "https://example.org/actions/create-person"
+
         CREATE_IDENTITY "https://example.org/actions/create-identity"
         rules ['[(allowed? permission access-token action resource)
                  [permission ::pass/subject subject]
@@ -776,22 +793,7 @@
       [::xt/put CARLOS_ACCESS_TOKEN]
 
       ;; Actions
-      [::xt/put
-       {:xt/id CREATE_PERSON
-        ::site/type "Action"
-        ::pass/action-args
-        [{::pass.malli/schema
-          [:map
-           [::site/type [:= "Person"]]
-           [::username [:string]]]
-
-          ::pass/process
-          [
-           ;; Though we could use a Malli value transformer here, at this stage is
-           ;; doesn't feel beneficial to lean too heavily on Malli's extensive
-           ;; feature set.
-           [::pass/merge {::site/type "Person"}]
-           [::pass.malli/validate]]}]}]
+      [::xt/put CREATE_PERSON]
 
       [::xt/put
        {:xt/id CREATE_IDENTITY
@@ -803,7 +805,7 @@
        {:xt/id "https://example.org/permissions/sue/create-person"
         ::site/type "Permission"
         ::pass/subject (:xt/id SUE)
-        ::pass/action CREATE_PERSON
+        ::pass/action (:xt/id CREATE_PERSON)
         ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
       ;; Functions
@@ -815,13 +817,13 @@
       (authz/check-permissions
        (xt/db *xt-node*)
        {:access-token (:xt/id SUE_ACCESS_TOKEN)
-        :actions #{CREATE_PERSON}
+        :actions #{(:xt/id CREATE_PERSON)}
         :rules rules})))
 
     (authz/submit-call-action-sync
      *xt-node*
      {:access-token (:xt/id SUE_ACCESS_TOKEN)
-      :action CREATE_PERSON
+      :action (:xt/id CREATE_PERSON)
       :rules rules
       :args [{:xt/id ALICE ::username "alice"}]})
 
@@ -834,7 +836,7 @@
       (authz/submit-call-action-sync
        *xt-node*
        {:access-token (:xt/id SUE_ACCESS_TOKEN)
-        :action CREATE_PERSON
+        :action (:xt/id CREATE_PERSON)
         :rules rules
         :args [{:xt/id ALICE}]})))
 
