@@ -909,14 +909,14 @@
         (authz/check-permissions
          db
          {:access-token (:xt/id SUE_ACCESS_TOKEN)
-          :scope (effective-scope db (:xt/id SUE_ACCESS_TOKEN));;#{"write:admin"}
+          :scope (effective-scope db (:xt/id SUE_ACCESS_TOKEN))
           :actions #{(:xt/id CREATE_PERSON)}
           :rules rules}))))
 
     (authz/submit-call-action-sync
      *xt-node*
      {:access-token (:xt/id SUE_ACCESS_TOKEN)
-      :scope #{"write:admin"}
+      :scope (effective-scope (xt/db *xt-node*) (:xt/id SUE_ACCESS_TOKEN))
       :action (:xt/id CREATE_PERSON)
       :rules rules
       :args [{:xt/id ALICE ::username "alice"}]})
@@ -930,7 +930,7 @@
       (authz/submit-call-action-sync
        *xt-node*
        {:access-token (:xt/id SUE_ACCESS_TOKEN)
-        :scope #{"write:admin"}
+        :scope (effective-scope (xt/db *xt-node*) (:xt/id SUE_ACCESS_TOKEN))
         :action (:xt/id CREATE_PERSON)
         :rules rules
         :args [{:xt/id ALICE}]})))))
