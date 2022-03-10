@@ -71,11 +71,13 @@
 
 (def ALICE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/alice"
+   ::site/type "AccessToken"
    ::pass/subject (:xt/id ALICE_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
 
 (def ALICE_READONLY_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/alice-readonly"
+   ::site/type "AccessToken"
    ::pass/subject (:xt/id ALICE_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)
    ::pass/scope (set
@@ -89,6 +91,7 @@
 
 (def BOB_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/bob"
+   ::site/type "AccessToken"
    ::pass/subject (:xt/id BOB_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
 
@@ -98,6 +101,7 @@
 
 (def CARLOS_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/carlos"
+   ::site/type "AccessToken"
    ::pass/subject (:xt/id CARLOS_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
 
@@ -107,6 +111,7 @@
 
 (def FAYTHE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/faythe"
+   ::site/type "AccessToken"
    ::pass/subject (:xt/id FAYTHE_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
 
@@ -116,6 +121,7 @@
 
 (def OSCAR_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/oscar"
+   ::site/type "AccessToken"
    ::pass/subject (:xt/id OSCAR_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
 
@@ -908,11 +914,13 @@
 
 (def SUE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/sue"
+   ::site/type "AccessToken"
    ::pass/subject (:xt/id SUE_SUBJECT)
    ::pass/application-client (:xt/id ADMIN_APP)})
 
 (def SUE_READONLY_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/sue-readonly"
+   ::site/type "AccessToken"
    ::pass/subject (:xt/id SUE_SUBJECT)
    ::pass/application-client (:xt/id ADMIN_APP)
    ::pass/scope #{"read:admin"}})
