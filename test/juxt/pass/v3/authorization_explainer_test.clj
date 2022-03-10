@@ -332,18 +332,18 @@
         false
         )
 
-    (are [access-token scope actions rules expected]
-        (is (= expected
-               (authz/allowed-resources
-                db
-                {:access-token access-token
-                 :scope scope
-                 :actions actions
-                 :rules rules})))
+    (are [access-token actions rules expected]
+        (let [scope (effective-scope db access-token)]
+          (is (= expected
+                 (authz/allowed-resources
+                  db
+                  {:access-token access-token
+                   :scope scope
+                   :actions actions
+                   :rules rules}))))
 
       ;; Alice can see all her files.
         "https://example.org/tokens/alice"
-        #{"read:resource" "write:resource"}
         #{"https://example.org/actions/read-user-dir"
           "https://example.org/actions/read-shared"}
         (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
@@ -352,7 +352,6 @@
 
         ;; Bob can only see the file Alice has shared with him.
         "https://example.org/tokens/bob"
-        #{"read:resource" "write:resource"}
         #{"https://example.org/actions/read-user-dir"
           "https://example.org/actions/read-shared"}
         (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
@@ -360,7 +359,6 @@
 
         ;; Carlos sees nothing
         "https://example.org/tokens/carlos"
-        #{"read:resource" "write:resource"}
         #{"https://example.org/actions/read-user-dir"
           "https://example.org/actions/read-shared"}
         (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
