@@ -21,27 +21,27 @@
 
 (def ALICE
   {:xt/id "https://example.org/people/alice"
-   ::site/type "Person"
+   ::type "Person"
    ::username "alice"})
 
 (def BOB
   {:xt/id "https://example.org/people/bob"
-   ::site/type "Person"
+   ::type "Person"
    ::username "bob"})
 
 (def CARLOS
   {:xt/id "https://example.org/people/carlos"
-   ::site/type "Person"
+   ::type "Person"
    ::username "carlos"})
 
 (def FAYTHE
   {:xt/id "https://example.org/people/faythe"
-   ::site/type "Person"
+   ::type "Person"
    ::username "faythe"})
 
 (def OSCAR
   {:xt/id "https://example.org/people/oscar"
-   ::site/type "Person"
+   ::type "Person"
    ::username "oscar"})
 
 ;; Applications
@@ -831,7 +831,7 @@
 
 (def SUE
   {:xt/id "https://example.org/people/sue"
-   ::site/type "Person"
+   ::type "Person"
    ::username "sue"})
 
 (def ADMIN_APP
@@ -853,7 +853,7 @@
    ::pass/action-args
    [{::pass.malli/schema
      [:map
-      [::site/type [:= "Person"]]
+      [::type [:= "Person"]]
       [::username [:string]]]
 
      ::pass/process
@@ -861,7 +861,7 @@
       ;; Though we could use a Malli value transformer here, at this stage is
       ;; doesn't feel beneficial to lean too heavily on Malli's extensive
       ;; feature set.
-      [::pass/merge {::site/type "Person"}]
+      [::pass/merge {::type "Person"}]
       [::pass.malli/validate]]}]})
 
 (def CREATE_IDENTITY
