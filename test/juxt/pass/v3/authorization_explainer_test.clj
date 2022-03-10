@@ -846,6 +846,12 @@
    ::pass/subject (:xt/id SUE)
    ::pass/application-client (:xt/id ADMIN_APP)})
 
+(def SUE_READONLY_ACCESS_TOKEN
+  {:xt/id "https://example.org/tokens/sue-readonly"
+   ::pass/subject (:xt/id SUE)
+   ::pass/application-client (:xt/id ADMIN_APP)
+   ::pass/scope #{"read:admin"}})
+
 (def CREATE_PERSON
   {:xt/id "https://example.org/actions/create-person"
    ::site/type "Action"
@@ -885,6 +891,7 @@
 
       ;; Access tokens
       [::xt/put SUE_ACCESS_TOKEN]
+      [::xt/put SUE_READONLY_ACCESS_TOKEN]
       [::xt/put CARLOS_ACCESS_TOKEN]
 
       ;; Actions
@@ -908,18 +915,30 @@
        (seq
         (authz/check-permissions
          db
-         {:access-token (:xt/id SUE_ACCESS_TOKEN)
-          :scope (effective-scope db (:xt/id SUE_ACCESS_TOKEN))
-          :actions #{(:xt/id CREATE_PERSON)}
-          :rules rules}))))
+         (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
+           {:access-token access-token
+            :scope (effective-scope db access-token)
+            :actions #{(:xt/id CREATE_PERSON)}
+            :rules rules}))))
+      (is
+       (not
+        (seq
+         (authz/check-permissions
+          db
+          (let [access-token (:xt/id SUE_READONLY_ACCESS_TOKEN)]
+            {:access-token access-token
+             :scope (effective-scope db access-token)
+             :actions #{(:xt/id CREATE_PERSON)}
+             :rules rules}))))))
 
     (authz/submit-call-action-sync
      *xt-node*
-     {:access-token (:xt/id SUE_ACCESS_TOKEN)
-      :scope (effective-scope (xt/db *xt-node*) (:xt/id SUE_ACCESS_TOKEN))
-      :action (:xt/id CREATE_PERSON)
-      :rules rules
-      :args [{:xt/id ALICE ::username "alice"}]})
+     (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
+       {:access-token access-token
+        :scope (effective-scope (xt/db *xt-node*) access-token)
+        :action (:xt/id CREATE_PERSON)
+        :rules rules
+        :args [{:xt/id ALICE ::username "alice"}]}))
 
     (is (xt/entity (xt/db *xt-node*) ALICE))
 
@@ -929,11 +948,12 @@
       AssertionError
       (authz/submit-call-action-sync
        *xt-node*
-       {:access-token (:xt/id SUE_ACCESS_TOKEN)
-        :scope (effective-scope (xt/db *xt-node*) (:xt/id SUE_ACCESS_TOKEN))
-        :action (:xt/id CREATE_PERSON)
-        :rules rules
-        :args [{:xt/id ALICE}]})))))
+       (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
+         {:access-token access-token
+          :scope (effective-scope (xt/db *xt-node*) access-token)
+          :action (:xt/id CREATE_PERSON)
+          :rules rules
+          :args [{:xt/id ALICE}]}))))))
 
 #_((t/join-fixtures [with-xt])
    (fn []
