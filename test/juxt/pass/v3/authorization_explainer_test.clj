@@ -16,6 +16,18 @@
 ;; Note: if you're not familiar with the Alice and Bob characters, see
 ;; https://en.wikipedia.org/wiki/Alice_and_Bob#Cast_of_characters
 
+(def USER_APP
+  {:xt/id "https://example.org/_site/apps/user"
+   ::name "User App"
+   ::pass/client-id "100"
+   ::pass/client-secret "SecretUmbrella"})
+
+(def ADMIN_APP
+  {:xt/id "https://example.org/_site/apps/admin"
+   ::name "Admin App"
+   ::pass/client-id "101"
+   ::pass/client-secret "SecretArmadillo"})
+
 (def ALICE
   {:xt/id "https://example.org/people/alice"
    ::site/type "User"
