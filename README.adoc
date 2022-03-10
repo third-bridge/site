@@ -144,7 +144,6 @@ Site by JUXT. Copyright (c) 2021, JUXT LTD.
 Type :repl/quit to exit
 
 [ ]  Site API not installed.  Enter (put-site-api!) to fix this.
-[ ]  Authentication resources not installed.  Enter (put-auth-resources!) to fix this.
 [ ]  Role of superuser not yet created. Enter (put-superuser-role!) to fix this.
 [ ]  No superusers exist. Enter (put-superuser! <username> <fullname>)
      or (put-superuser! <username> <fullname> <password>) to fix this.
@@ -155,12 +154,6 @@ Install the Site API:
 
 ----
 site> (put-site-api!)
-----
-
-Install the authentication rules:
-
-----
-site> (put-auth-resources!)
 ----
 
 Install the superuser role:

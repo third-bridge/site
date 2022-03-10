@@ -214,7 +214,8 @@
      (json/write-value-as-string %))
    config))
 
-(defn put-openid-token-endpoint! [xt-node {::site/keys [base-uri]}]
+;; This is deprecated because there are no longer any users/passwords
+#_(defn ^:deprecated put-openid-token-endpoint! [xt-node {::site/keys [base-uri]}]
   (log/info "Installing OpenID Connect token endpoint")
   (let [token-endpoint (str base-uri "/_site/token")
         grant-types #{"client_credentials"}]
@@ -258,7 +259,7 @@
         ::http/etag (subs (util/hexdigest (.getBytes content)) 0 32)
         ::http/content content}))))
 
-(defn put-login-endpoint! [xt-node {::site/keys [base-uri]}]
+#_(defn put-login-endpoint! [xt-node {::site/keys [base-uri]}]
   (log/info "Installing login endpoint")
   ;; Allow anyone to login
   (put!
@@ -276,7 +277,7 @@
                    ['request ::site/uri (str base-uri "/_site/login")]]
     ::pass/effect ::pass/allow}))
 
-(defn put-logout-endpoint! [xt-node {::site/keys [base-uri]}]
+#_(defn put-logout-endpoint! [xt-node {::site/keys [base-uri]}]
   (log/info "Installing logout endpoint")
   ;; Allow anyone to login
   (put!

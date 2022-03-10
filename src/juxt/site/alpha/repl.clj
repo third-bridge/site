@@ -359,7 +359,7 @@
        :sad-message "Site API not installed. "
        :fix "Enter (put-site-api!) to fix this."}
 
-      {:complete? (xt/entity db (str base-uri "/_site/token"))
+      #_{:complete? (xt/entity db (str base-uri "/_site/token"))
        :happy-message "Authentication resources installed."
        :sad-message "Authentication resources not installed. "
        :fix "Enter (put-auth-resources!) to fix this."}
@@ -394,12 +394,12 @@
     (init/put-site-api! xt-node config)
     (status (steps config))))
 
-(defn put-auth-resources! []
+#_(defn put-auth-resources! []
   (let [config (config)
         xt-node (xt-node)]
-    (init/put-openid-token-endpoint! xt-node config)
-    (init/put-login-endpoint! xt-node config)
-    (init/put-logout-endpoint! xt-node config)
+    ;;(init/put-openid-token-endpoint! xt-node config)
+    ;;(init/put-login-endpoint! xt-node config)
+    ;;(init/put-logout-endpoint! xt-node config)
     (status (steps config))))
 
 (defn put-superuser-role! []
@@ -435,7 +435,8 @@
   []
   (init/put-graphql-schema-endpoint! (xt-node) (config)))
 
-(defn init!
+;; No longer any users so no username/password
+#_(defn init!
   [username password]
   (let [xt-node (xt-node)
         config (config)]
