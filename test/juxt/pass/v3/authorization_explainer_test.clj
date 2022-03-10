@@ -748,9 +748,12 @@
 ;; Answer @jms's question: is it possible for Sue to grant a resource for
 ;; which she hasn't herself access?
 
+(def SUE {:xt/id "https://example.org/people/sue"
+          ::site/type "Person"
+          ::username "sue"})
+
 (deftest call-action-test
-  (let [SUE "https://example.org/people/sue"
-        SUE_ACCESS_TOKEN "https://example.org/tokens/sue"
+  (let [SUE_ACCESS_TOKEN "https://example.org/tokens/sue"
         CARLOS "https://example.org/people/carlos"
         CARLOS_ACCESS_TOKEN "https://example.org/tokens/carlos"
         CREATE_PERSON "https://example.org/actions/create-person"
@@ -762,13 +765,10 @@
     (submit-and-await!
      [
       ;; People
-      [::xt/put
-       {:xt/id SUE
-        ::site/type "Person"
-        ::username "sue"}]
+      [::xt/put SUE]
       [::xt/put
        {:xt/id SUE_ACCESS_TOKEN
-        ::pass/subject SUE
+        ::pass/subject (:xt/id SUE)
         ::username "sue"}]
 
       [::xt/put
@@ -806,7 +806,7 @@
       [::xt/put
        {:xt/id "https://example.org/permissions/sue/create-person"
         ::site/type "Permission"
-        ::pass/subject SUE
+        ::pass/subject (:xt/id SUE)
         ::pass/action CREATE_PERSON
         ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
