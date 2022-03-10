@@ -748,13 +748,18 @@
 ;; Answer @jms's question: is it possible for Sue to grant a resource for
 ;; which she hasn't herself access?
 
-(def SUE {:xt/id "https://example.org/people/sue"
-          ::site/type "Person"
-          ::username "sue"})
+(def SUE
+  {:xt/id "https://example.org/people/sue"
+   ::site/type "Person"
+   ::username "sue"})
+
+(def SUE_ACCESS_TOKEN
+  {:xt/id "https://example.org/tokens/sue"
+   ::pass/subject (:xt/id SUE)
+   ::username "sue"})
 
 (deftest call-action-test
-  (let [SUE_ACCESS_TOKEN "https://example.org/tokens/sue"
-        CARLOS "https://example.org/people/carlos"
+  (let [CARLOS "https://example.org/people/carlos"
         CARLOS_ACCESS_TOKEN "https://example.org/tokens/carlos"
         CREATE_PERSON "https://example.org/actions/create-person"
         CREATE_IDENTITY "https://example.org/actions/create-identity"
@@ -766,10 +771,7 @@
      [
       ;; People
       [::xt/put SUE]
-      [::xt/put
-       {:xt/id SUE_ACCESS_TOKEN
-        ::pass/subject (:xt/id SUE)
-        ::username "sue"}]
+      [::xt/put SUE_ACCESS_TOKEN]
 
       [::xt/put
        {:xt/id CARLOS
@@ -818,11 +820,13 @@
      (seq
       (authz/check-permissions
        (xt/db *xt-node*)
-       {:access-token SUE_ACCESS_TOKEN :actions #{CREATE_PERSON} :rules rules})))
+       {:access-token (:xt/id SUE_ACCESS_TOKEN)
+        :actions #{CREATE_PERSON}
+        :rules rules})))
 
     (authz/submit-call-action-sync
      *xt-node*
-     {:access-token SUE_ACCESS_TOKEN
+     {:access-token (:xt/id SUE_ACCESS_TOKEN)
       :action CREATE_PERSON
       :rules rules
       :args [{:xt/id ALICE ::username "alice"}]})
@@ -835,7 +839,7 @@
       AssertionError
       (authz/submit-call-action-sync
        *xt-node*
-       {:access-token SUE_ACCESS_TOKEN
+       {:access-token (:xt/id SUE_ACCESS_TOKEN)
         :action CREATE_PERSON
         :rules rules
         :args [{:xt/id ALICE}]})))
