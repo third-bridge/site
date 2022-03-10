@@ -760,7 +760,6 @@
 
 (deftest call-action-test
   (let [
-        CARLOS_ACCESS_TOKEN "https://example.org/tokens/carlos"
         CREATE_PERSON "https://example.org/actions/create-person"
         CREATE_IDENTITY "https://example.org/actions/create-identity"
         rules ['[(allowed? permission access-token action resource)
@@ -774,9 +773,7 @@
       [::xt/put SUE_ACCESS_TOKEN]
 
       [::xt/put CARLOS]
-      [::xt/put
-       {:xt/id CARLOS_ACCESS_TOKEN
-        ::pass/subject (:xt/id CARLOS)}]
+      [::xt/put CARLOS_ACCESS_TOKEN]
 
       ;; Actions
       [::xt/put
