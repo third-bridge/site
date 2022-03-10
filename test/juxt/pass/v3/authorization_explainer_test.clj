@@ -775,14 +775,15 @@
       [::pass/merge {::site/type "Person"}]
       [::pass.malli/validate]]}]})
 
-(deftest call-action-test
-  (let [
+(def CREATE_IDENTITY
+  {:xt/id "https://example.org/actions/create-identity"
+   ::site/type "Action"
+   ::pass/action-args [{}]})
 
-        CREATE_IDENTITY "https://example.org/actions/create-identity"
-        rules ['[(allowed? permission access-token action resource)
+(deftest call-action-test
+  (let [rules ['[(allowed? permission access-token action resource)
                  [permission ::pass/subject subject]
-                 [access-token ::pass/subject subject]
-                 ]]]
+                 [access-token ::pass/subject subject]]]]
     (submit-and-await!
      [
       ;; People
@@ -794,11 +795,7 @@
 
       ;; Actions
       [::xt/put CREATE_PERSON]
-
-      [::xt/put
-       {:xt/id CREATE_IDENTITY
-        ::site/type "Action"
-        ::pass/action-args [{}]}]
+      [::xt/put CREATE_IDENTITY]
 
       ;; Permissions
       [::xt/put
@@ -838,14 +835,12 @@
        {:access-token (:xt/id SUE_ACCESS_TOKEN)
         :action (:xt/id CREATE_PERSON)
         :rules rules
-        :args [{:xt/id ALICE}]})))
-
-    ))
+        :args [{:xt/id ALICE}]})))))
 
 #_((t/join-fixtures [with-xt])
    (fn []
      :ok
-   ))
+     ))
 
 ;; TODO: Extend to GraphQL
 ;;
