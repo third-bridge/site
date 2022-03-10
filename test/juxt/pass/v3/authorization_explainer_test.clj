@@ -1,5 +1,7 @@
 ;; Copyright © 2022, JUXT LTD.
 
+;;(remove-ns 'juxt.pass.v3.authorization-explainer-test)
+
 (ns juxt.pass.v3.authorization-explainer-test
   (:require
    [clojure.test :refer [deftest is are use-fixtures] :as t]
@@ -16,6 +18,33 @@
 ;; Note: if you're not familiar with the Alice and Bob characters, see
 ;; https://en.wikipedia.org/wiki/Alice_and_Bob#Cast_of_characters
 
+(def ALICE
+  {:xt/id "https://example.org/people/alice"
+   ::site/type "User"
+   ::username "alice"})
+
+(def BOB
+  {:xt/id "https://example.org/people/bob"
+   ::site/type "User"
+   ::username "bob"})
+
+(def CARLOS
+  {:xt/id "https://example.org/people/carl"
+   ::site/type "User"
+   ::username "carl"})
+
+(def FAYTHE
+  {:xt/id "https://example.org/people/faythe"
+   ::site/type "User"
+   ::username "faythe"})
+
+(def OSCAR
+  {:xt/id "https://example.org/people/oscar"
+   ::site/type "User"
+   ::username "oscar"})
+
+;; Applications
+
 (def USER_APP
   {:xt/id "https://example.org/_site/apps/user"
    ::name "User App"
@@ -28,50 +57,27 @@
    ::pass/client-id "101"
    ::pass/client-secret "SecretArmadillo"})
 
-(def ALICE
-  {:xt/id "https://example.org/people/alice"
-   ::site/type "User"
-   ::username "alice"})
+;; Access tokens
 
 (def ALICE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/alice"
    ::pass/subject (:xt/id ALICE)
    ::pass/application-client (:xt/id USER_APP)})
 
-(def BOB
-  {:xt/id "https://example.org/people/bob"
-   ::site/type "User"
-   ::username "bob"})
-
 (def BOB_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/bob"
    ::pass/subject (:xt/id BOB)
    ::pass/application-client (:xt/id USER_APP)})
-
-(def CARLOS
-  {:xt/id "https://example.org/people/carl"
-   ::site/type "User"
-   ::username "carl"})
 
 (def CARLOS_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/carlos"
    ::pass/subject (:xt/id CARLOS)
    ::pass/application-client (:xt/id USER_APP)})
 
-(def FAYTHE
-  {:xt/id "https://example.org/people/faythe"
-   ::site/type "User"
-   ::username "faythe"})
-
 (def FAYTHE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/faythe"
    ::pass/subject (:xt/id FAYTHE)
    ::pass/application-client (:xt/id USER_APP)})
-
-(def OSCAR
-  {:xt/id "https://example.org/people/oscar"
-   ::site/type "User"
-   ::username "oscar"})
 
 (def OSCAR_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/oscar"
