@@ -35,7 +35,8 @@
 
 (def ALICE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/alice"
-   ::pass/subject (:xt/id ALICE)})
+   ::pass/subject (:xt/id ALICE)
+   ::pass/application-client (:xt/id USER_APP)})
 
 (def BOB
   {:xt/id "https://example.org/people/bob"
@@ -44,7 +45,8 @@
 
 (def BOB_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/bob"
-   ::pass/subject (:xt/id BOB)})
+   ::pass/subject (:xt/id BOB)
+   ::pass/application-client (:xt/id USER_APP)})
 
 (def CARLOS
   {:xt/id "https://example.org/people/carl"
@@ -53,7 +55,8 @@
 
 (def CARLOS_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/carlos"
-   ::pass/subject (:xt/id CARLOS)})
+   ::pass/subject (:xt/id CARLOS)
+   ::pass/application-client (:xt/id USER_APP)})
 
 (def FAYTHE
   {:xt/id "https://example.org/people/faythe"
@@ -62,7 +65,8 @@
 
 (def FAYTHE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/faythe"
-   ::pass/subject (:xt/id FAYTHE)})
+   ::pass/subject (:xt/id FAYTHE)
+   ::pass/application-client (:xt/id USER_APP)})
 
 (def OSCAR
   {:xt/id "https://example.org/people/oscar"
@@ -71,7 +75,8 @@
 
 (def OSCAR_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/oscar"
-   ::pass/subject (:xt/id OSCAR)})
+   ::pass/subject (:xt/id OSCAR)
+   ::pass/application-client (:xt/id USER_APP)})
 
 ;; TODO: INTERNAL classification, different security models, see
 ;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
