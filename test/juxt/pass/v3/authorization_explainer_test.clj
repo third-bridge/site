@@ -759,7 +759,7 @@
    ::username "sue"})
 
 (deftest call-action-test
-  (let [CARLOS "https://example.org/people/carlos"
+  (let [
         CARLOS_ACCESS_TOKEN "https://example.org/tokens/carlos"
         CREATE_PERSON "https://example.org/actions/create-person"
         CREATE_IDENTITY "https://example.org/actions/create-identity"
@@ -773,13 +773,10 @@
       [::xt/put SUE]
       [::xt/put SUE_ACCESS_TOKEN]
 
-      [::xt/put
-       {:xt/id CARLOS
-        ::site/type "Person"
-        ::username "carlos"}]
+      [::xt/put CARLOS]
       [::xt/put
        {:xt/id CARLOS_ACCESS_TOKEN
-        ::pass/subject CARLOS}]
+        ::pass/subject (:xt/id CARLOS)}]
 
       ;; Actions
       [::xt/put
