@@ -21,27 +21,27 @@
 
 (def ALICE
   {:xt/id "https://example.org/people/alice"
-   ::site/type "User"
+   ::site/type "Person"
    ::username "alice"})
 
 (def BOB
   {:xt/id "https://example.org/people/bob"
-   ::site/type "User"
+   ::site/type "Person"
    ::username "bob"})
 
 (def CARLOS
   {:xt/id "https://example.org/people/carlos"
-   ::site/type "User"
+   ::site/type "Person"
    ::username "carlos"})
 
 (def FAYTHE
   {:xt/id "https://example.org/people/faythe"
-   ::site/type "User"
+   ::site/type "Person"
    ::username "faythe"})
 
 (def OSCAR
   {:xt/id "https://example.org/people/oscar"
-   ::site/type "User"
+   ::site/type "Person"
    ::username "oscar"})
 
 ;; Applications
