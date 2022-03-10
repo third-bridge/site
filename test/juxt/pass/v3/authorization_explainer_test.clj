@@ -1,6 +1,6 @@
 ;; Copyright © 2022, JUXT LTD.
 
-;;(remove-ns 'juxt.pass.v3.authorization-explainer-test)
+#_(remove-ns 'juxt.pass.v3.authorization-explainer-test)
 
 (ns juxt.pass.v3.authorization-explainer-test
   (:require
@@ -59,38 +59,64 @@
 ;; All access is via an access token. Access tokens are created for individual
 ;; subjects using a specific application.
 
+(def ALICE_SUBJECT
+  {:xt/id "https://example.org/subjects/alice"
+   ::person (:xt/id ALICE)
+   ::email-verified true})
+
+(def ALICE_UNVERIFIED_SUBJECT
+  {:xt/id "https://example.org/subjects/unverified-alice"
+   ::person (:xt/id ALICE)
+   ::email-verified false})
+
 (def ALICE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/alice"
-   ::pass/subject (:xt/id ALICE)
+   ::pass/subject (:xt/id ALICE_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
 
 (def ALICE_READONLY_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/alice-readonly"
-   ::pass/subject (:xt/id ALICE)
+   ::pass/subject (:xt/id ALICE_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)
    ::pass/scope (set
                  (filter
                   #(re-matches #"read:.*" %)
                   (::pass/scope USER_APP)))})
 
+(def BOB_SUBJECT
+  {:xt/id "https://example.org/subjects/bob"
+   ::person (:xt/id BOB)})
+
 (def BOB_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/bob"
-   ::pass/subject (:xt/id BOB)
+   ::pass/subject (:xt/id BOB_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
+
+(def CARLOS_SUBJECT
+  {:xt/id "https://example.org/subjects/carlos"
+   ::person (:xt/id CARLOS)})
 
 (def CARLOS_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/carlos"
-   ::pass/subject (:xt/id CARLOS)
+   ::pass/subject (:xt/id CARLOS_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
+
+(def FAYTHE_SUBJECT
+  {:xt/id "https://example.org/subjects/faythe"
+   ::person (:xt/id FAYTHE)})
 
 (def FAYTHE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/faythe"
-   ::pass/subject (:xt/id FAYTHE)
+   ::pass/subject (:xt/id FAYTHE_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
+
+(def OSCAR_SUBJECT
+  {:xt/id "https://example.org/subjects/oscar"
+   ::person (:xt/id OSCAR)})
 
 (def OSCAR_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/oscar"
-   ::pass/subject (:xt/id OSCAR)
+   ::pass/subject (:xt/id OSCAR_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
 
 ;; TODO: INTERNAL classification, different security models, see
@@ -137,7 +163,7 @@
 (def ALICE_CAN_READ
   {:xt/id "https://example.org/permissions/alice-can-read"
    ::site/type "Permission"
-   ::pass/subject "https://example.org/people/alice"
+   ::person "https://example.org/people/alice"
    ::pass/action #{"https://example.org/actions/read-shared"
                    "https://example.org/actions/read-user-dir"}
    ::pass/purpose nil})
@@ -145,14 +171,14 @@
 (def ALICE_CAN_WRITE_USER_DIR_CONTENT
   {:xt/id "https://example.org/permissions/alice-can-write-user-dir-content"
    ::site/type "Permission"
-   ::pass/subject "https://example.org/people/alice"
+   ::person "https://example.org/people/alice"
    ::pass/action "https://example.org/actions/write-user-dir"
    ::pass/purpose nil})
 
 (def BOB_CAN_READ
   {:xt/id "https://example.org/permissions/bob-can-read"
    ::site/type "Permission"
-   ::pass/subject "https://example.org/people/bob"
+   ::person "https://example.org/people/bob"
    ::pass/action #{"https://example.org/actions/read-shared"
                    "https://example.org/actions/read-user-dir"}
    ::pass/purpose nil})
@@ -160,7 +186,7 @@
 (def ALICES_SHARES_FILE_WITH_BOB
   {:xt/id "https://example.org/permissions/alice-shares-file-with-bob"
    ::site/type "Permission"
-   ::pass/subject "https://example.org/people/bob"
+   ::person "https://example.org/people/bob"
    ::pass/action "https://example.org/actions/read-shared"
    ::pass/purpose nil
    ::pass/resource "https://example.org/~alice/shared.txt"})
@@ -168,17 +194,19 @@
 (def BOB_CAN_WRITE_USER_DIR_CONTENT
   {:xt/id "https://example.org/permissions/bob-can-write-user-dir-content"
    ::site/type "Permission"
-   ::pass/subject "https://example.org/people/bob"
+   ::person "https://example.org/people/bob"
    ::pass/action "https://example.org/actions/write-user-dir"
    ::pass/purpose nil})
 
 (def WRITE_USER_DIR_RULES
   '[[(allowed? permission access-token action resource)
      [access-token ::pass/subject subject]
-     [permission ::pass/subject subject]
+     [permission ::person person]
+     [subject ::person person]
+     [person ::type "Person"]
      [action :xt/id "https://example.org/actions/write-user-dir"]
      [action ::pass/resource-matches resource-regex]
-     [subject ::username username]
+     [person ::username username]
      [(re-pattern resource-regex) resource-pattern]
      [(re-matches resource-pattern resource) [_ user]]
      [(= user username)]]])
@@ -186,11 +214,13 @@
 (def READ_USER_DIR_RULES
   '[[(allowed? permission access-token action resource)
      [access-token ::pass/subject subject]
-     [permission ::pass/subject subject]
+     [permission ::person person]
+     [subject ::person person]
+     [person ::type "Person"]
      [action :xt/id "https://example.org/actions/read-user-dir"]
      [action ::pass/resource-matches resource-regex]
      [resource :xt/id]
-     [subject ::username username]
+     [person ::username username]
      [(re-pattern resource-regex) resource-pattern]
      [(re-matches resource-pattern resource) [_ user]]
      [(= user username)]]])
@@ -198,7 +228,9 @@
 (def READ_SHARED_RULES
   '[[(allowed? permission access-token action resource)
      [access-token ::pass/subject subject]
-     [permission ::pass/subject subject]
+     [permission ::person person]
+     [person ::type "Person"]
+     [subject ::person person]
      [resource :xt/id]
      [action :xt/id "https://example.org/actions/read-shared"]
      [permission ::pass/resource resource]]])
@@ -224,8 +256,11 @@
 
     ;; Subjects
     [::xt/put ALICE]
+    [::xt/put ALICE_SUBJECT]
     [::xt/put BOB]
+    [::xt/put BOB_SUBJECT]
     [::xt/put CARLOS]
+    [::xt/put CARLOS_SUBJECT]
 
     ;; Access tokens
     [::xt/put ALICE_ACCESS_TOKEN]
@@ -253,153 +288,153 @@
         db (xt/db *xt-node*)]
 
     (are [access-token actions resource ok?]
-        (let [scope (effective-scope db access-token)
-              actual (authz/check-permissions
-                      db {:access-token access-token
-                          :scope scope
-                          :actions actions
-                          :resource resource
-                          :rules rules})]
-          (if ok? (is (seq actual)) (is (not (seq actual)))))
+          (let [scope (effective-scope db access-token)
+                actual (authz/check-permissions
+                        db {:access-token access-token
+                            :scope scope
+                            :actions actions
+                            :resource resource
+                            :rules rules})]
+            (if ok? (is (seq actual)) (is (not (seq actual)))))
 
-      ;; Alice can read her own private file.
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/read-user-dir"}
-        "https://example.org/~alice/private.txt"
-        true
+        ;; Alice can read her own private file.
+          "https://example.org/tokens/alice"
+          #{"https://example.org/actions/read-user-dir"}
+          "https://example.org/~alice/private.txt"
+          true
 
-        ;; Alice can read the file in her user directory which she has shared with
-        ;; Bob.
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/read-user-dir"}
-        "https://example.org/~alice/shared.txt"
-        true
+          ;; Alice can read the file in her user directory which she has shared with
+          ;; Bob.
+          "https://example.org/tokens/alice"
+          #{"https://example.org/actions/read-user-dir"}
+          "https://example.org/~alice/shared.txt"
+          true
 
-        ;; Bob cannot read Alice's private file.
-        "https://example.org/tokens/bob"
-        #{"https://example.org/actions/read-user-dir"}
-        "https://example.org/~alice/private.txt"
-        false
+          ;; Bob cannot read Alice's private file.
+          "https://example.org/tokens/bob"
+          #{"https://example.org/actions/read-user-dir"}
+          "https://example.org/~alice/private.txt"
+          false
 
-        ;; Bob can read the file Alice has shared with him.
-        "https://example.org/tokens/bob"
-        #{"https://example.org/actions/read-shared"}
-        "https://example.org/~alice/shared.txt"
-        true
+          ;; Bob can read the file Alice has shared with him.
+          "https://example.org/tokens/bob"
+          #{"https://example.org/actions/read-shared"}
+          "https://example.org/~alice/shared.txt"
+          true
 
-        ;; Alice can put a file to her user directory
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~alice/foo.txt"
-        true
+          ;; Alice can put a file to her user directory
+          "https://example.org/tokens/alice"
+          #{"https://example.org/actions/write-user-dir"}
+          "https://example.org/~alice/foo.txt"
+          true
 
-        ;; Alice can't put a file to her user directory without write:resource
-        ;; scope
-        "https://example.org/tokens/alice-readonly"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~alice/foo.txt"
-        false
+          ;; Alice can't put a file to her user directory without write:resource
+          ;; scope
+          "https://example.org/tokens/alice-readonly"
+          #{"https://example.org/actions/write-user-dir"}
+          "https://example.org/~alice/foo.txt"
+          false
 
-        ;; Alice can't put a file to Bob's user directory
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~bob/foo.txt"
-        false
+          ;; Alice can't put a file to Bob's user directory
+          "https://example.org/tokens/alice"
+          #{"https://example.org/actions/write-user-dir"}
+          "https://example.org/~bob/foo.txt"
+          false
 
-        ;; Alice can't put a file outside her user directory
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/index.html"
-        false
+          ;; Alice can't put a file outside her user directory
+          "https://example.org/tokens/alice"
+          #{"https://example.org/actions/write-user-dir"}
+          "https://example.org/index.html"
+          false
 
-        ;; Bob can put a file to his user directory
-        "https://example.org/tokens/bob"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~bob/foo.txt"
-        true
+          ;; Bob can put a file to his user directory
+          "https://example.org/tokens/bob"
+          #{"https://example.org/actions/write-user-dir"}
+          "https://example.org/~bob/foo.txt"
+          true
 
-        ;; Bob can't put a file to Alice's directory
-        "https://example.org/tokens/bob"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~alice/foo.txt"
-        false
+          ;; Bob can't put a file to Alice's directory
+          "https://example.org/tokens/bob"
+          #{"https://example.org/actions/write-user-dir"}
+          "https://example.org/~alice/foo.txt"
+          false
 
-        ;; Carlos cannot put a file to his user directory, as he hasn't been
-        ;; granted the write-user-dir action.
-        "https://example.org/tokens/carlos"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~carlos/foo.txt"
-        false
-        )
+          ;; Carlos cannot put a file to his user directory, as he hasn't been
+          ;; granted the write-user-dir action.
+          "https://example.org/tokens/carlos"
+          #{"https://example.org/actions/write-user-dir"}
+          "https://example.org/~carlos/foo.txt"
+          false
+          )
 
     (are [access-token actions rules expected]
-        (let [scope (effective-scope db access-token)]
-          (is (= expected
-                 (authz/allowed-resources
-                  db
-                  {:access-token access-token
-                   :scope scope
-                   :actions actions
-                   :rules rules}))))
+          (let [scope (effective-scope db access-token)]
+            (is (= expected
+                   (authz/allowed-resources
+                    db
+                    {:access-token access-token
+                     :scope scope
+                     :actions actions
+                     :rules rules}))))
 
-      ;; Alice can see all her files.
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-        #{["https://example.org/~alice/shared.txt"]
-          ["https://example.org/~alice/private.txt"]}
+        ;; Alice can see all her files.
+          "https://example.org/tokens/alice"
+          #{"https://example.org/actions/read-user-dir"
+            "https://example.org/actions/read-shared"}
+          (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+          #{["https://example.org/~alice/shared.txt"]
+            ["https://example.org/~alice/private.txt"]}
 
-        ;; Bob can only see the file Alice has shared with him.
-        "https://example.org/tokens/bob"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-        #{["https://example.org/~alice/shared.txt"]}
+          ;; Bob can only see the file Alice has shared with him.
+          "https://example.org/tokens/bob"
+          #{"https://example.org/actions/read-user-dir"
+            "https://example.org/actions/read-shared"}
+          (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+          #{["https://example.org/~alice/shared.txt"]}
 
-        ;; Carlos sees nothing
-        "https://example.org/tokens/carlos"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-        #{})
+          ;; Carlos sees nothing
+          "https://example.org/tokens/carlos"
+          #{"https://example.org/actions/read-user-dir"
+            "https://example.org/actions/read-shared"}
+          (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+          #{})
 
     ;; Given a resource and a set of actions, which subjects can access
     ;; and via which actions?
 
     (are [resource actions scope rules expected]
-        (is (= expected (authz/allowed-subjects
-                         db
-                         {:resource resource
-                          :actions actions
-                          :scope scope
-                          :rules rules})))
+          (is (= expected (authz/allowed-subjects
+                           db
+                           {:resource resource
+                            :actions actions
+                            :scope scope
+                            :rules rules})))
 
-        "https://example.org/~alice/shared.txt"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        #{"read:resource"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-        #{{:subject "https://example.org/people/bob",
-           :action "https://example.org/actions/read-shared"}
-          {:subject "https://example.org/people/alice",
-           :action "https://example.org/actions/read-user-dir"}}
+          "https://example.org/~alice/shared.txt"
+          #{"https://example.org/actions/read-user-dir"
+            "https://example.org/actions/read-shared"}
+          #{"read:resource"}
+          (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+          #{{:subject "https://example.org/subjects/bob",
+             :action "https://example.org/actions/read-shared"}
+            {:subject "https://example.org/subjects/alice",
+             :action "https://example.org/actions/read-user-dir"}}
 
-        "https://example.org/~alice/private.txt"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        #{"read:resource"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-        #{{:subject "https://example.org/people/alice",
-           :action "https://example.org/actions/read-user-dir"}}
+          "https://example.org/~alice/private.txt"
+          #{"https://example.org/actions/read-user-dir"
+            "https://example.org/actions/read-shared"}
+          #{"read:resource"}
+          (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+          #{{:subject "https://example.org/subjects/alice",
+             :action "https://example.org/actions/read-user-dir"}}
 
-        ;; Cannot see anything without a scope
-        "https://example.org/~alice/shared.txt"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        #{}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-        #{})))
+          ;; Cannot see anything without a scope
+          "https://example.org/~alice/shared.txt"
+          #{"https://example.org/actions/read-user-dir"
+            "https://example.org/actions/read-shared"}
+          #{}
+          (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+          #{})))
 
 (deftest constrained-pull-test
   (let [READ_USERNAME_ACTION
@@ -417,7 +452,7 @@
         BOB_CAN_READ_ALICE_USERNAME
         {:xt/id "https://example.org/permissions/bob-can-read-alice-username"
          ::site/type "Permission"
-         ::pass/subject "https://example.org/people/bob"
+         ::person "https://example.org/people/bob"
          ::pass/action "https://example.org/actions/read-username"
          ::pass/purpose nil
          ::pass/resource "https://example.org/people/alice"}
@@ -425,7 +460,7 @@
         BOB_CAN_READ_ALICE_SECRETS
         {:xt/id "https://example.org/permissions/bob-can-read-alice-secrets"
          ::site/type "Permission"
-         ::pass/subject "https://example.org/people/bob"
+         ::person "https://example.org/people/bob"
          ::pass/action "https://example.org/actions/read-secrets"
          ::pass/purpose nil
          ::pass/resource "https://example.org/people/alice"}
@@ -433,20 +468,24 @@
         CARLOS_CAN_READ_ALICE_USERNAME
         {:xt/id "https://example.org/permissions/carlos-can-read-alice-username"
          ::site/type "Permission"
-         ::pass/subject "https://example.org/people/carlos"
+         ::person "https://example.org/people/carlos"
          ::pass/action "https://example.org/actions/read-username"
          ::pass/purpose nil
          ::pass/resource "https://example.org/people/alice"}
 
         rules
         '[[(allowed? permission access-token action resource)
-           [permission ::pass/subject subject]
+           [permission ::person person]
+           [subject ::person person]
+           [person ::type "Person"]
            [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-username"]
            [permission ::pass/resource resource]]
 
           [(allowed? permission access-token action resource)
-           [permission ::pass/subject subject]
+           [permission ::person person]
+           [subject ::person person]
+           [person ::type "Person"]
            [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-secrets"]
            [permission ::pass/resource resource]]]]
@@ -455,10 +494,13 @@
      [
       ;; Actors
       [::xt/put (assoc ALICE ::secret "foo")]
+      [::xt/put ALICE_SUBJECT]
       [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put BOB]
+      [::xt/put BOB_SUBJECT]
       [::xt/put BOB_ACCESS_TOKEN]
       [::xt/put CARLOS]
+      [::xt/put CARLOS_SUBJECT]
       [::xt/put CARLOS_ACCESS_TOKEN]
 
       [::xt/put READ_USERNAME_ACTION]
@@ -500,7 +542,7 @@
         ALICE_BELONGS_GROUP_A
         {:xt/id "https://example.org/group/a/alice"
          ::site/type "Permission"
-         ::pass/subject (:xt/id ALICE)
+         ::person (:xt/id ALICE)
          ::group :a
          ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                          (:xt/id READ_MESSAGE_METADATA_ACTION)}
@@ -509,7 +551,7 @@
         BOB_BELONGS_GROUP_A
         {:xt/id "https://example.org/group/a/bob"
          ::site/type "Permission"
-         ::pass/subject (:xt/id BOB)
+         ::person (:xt/id BOB)
          ::group :a
          ::pass/action #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                          (:xt/id READ_MESSAGE_METADATA_ACTION)}
@@ -520,14 +562,16 @@
         FAYTHE_MONITORS_GROUP_A
         {:xt/id "https://example.org/group/a/faythe"
          ::site/type "Permission"
-         ::pass/subject (:xt/id FAYTHE)
+         ::person (:xt/id FAYTHE)
          ::group :a
          ::pass/action #{(:xt/id READ_MESSAGE_METADATA_ACTION)}
          ::pass/purpose nil}
 
         rules
         '[[(allowed? permission access-token action resource)
-           [permission ::pass/subject subject]
+           [permission ::person person]
+           [subject ::person person]
+           [person ::type "Person"]
            [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-message-content"]
            [permission ::group group]
@@ -535,7 +579,9 @@
            [resource ::site/type "Message"]]
 
           [(allowed? permission access-token action resource)
-           [permission ::pass/subject subject]
+           [permission ::person person]
+           [subject ::person person]
+           [person ::type "Person"]
            [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-message-metadata"]
            [permission ::group group]
@@ -550,12 +596,16 @@
 
       ;; Actors
       [::xt/put ALICE]
+      [::xt/put ALICE_SUBJECT]
       [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put BOB]
+      [::xt/put BOB_SUBJECT]
       [::xt/put BOB_ACCESS_TOKEN]
       [::xt/put CARLOS]
+      [::xt/put CARLOS_SUBJECT]
       [::xt/put CARLOS_ACCESS_TOKEN]
       [::xt/put FAYTHE]
+      [::xt/put FAYTHE_SUBJECT]
       [::xt/put FAYTHE_ACCESS_TOKEN]
 
       ;; Permissions
@@ -683,13 +733,17 @@
 
         rules
         '[[(allowed? permission access-token action resource)
-           [permission ::pass/subject subject]
+           [permission ::person person]
+           [subject ::person person]
+           [person ::type "Person"]
            [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/read-medical-record"]
            [resource ::site/type "MedicalRecord"]]
 
           [(allowed? permission access-token action resource)
-           [permission ::pass/subject subject]
+           [permission ::person person]
+           [subject ::person person]
+           [person ::type "Person"]
            [access-token ::pass/subject subject]
            [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
            [resource ::site/type "MedicalRecord"]]]]
@@ -698,8 +752,10 @@
      [
       ;; Subject
       [::xt/put ALICE]
+      [::xt/put ALICE_SUBJECT]
       [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put OSCAR]
+      [::xt/put OSCAR_SUBJECT]
       [::xt/put OSCAR_ACCESS_TOKEN]
 
       ;; Actions
@@ -710,7 +766,7 @@
       [::xt/put
        {:xt/id "https://example.org/alice/medical-record/grants/oscar"
         ::site/type "Permission"
-        ::pass/subject (:xt/id OSCAR)
+        ::person (:xt/id OSCAR)
         ::pass/action #{(:xt/id EMERGENCY_READ_MEDICAL_RECORD_ACTION)}
         ::pass/purpose nil}]
 
@@ -756,7 +812,9 @@
 
         rules
         '[[(allowed? permission access-token action resource)
-           [permission ::pass/subject subject]
+           [permission ::person person]
+           [subject ::person person]
+           [person ::type "Person"]
            [access-token ::pass/subject subject]
            [permission ::pass/purpose purpose]
            [action :xt/id "https://example.org/actions/read-medical-record"]
@@ -769,8 +827,10 @@
 
       ;; Actors
       [::xt/put ALICE]
+      [::xt/put ALICE_SUBJECT]
       [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put OSCAR]
+      [::xt/put OSCAR_SUBJECT]
       [::xt/put OSCAR_ACCESS_TOKEN]
 
       ;; Purposes
@@ -784,7 +844,7 @@
       [::xt/put
        {:xt/id "https://example.org/alice/medical-record/grants/oscar"
         ::site/type "Permission"
-        ::pass/subject (:xt/id OSCAR)
+        ::person (:xt/id OSCAR)
         ::pass/action (:xt/id READ_MEDICAL_RECORD_ACTION)
         ::pass/purpose "https://example.org/purposes/emergency"}]
 
@@ -841,14 +901,19 @@
    ::pass/client-secret "SecretArmadillo"
    ::pass/scope #{"read:admin" "write:admin"}})
 
+(def SUE_SUBJECT
+  {:xt/id "https://example.org/subjects/sue"
+   ::person (:xt/id SUE)
+   ::email-verified true})
+
 (def SUE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/sue"
-   ::pass/subject (:xt/id SUE)
+   ::pass/subject (:xt/id SUE_SUBJECT)
    ::pass/application-client (:xt/id ADMIN_APP)})
 
 (def SUE_READONLY_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/sue-readonly"
-   ::pass/subject (:xt/id SUE)
+   ::pass/subject (:xt/id SUE_SUBJECT)
    ::pass/application-client (:xt/id ADMIN_APP)
    ::pass/scope #{"read:admin"}})
 
@@ -878,7 +943,9 @@
 
 (deftest call-action-test
   (let [rules ['[(allowed? permission access-token action resource)
-                 [permission ::pass/subject subject]
+                 [permission ::person person]
+                 [subject ::person person]
+                 [person ::type "Person"]
                  [access-token ::pass/subject subject]]]]
     (submit-and-await!
      [
@@ -887,7 +954,9 @@
 
       ;; People
       [::xt/put SUE]
+      [::xt/put SUE_SUBJECT]
       [::xt/put CARLOS]
+      [::xt/put CARLOS_SUBJECT]
 
       ;; Access tokens
       [::xt/put SUE_ACCESS_TOKEN]
@@ -902,7 +971,7 @@
       [::xt/put
        {:xt/id "https://example.org/permissions/sue/create-person"
         ::site/type "Permission"
-        ::pass/subject (:xt/id SUE)
+        ::person (:xt/id SUE)
         ::pass/action (:xt/id CREATE_PERSON)
         ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
