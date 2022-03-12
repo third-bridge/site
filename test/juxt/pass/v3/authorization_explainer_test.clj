@@ -65,7 +65,9 @@
                   "read:health"}})
 
 ;; Subjects incorporate information about the person and other details. For
-;; example, the device they are using, the method of authentication.
+;; example, the device they are using, the method of authentication (whether
+;; using 2FA), the level their claims can be trusted. Subjects are established
+;; and stored in the user's session.
 
 (def ALICE_SUBJECT
   {:xt/id "https://example.org/subjects/alice"
@@ -85,8 +87,23 @@
   {:xt/id "https://example.org/subjects/carlos"
    ::person (:xt/id CARLOS)})
 
-;; All access is via an access token. Access tokens are created for individual
-;; subjects using a specific application.
+(def FAYTHE_SUBJECT
+  {:xt/id "https://example.org/subjects/faythe"
+   ::person (:xt/id FAYTHE)})
+
+(def OSCAR_SUBJECT
+  {:xt/id "https://example.org/subjects/oscar"
+   ::person (:xt/id OSCAR)})
+
+;; All access is via an access token. Access tokens reference the application
+;; being used and the subject that the application is acting on behalf
+;; of. Access tokens are Site documents and must contain, at the minimum,
+;; ::site/type, ::pass/subject and ::pass/application-client. An access token
+;; might not be granted all the scopes that the application requests. When the
+;; access token's scopes are limited with respect to the application's allowed
+;; scopes, a :pass/scope entry is added. This might be added at the creation of
+;; the access token, or during its lifecycle (if the person represented by the
+;; subject wishes to adjust the scope of the access token).
 
 (def ALICE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/alice"
@@ -116,19 +133,11 @@
    ::pass/subject (:xt/id CARLOS_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
 
-(def FAYTHE_SUBJECT
-  {:xt/id "https://example.org/subjects/faythe"
-   ::person (:xt/id FAYTHE)})
-
 (def FAYTHE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/faythe"
    ::site/type "AccessToken"
    ::pass/subject (:xt/id FAYTHE_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
-
-(def OSCAR_SUBJECT
-  {:xt/id "https://example.org/subjects/oscar"
-   ::person (:xt/id OSCAR)})
 
 (def OSCAR_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/oscar"
