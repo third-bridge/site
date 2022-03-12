@@ -16,6 +16,13 @@
 
 (use-fixtures :each with-xt)
 
+;; First, we define the actors.
+
+;; Site is a 'Bring Your Own Domain' thing, and it's common for domains to
+;; define users in terms of the attributes of those users that are important to
+;; the domain. So in this example we define our users without any keywords that
+;; would be recognisable to site/pass.
+
 ;; Note: if you're not familiar with the Alice and Bob characters, see
 ;; https://en.wikipedia.org/wiki/Alice_and_Bob#Cast_of_characters
 
@@ -44,7 +51,8 @@
    ::type "Person"
    ::username "oscar"})
 
-;; Applications
+;; Applications. Applications access APIs on behalf of subjects. In most cases,
+;; you can't access an API, certainly not a private one, without an application.
 
 (def USER_APP
   {:xt/id "https://example.org/_site/apps/user"
@@ -56,8 +64,8 @@
                   "read:messages"
                   "read:health"}})
 
-;; All access is via an access token. Access tokens are created for individual
-;; subjects using a specific application.
+;; Subjects incorporate information about the person and other details. For
+;; example, the device they are using, the method of authentication.
 
 (def ALICE_SUBJECT
   {:xt/id "https://example.org/subjects/alice"
@@ -68,6 +76,17 @@
   {:xt/id "https://example.org/subjects/unverified-alice"
    ::person (:xt/id ALICE)
    ::email-verified false})
+
+(def BOB_SUBJECT
+  {:xt/id "https://example.org/subjects/bob"
+   ::person (:xt/id BOB)})
+
+(def CARLOS_SUBJECT
+  {:xt/id "https://example.org/subjects/carlos"
+   ::person (:xt/id CARLOS)})
+
+;; All access is via an access token. Access tokens are created for individual
+;; subjects using a specific application.
 
 (def ALICE_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/alice"
@@ -85,19 +104,11 @@
                   #(re-matches #"read:.*" %)
                   (::pass/scope USER_APP)))})
 
-(def BOB_SUBJECT
-  {:xt/id "https://example.org/subjects/bob"
-   ::person (:xt/id BOB)})
-
 (def BOB_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/bob"
    ::site/type "AccessToken"
    ::pass/subject (:xt/id BOB_SUBJECT)
    ::pass/application-client (:xt/id USER_APP)})
-
-(def CARLOS_SUBJECT
-  {:xt/id "https://example.org/subjects/carlos"
-   ::person (:xt/id CARLOS)})
 
 (def CARLOS_ACCESS_TOKEN
   {:xt/id "https://example.org/tokens/carlos"
