@@ -520,15 +520,20 @@
      [
       ;; Actors
       [::xt/put (assoc ALICE ::secret "foo")]
-      [::xt/put ALICE_SUBJECT]
-      [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put BOB]
-      [::xt/put BOB_SUBJECT]
-      [::xt/put BOB_ACCESS_TOKEN]
       [::xt/put CARLOS]
+
+      ;; Subjects
+      [::xt/put ALICE_SUBJECT]
+      [::xt/put BOB_SUBJECT]
       [::xt/put CARLOS_SUBJECT]
+
+      ;; Access tokens
+      [::xt/put ALICE_ACCESS_TOKEN]
+      [::xt/put BOB_ACCESS_TOKEN]
       [::xt/put CARLOS_ACCESS_TOKEN]
 
+      ;; Actions
       [::xt/put READ_USERNAME_ACTION]
       [::xt/put READ_SECRETS_ACTION]
       [::xt/put BOB_CAN_READ_ALICE_USERNAME]
@@ -622,16 +627,20 @@
 
       ;; Actors
       [::xt/put ALICE]
-      [::xt/put ALICE_SUBJECT]
-      [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put BOB]
-      [::xt/put BOB_SUBJECT]
-      [::xt/put BOB_ACCESS_TOKEN]
       [::xt/put CARLOS]
-      [::xt/put CARLOS_SUBJECT]
-      [::xt/put CARLOS_ACCESS_TOKEN]
       [::xt/put FAYTHE]
+
+      ;; Subjects
+      [::xt/put ALICE_SUBJECT]
+      [::xt/put BOB_SUBJECT]
+      [::xt/put CARLOS_SUBJECT]
       [::xt/put FAYTHE_SUBJECT]
+
+      ;; Access tokens
+      [::xt/put ALICE_ACCESS_TOKEN]
+      [::xt/put BOB_ACCESS_TOKEN]
+      [::xt/put CARLOS_ACCESS_TOKEN]
       [::xt/put FAYTHE_ACCESS_TOKEN]
 
       ;; Permissions
@@ -776,12 +785,16 @@
 
     (submit-and-await!
      [
-      ;; Subject
+      ;; Actors
       [::xt/put ALICE]
-      [::xt/put ALICE_SUBJECT]
-      [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put OSCAR]
+
+      ;; Subjects
+      [::xt/put ALICE_SUBJECT]
       [::xt/put OSCAR_SUBJECT]
+
+      ;; Access token
+      [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put OSCAR_ACCESS_TOKEN]
 
       ;; Actions
@@ -848,16 +861,20 @@
 
     (submit-and-await!
      [
-      ;; Actions
-      [::xt/put READ_MEDICAL_RECORD_ACTION]
-
       ;; Actors
       [::xt/put ALICE]
-      [::xt/put ALICE_SUBJECT]
-      [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put OSCAR]
+
+      ;; Subjects
+      [::xt/put ALICE_SUBJECT]
       [::xt/put OSCAR_SUBJECT]
+
+      ;; Access tokens
+      [::xt/put ALICE_ACCESS_TOKEN]
       [::xt/put OSCAR_ACCESS_TOKEN]
+
+      ;; Actions
+      [::xt/put READ_MEDICAL_RECORD_ACTION]
 
       ;; Purposes
       [::xt/put
@@ -980,10 +997,12 @@
       ;; Applications
       [::xt/put ADMIN_APP]
 
-      ;; People
+      ;; Actors
       [::xt/put SUE]
-      [::xt/put SUE_SUBJECT]
       [::xt/put CARLOS]
+
+      ;; Subjects
+      [::xt/put SUE_SUBJECT]
       [::xt/put CARLOS_SUBJECT]
 
       ;; Access tokens
