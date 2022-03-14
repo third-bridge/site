@@ -1091,3 +1091,23 @@
 ;; Grant list-persons on /people/ to Alice
 ;; Can a GET from Alice to /people/ trigger a list-persons actions?
 ;; Can a list-persons action be configured to do a a query?
+
+;; Things we'll need in the bootstrap
+;;
+;; Access token only
+;;
+;; * A user (can contain anything, just needs to exist)
+;; * A OAuth2 registered application representing the 'admin app' (client-id and client-secret) that a caller will use when acquiring a token against the token endpoint
+;; * Actions which belong to one or more scopes that permit authorized access to the database
+;; * Permissions
+;; * Rules that reference permissions, access-tokens, actions and resources
+;;
+;; Adding an authorization-provider
+;;
+;; * An login endpoint that sets up the session and redirects to an issuer
+;; * OpenID Authorization Server details (so we can do $issuer/.wellknown/openid-config)
+;; * JWKS for the issuer
+;; * An identity (::site/type "Identity") that links to a user (::site/user) and has a matching iss/sub
+;; * OpenID Connect client application details that have been registered with the OpenID Authorization Server
+;; * A callback endpoint for the application (this will update the session and set the cookie)
+;; * A token endpoint that can be used to acquire tokens
