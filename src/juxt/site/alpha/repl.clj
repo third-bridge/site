@@ -250,12 +250,12 @@
            (let [line (pr-str ent)]
              ;; Test the line can be read
              #_(try
-               (validate-resource-line line)
-               (catch Exception e
-                 (throw
-                  (ex-info
-                   (format "Serialization of entity '%s' will not be readable" (:xt/id ent))
-                   {:xt/id (:xt/id ent)} e))))
+                 (validate-resource-line line)
+                 (catch Exception e
+                   (throw
+                    (ex-info
+                     (format "Serialization of entity '%s' will not be readable" (:xt/id ent))
+                     {:xt/id (:xt/id ent)} e))))
              (.write w line)
              (.write w (System/lineSeparator))))
          (let [n (inc (first (last batch)))
@@ -333,12 +333,21 @@
   ([{::site/keys [base-uri]}]
    (map first
         (xt/q (db) '{:find [user]
-                    :where [[user ::site/type "User"]
-                            [mapping ::site/type "UserRoleMapping"]
-                            [mapping ::pass/assignee user]
-                            [mapping ::pass/role superuser]]
-                    :in [superuser]}
-             (str base-uri "/_site/roles/superuser")))))
+                     :where [[user ::site/type "User"]
+                             [mapping ::site/type "UserRoleMapping"]
+                             [mapping ::pass/assignee user]
+                             [mapping ::pass/role superuser]]
+                     :in [superuser]}
+              (str base-uri "/_site/roles/superuser")))))
+
+(defn admin-access-tokens
+  ([] (admin-access-tokens (db) (base-uri)))
+  ([db base-uri]
+   (map
+    first
+    (xt/q db {:find '[e]
+              :where [['e ::pass/client (str base-uri "/_site/apps/admin")]
+                      ['e ::site/type "AccessToken"]]}))))
 
 (defn steps
   ([] (steps (config)))
@@ -346,38 +355,45 @@
    (let [{::site/keys [base-uri]} opts
          _ (assert base-uri)
          db (xt/db (xt-node))]
-     [;; Awaiting a fix to https://github.com/juxt/xtdb/issues/1480
+     [ ;; Awaiting a fix to https://github.com/juxt/xtdb/issues/1480
       #_{:complete? (and
-                   (xt/entity db (str base-uri "/_site/tx_fns/put_if_match_wildcard"))
-                   (xt/entity db (str base-uri "/_site/tx_fns/put_if_match_etags")))
-       :happy-message "Site transaction functions installed."
-       :sad-message "Site transaction functions not installed. "
-       :fix "Enter (put-site-txfns!) to fix this."}
+                     (xt/entity db (str base-uri "/_site/tx_fns/put_if_match_wildcard"))
+                     (xt/entity db (str base-uri "/_site/tx_fns/put_if_match_etags")))
+         :happy-message "Site transaction functions installed."
+         :sad-message "Site transaction functions not installed. "
+         :fix "Enter (put-site-txfns!) to fix this."}
 
       #_{:complete? (xt/entity db (str base-uri "/_site/apis/site/openapi.json"))
-       :happy-message "Site API resources installed."
-       :sad-message "Site API not installed. "
-       :fix "Enter (put-site-api!) to fix this."}
+         :happy-message "Site API resources installed."
+         :sad-message "Site API not installed. "
+         :fix "Enter (put-site-api!) to fix this."}
 
       #_{:complete? (xt/entity db (str base-uri "/_site/token"))
-       :happy-message "Authentication resources installed."
-       :sad-message "Authentication resources not installed. "
-       :fix "Enter (put-auth-resources!) to fix this."}
+         :happy-message "Authentication resources installed."
+         :sad-message "Authentication resources not installed. "
+         :fix "Enter (put-auth-resources!) to fix this."}
 
       #_{:complete? (xt/entity db (str base-uri "/_site/roles/superuser"))
-       :happy-message "Role of superuser exists."
-       :sad-message "Role of superuser not yet created."
-       :fix "Enter (put-superuser-role!) to fix this."}
+         :happy-message "Role of superuser exists."
+         :sad-message "Role of superuser not yet created."
+         :fix "Enter (put-superuser-role!) to fix this."}
 
       #_{:complete? (pos? (count (superusers opts)))
-       :happy-message "At least one superuser exists."
-       :sad-message "No superusers exist."
+         :happy-message "At least one superuser exists."
+         :sad-message "No superusers exist."
          :fix "Enter (put-superuser! <username> <fullname>) or (put-superuser! <username> <fullname> <password>) to fix this."}
 
       {:complete? (xt/entity db (str base-uri "/_site/apps/admin"))
        :happy-message "Admin app exists."
        :sad-message "Admin app does not yet exist."
-       :fix "Enter (put-admin-app!) to fix this."}])))
+       :fix "Enter (put-admin-app!) to fix this."}
+
+      {:complete? (seq (admin-access-tokens db base-uri))
+       :happy-message "Admin access-token exists."
+       :sad-message "Admin access-token does not yet exist."
+       :fix "Enter (create-admin-access-token! <subject>) to fix this."}
+
+      ])))
 
 (defn status
   ([] (status (steps (config))))
@@ -385,7 +401,7 @@
    (println)
    (doseq [{:keys [complete? happy-message sad-message fix]} steps]
      (if complete?
-       (println "[✔] " (ansi/green happy-message))
+       (println "[X] " (ansi/green happy-message))
        (println
         "[ ] "
         (ansi/red sad-message)
@@ -405,42 +421,48 @@
     (init/put-admin-app! xt-node config)
     (status (steps config))))
 
-#_(defn put-auth-resources! []
+(defn create-admin-access-token! [subject]
   (let [config (config)
         xt-node (xt-node)]
-    ;;(init/put-openid-token-endpoint! xt-node config)
-    ;;(init/put-login-endpoint! xt-node config)
-    ;;(init/put-logout-endpoint! xt-node config)
+    (init/create-admin-access-token! xt-node subject config)
     (status (steps config))))
+
+#_(defn put-auth-resources! []
+    (let [config (config)
+          xt-node (xt-node)]
+      ;;(init/put-openid-token-endpoint! xt-node config)
+      ;;(init/put-login-endpoint! xt-node config)
+      ;;(init/put-logout-endpoint! xt-node config)
+      (status (steps config))))
 
 #_(defn put-superuser-role! []
-  (let [config (config)
-        xt-node (xt-node)]
-    (init/put-superuser-role! xt-node config)
-    (status (steps config))))
+    (let [config (config)
+          xt-node (xt-node)]
+      (init/put-superuser-role! xt-node config)
+      (status (steps config))))
 
 #_(defn get-password [pass-name]
-  (println "Getting password" pass-name)
-  (let [{:keys [exit out err]} (sh/sh "pass" "show" pass-name)]
-    (if (zero? exit) (str/trim out) (println (ansi/red "Failed to get password")))))
+    (println "Getting password" pass-name)
+    (let [{:keys [exit out err]} (sh/sh "pass" "show" pass-name)]
+      (if (zero? exit) (str/trim out) (println (ansi/red "Failed to get password")))))
 
 #_(defn put-superuser!
-  ([username fullname]
-   (if-let [password-prefix (:juxt.site.alpha.unix-pass/password-prefix (config))]
-     (if-let [password (get-password (str password-prefix username))]
-       (put-superuser! username fullname password)
-       (println (ansi/red "Failed to get password")))
-     (println (ansi/red "Password required!"))))
-  ([username fullname password]
-   (let [config (config)
-         xt-node (xt-node)]
-     (init/put-superuser!
-      xt-node
-      {:username username
-       :fullname fullname
-       :password password}
-      config)
-     (status (steps config)))))
+    ([username fullname]
+     (if-let [password-prefix (:juxt.site.alpha.unix-pass/password-prefix (config))]
+       (if-let [password (get-password (str password-prefix username))]
+         (put-superuser! username fullname password)
+         (println (ansi/red "Failed to get password")))
+       (println (ansi/red "Password required!"))))
+    ([username fullname password]
+     (let [config (config)
+           xt-node (xt-node)]
+       (init/put-superuser!
+        xt-node
+        {:username username
+         :fullname fullname
+         :password password}
+        config)
+       (status (steps config)))))
 
 (defn update-site-graphql
   []
@@ -448,16 +470,16 @@
 
 ;; No longer any users so no username/password
 #_(defn init!
-  [username password]
-  (let [xt-node (xt-node)
-        config (config)]
-    (put-site-api!)
-    (put-auth-resources!)
-    (put-superuser-role!)
-    (put-superuser! username "Administrator" password)
-    (init/put-graphql-operations! xt-node config)
-    (init/put-graphql-schema-endpoint! xt-node config)
-    (init/put-request-template! xt-node config)))
+    [username password]
+    (let [xt-node (xt-node)
+          config (config)]
+      (put-site-api!)
+      (put-auth-resources!)
+      (put-superuser-role!)
+      (put-superuser! username "Administrator" password)
+      (init/put-graphql-operations! xt-node config)
+      (init/put-graphql-schema-endpoint! xt-node config)
+      (init/put-request-template! xt-node config)))
 
 (defn allow-public-access-to-public-resources! []
   (let [config (config)

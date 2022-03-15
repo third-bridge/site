@@ -17,6 +17,7 @@
    [juxt.site.alpha.graphql :as graphql]
    [juxt.site.alpha.util :as util]
    [selmer.parser :as selmer]
+   [juxt.pass.alpha.v3.access-token :as at]
    [xtdb.api :as xt])
   (:import
    (java.util Date)))
@@ -222,6 +223,11 @@
      {:xt/id id
       :name "Site Administration Application"
       ::pass/client-secret (make-nonce 16)})))
+
+(defn create-admin-access-token! [xt-node subject-id {::site/keys [base-uri] :as config}]
+  (put!
+   xt-node
+   (at/make-access-token-doc subject-id (str base-uri "/_site/apps/admin"))))
 
 ;; This is deprecated because there are no longer any users/passwords
 #_(defn ^:deprecated put-openid-token-endpoint! [xt-node {::site/keys [base-uri]}]
