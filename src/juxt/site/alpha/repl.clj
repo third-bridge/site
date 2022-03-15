@@ -354,7 +354,7 @@
        :sad-message "Site transaction functions not installed. "
        :fix "Enter (put-site-txfns!) to fix this."}
 
-      {:complete? (xt/entity db (str base-uri "/_site/apis/site/openapi.json"))
+      #_{:complete? (xt/entity db (str base-uri "/_site/apis/site/openapi.json"))
        :happy-message "Site API resources installed."
        :sad-message "Site API not installed. "
        :fix "Enter (put-site-api!) to fix this."}
@@ -364,15 +364,20 @@
        :sad-message "Authentication resources not installed. "
        :fix "Enter (put-auth-resources!) to fix this."}
 
-      {:complete? (xt/entity db (str base-uri "/_site/roles/superuser"))
+      #_{:complete? (xt/entity db (str base-uri "/_site/roles/superuser"))
        :happy-message "Role of superuser exists."
        :sad-message "Role of superuser not yet created."
        :fix "Enter (put-superuser-role!) to fix this."}
 
-      {:complete? (pos? (count (superusers opts)))
+      #_{:complete? (pos? (count (superusers opts)))
        :happy-message "At least one superuser exists."
        :sad-message "No superusers exist."
-       :fix "Enter (put-superuser! <username> <fullname>) or (put-superuser! <username> <fullname> <password>) to fix this."}])))
+         :fix "Enter (put-superuser! <username> <fullname>) or (put-superuser! <username> <fullname> <password>) to fix this."}
+
+      {:complete? (xt/entity db (str base-uri "/_site/apps/admin"))
+       :happy-message "Admin app exists."
+       :sad-message "Admin app does not yet exist."
+       :fix "Enter (put-admin-app!) to fix this."}])))
 
 (defn status
   ([] (status (steps (config))))
@@ -394,6 +399,12 @@
     (init/put-site-api! xt-node config)
     (status (steps config))))
 
+(defn put-admin-app! []
+  (let [config (config)
+        xt-node (xt-node)]
+    (init/put-admin-app! xt-node config)
+    (status (steps config))))
+
 #_(defn put-auth-resources! []
   (let [config (config)
         xt-node (xt-node)]
@@ -402,18 +413,18 @@
     ;;(init/put-logout-endpoint! xt-node config)
     (status (steps config))))
 
-(defn put-superuser-role! []
+#_(defn put-superuser-role! []
   (let [config (config)
         xt-node (xt-node)]
     (init/put-superuser-role! xt-node config)
     (status (steps config))))
 
-(defn get-password [pass-name]
+#_(defn get-password [pass-name]
   (println "Getting password" pass-name)
   (let [{:keys [exit out err]} (sh/sh "pass" "show" pass-name)]
     (if (zero? exit) (str/trim out) (println (ansi/red "Failed to get password")))))
 
-(defn put-superuser!
+#_(defn put-superuser!
   ([username fullname]
    (if-let [password-prefix (:juxt.site.alpha.unix-pass/password-prefix (config))]
      (if-let [password (get-password (str password-prefix username))]
@@ -460,7 +471,7 @@
     (status)))
 
 (defn reset-password! [username password]
-  (let [user (str (::site/base-uri (config))  "/_site/users/" username)]
+  (let [user (str (::site/base-uri (config)) "/_site/users/" username)]
     (put!
      {:xt/id (str user "/password")
       ::site/type "Password"

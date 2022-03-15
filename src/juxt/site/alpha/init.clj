@@ -10,6 +10,7 @@
    [crypto.password.bcrypt :as password]
    [jsonista.core :as json]
    [juxt.pass.alpha.authentication :as authn]
+   [juxt.pass.alpha.util :refer [make-nonce]]
    [juxt.reap.alpha.combinators :as p]
    [juxt.reap.alpha.regex :as re]
    [juxt.reap.alpha.decoders.rfc7230 :as rfc7230.decoders]
@@ -214,50 +215,58 @@
      (json/write-value-as-string %))
    config))
 
-;; This is deprecated because there are no longer any users/passwords
-#_(defn ^:deprecated put-openid-token-endpoint! [xt-node {::site/keys [base-uri]}]
-  (log/info "Installing OpenID Connect token endpoint")
-  (let [token-endpoint (str base-uri "/_site/token")
-        grant-types #{"client_credentials"}]
+(defn put-admin-app! [xt-node {::site/keys [base-uri] :as config}]
+  (let [id (str base-uri "/_site/apps/admin")]
     (put!
      xt-node
-     {:xt/id token-endpoint
-      ::http/methods #{:post :options}
-      ::http/acceptable "application/x-www-form-urlencoded"
-      ::site/post-fn `authn/token-response
-      ::site/access-control-allow-origins
-      {"http://localhost:8000"
-       {::site/access-control-allow-methods #{:post}
-        ::site/access-control-allow-headers #{"authorization" "content-type"}}}
-      ::pass/expires-in (* 60 60 1)}
+     {:xt/id id
+      :name "Site Administration Application"
+      ::pass/client-secret (make-nonce 16)})))
 
-     {:xt/id (str base-uri "/_site/rules/anyone-can-ask-for-a-token")
-      ::site/type "Rule"
-      ::site/description "The token_endpoint must be accessible"
-      ::pass/target [['request ::site/uri token-endpoint]
-                     ['request :ring.request/method #{:post}]]
-      ::pass/effect ::pass/allow})
-
-    (let [content
-          (str
-           (json/write-value-as-string
-            {"issuer" "https://juxt.site" ; draft
-             "token_endpoint" token-endpoint
-             "token_endpoint_auth_methods_supported" ["client_secret_basic"]
-             "grant_types_supported" (vec grant-types)}
-            (json/object-mapper
-             {:pretty true}))
-           "\r\n")]
+;; This is deprecated because there are no longer any users/passwords
+#_(defn ^:deprecated put-openid-token-endpoint! [xt-node {::site/keys [base-uri]}]
+    (log/info "Installing OpenID Connect token endpoint")
+    (let [token-endpoint (str base-uri "/_site/token")
+          grant-types #{"client_credentials"}]
       (put!
        xt-node
-       {:xt/id (str base-uri "/.well-known/openid-configuration")
-        ;; OpenID Connect Discovery documents are publically available
-        ::pass/classification "PUBLIC"
-        ::http/methods #{:get :head :options}
-        ::http/content-type "application/json"
-        ::http/last-modified (Date.)
-        ::http/etag (subs (util/hexdigest (.getBytes content)) 0 32)
-        ::http/content content}))))
+       {:xt/id token-endpoint
+        ::http/methods #{:post :options}
+        ::http/acceptable "application/x-www-form-urlencoded"
+        ::site/post-fn `authn/token-response
+        ::site/access-control-allow-origins
+        {"http://localhost:8000"
+         {::site/access-control-allow-methods #{:post}
+          ::site/access-control-allow-headers #{"authorization" "content-type"}}}
+        ::pass/expires-in (* 60 60 1)}
+
+       {:xt/id (str base-uri "/_site/rules/anyone-can-ask-for-a-token")
+        ::site/type "Rule"
+        ::site/description "The token_endpoint must be accessible"
+        ::pass/target [['request ::site/uri token-endpoint]
+                       ['request :ring.request/method #{:post}]]
+        ::pass/effect ::pass/allow})
+
+      (let [content
+            (str
+             (json/write-value-as-string
+              {"issuer" "https://juxt.site" ; draft
+               "token_endpoint" token-endpoint
+               "token_endpoint_auth_methods_supported" ["client_secret_basic"]
+               "grant_types_supported" (vec grant-types)}
+              (json/object-mapper
+               {:pretty true}))
+             "\r\n")]
+        (put!
+         xt-node
+         {:xt/id (str base-uri "/.well-known/openid-configuration")
+          ;; OpenID Connect Discovery documents are publically available
+          ::pass/classification "PUBLIC"
+          ::http/methods #{:get :head :options}
+          ::http/content-type "application/json"
+          ::http/last-modified (Date.)
+          ::http/etag (subs (util/hexdigest (.getBytes content)) 0 32)
+          ::http/content content}))))
 
 #_(defn put-login-endpoint! [xt-node {::site/keys [base-uri]}]
   (log/info "Installing login endpoint")

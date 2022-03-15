@@ -143,48 +143,14 @@ Bootstrap the new system by adding the minimum resources that are required to al
 Site by JUXT. Copyright (c) 2021, JUXT LTD.
 Type :repl/quit to exit
 
-[ ]  Site API not installed.  Enter (put-site-api!) to fix this.
-[ ]  Role of superuser not yet created. Enter (put-superuser-role!) to fix this.
-[ ]  No superusers exist. Enter (put-superuser! <username> <fullname>)
-     or (put-superuser! <username> <fullname> <password>) to fix this.
 site>
 ----
-
-Install the Site API:
-
-----
-site> (put-site-api!)
-----
-
-Install the superuser role:
-
-----
-site> (put-superuser-role!)
-----
-
-Finally, create a superuser. If you have `pass` installed, this will fetch the password directly:
-
-----
-site> (put-superuser! "admin" "Administrator")
-----
-
-NOTE: We recommend that you generate a password with `pass`.
-
-If you don't have `pass` installed, you can add a password as a final argument to `put-superuser!`.
-
-----
-site> (put-superuser! "admin" "Administrator" "admin")
-----
-
-Replace `"admin"`, `"Administrator"` and `"admin"` with your own username, full name and password respectively.
-
-Quit the REPL, for example, with `Ctrl-C` or by typing `:repl/quit`.
 
 === Run the site tool
 
 The site tool is a command-line utility that allows you to remotely administer site.
 
-If you're on MacOS, you will need to install the gnu version of `readlink`. You can do so with brew:
+If you're on MacOS, you will need to install the GNU version of `readlink`. You can do so with brew:
 ```
 brew install coreutils
 ln -s /usr/local/bin/readlink /usr/local/bin/readlink

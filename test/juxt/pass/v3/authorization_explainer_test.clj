@@ -1099,7 +1099,7 @@
 ;; * A user (can contain anything, just needs to exist)
 ;; * A OAuth2 registered application representing the 'admin app' (client-id and client-secret) that a caller will use when acquiring a token against the token endpoint
 ;; * Actions which belong to one or more scopes that permit authorized access to the database
-;; * Permissions
+;; * Permissions on the user
 ;; * Rules that reference permissions, access-tokens, actions and resources
 ;;
 ;; Adding an authorization-provider
