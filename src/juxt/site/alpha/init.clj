@@ -221,8 +221,9 @@
     (put!
      xt-node
      {:xt/id id
-      :name "Site Administration Application"
-      ::pass/client-secret (make-nonce 16)})))
+      :name "Admin App" ; make this possible to configure somehow
+      ::pass/client-secret (make-nonce 16)
+      ::pass/scope #{"read:admin" "write:admin"}})))
 
 (defn create-admin-access-token! [xt-node subject-id {::site/keys [base-uri] :as config}]
   (put!

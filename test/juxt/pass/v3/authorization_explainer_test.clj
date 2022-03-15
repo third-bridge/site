@@ -962,7 +962,7 @@
    ::pass/application-client (:xt/id ADMIN_APP)
    ::pass/scope #{"read:admin"}})
 
-(def CREATE_PERSON
+(def CREATE_PERSON_ACTION
   {:xt/id "https://example.org/actions/create-person"
    ::site/type "Action"
    ::pass/scope "write:admin"
@@ -980,7 +980,7 @@
       [::pass/merge {::type "Person"}]
       [::pass.malli/validate]]}]})
 
-(def CREATE_IDENTITY
+(def CREATE_IDENTITY_ACTION
   {:xt/id "https://example.org/actions/create-identity"
    ::site/type "Action"
    ::pass/scope "write:admin"
@@ -1011,15 +1011,15 @@
       [::xt/put CARLOS_ACCESS_TOKEN]
 
       ;; Actions
-      [::xt/put CREATE_PERSON]
-      [::xt/put CREATE_IDENTITY]
+      [::xt/put CREATE_PERSON_ACTION]
+      [::xt/put CREATE_IDENTITY_ACTION]
 
       ;; Permissions
       [::xt/put
        {:xt/id "https://example.org/permissions/sue/create-person"
         ::site/type "Permission"
         ::person (:xt/id SUE)
-        ::pass/action (:xt/id CREATE_PERSON)
+        ::pass/action (:xt/id CREATE_PERSON_ACTION)
         ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
       ;; Functions
@@ -1034,7 +1034,7 @@
          (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
            {:access-token access-token
             :scope (effective-scope db access-token)
-            :actions #{(:xt/id CREATE_PERSON)}
+            :actions #{(:xt/id CREATE_PERSON_ACTION)}
             :rules rules}))))
       (is
        (not
@@ -1044,7 +1044,7 @@
           (let [access-token (:xt/id SUE_READONLY_ACCESS_TOKEN)]
             {:access-token access-token
              :scope (effective-scope db access-token)
-             :actions #{(:xt/id CREATE_PERSON)}
+             :actions #{(:xt/id CREATE_PERSON_ACTION)}
              :rules rules}))))))
 
     (authz/submit-call-action-sync
@@ -1052,7 +1052,7 @@
      (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
        {:access-token access-token
         :scope (effective-scope (xt/db *xt-node*) access-token)
-        :action (:xt/id CREATE_PERSON)
+        :action (:xt/id CREATE_PERSON_ACTION)
         :rules rules
         :args [{:xt/id ALICE ::username "alice"}]}))
 
@@ -1067,7 +1067,7 @@
        (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
          {:access-token access-token
           :scope (effective-scope (xt/db *xt-node*) access-token)
-          :action (:xt/id CREATE_PERSON)
+          :action (:xt/id CREATE_PERSON_ACTION)
           :rules rules
           :args [{:xt/id ALICE}]}))))))
 
