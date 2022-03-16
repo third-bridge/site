@@ -38,7 +38,7 @@ range requests and authentication.
 APIs are also able to benefit from Site's authorization module, Pass, providing
 Policy-Based Access Control, loosely based on XACML.
 
-== Test drive
+== Installation Guide
 
 === Requirements
 
