@@ -2,19 +2,20 @@
 
 image:https://circleci.com/gh/juxt/site/tree/master.svg?style=svg["CircleCI", link="https://circleci.com/gh/juxt/site/tree/master"]
 
-Site is a project from https://juxt.pro[JUXT] to build a Resource Server out of
-our open-source https://xtdb.com[XTDB] database.
+Site is a project from https://juxt.pro[JUXT] to build an OAuth2 Resource Server
+around our open-source https://xtdb.com[XTDB] database.
 
-Site supports web content, and https://www.openapis.org/[OpenAPI]. You can use
-Site as a versioned
+Site supports web content, https://www.openapis.org/[OpenAPI] and GraphQL. You
+can use Site as a versioned
 https://en.wikipedia.org/wiki/Content_management_system[Content Management
 System].
 
-An official (work in progress) documentation website can be found https://juxtsite.netlify.app/[here].
+An official (work in progress) documentation website can be found
+https://juxtsite.netlify.app/[here].
 
 == What is Site?
 
-Site is a Resource Server, built on the XTDB database.
+Site is a Resource Server, built on JUXT's https://xtdb.com[XTDB] database.
 
 You can put things into Site with (HTTP) PUT requests. When you do this, Site
 will put (the representation of) your thing (document, image, video, data…) into
@@ -36,9 +37,14 @@ semantics properly, with support for content negotiation, conditional requests,
 range requests and authentication.
 
 APIs are also able to benefit from Site's authorization module, Pass, providing
-Policy-Based Access Control, loosely based on XACML.
+Policy-Based Access Control.
 
 == Installation Guide
+
+This is the long-winded installation guide to explain how to bootstrap a Site
+instance. This is partly for pedagogical purposes.
+
+NOTE: It would be a good idea to create a docker image of a pre-installed Site.
 
 === Requirements
 
@@ -47,6 +53,113 @@ Before you start, you'll need to have the following installed:
 * Java 9+ (Site is not compatible with Java 8 and below!)
 * https://clojure.org/guides/getting_started[Clojure] and
 * https://github.com/babashka/babashka[Babashka] installed on your system.
+
+=== Before you start
+
+All these instructions are for Arch Linux, please amend accordingly for your own
+platform, if different.
+
+Run each command under your user account (i.e. not as root).
+
+For documentation purposes, we'll assume your Site server will be set up to run
+on the host site.test. If you choose another hostname, or are setting up for
+production, please amend instructions accordingly.
+
+=== Configure your local DNS or /etc/hosts
+
+Edit /etc/hosts to point site.test at 127.0.0.1.
+
+----
+# Static table lookup for hostnames.
+# See hosts(5) for details.
+127.0.0.1	localhost site.test
+----
+
+=== mkcert
+
+Install mkcert
+
+----
+sudo pacman -Sy mkcert
+----
+
+----
+mkcert -install
+----
+
+----
+Created a new local CA 💥
+The local CA is now installed in the system trust store! ⚡️
+The local CA is now installed in the Firefox and/or Chrome/Chromium trust store (requires browser restart)! 🦊
+----
+
+=== Install nginx
+
+----
+sudo pacman -Sy nginx-mainline
+----
+
+=== Create private key and cert
+
+Create a new cert for the local development server, and move these into your
+nginx config directory.
+
+----
+mkcert site.test
+sudo mv site.test-key.pem site.test.pem /etc/nginx
+----
+
+=== Configure nginx
+
+Configure nginx. Use `etc/dev/nginx.conf` as a guide to what to configure. You'll need to reference your private key and cert via the `ssl_certificate` and `ssl_certificate_key` parameters.
+
+----
+ssl_certificate      site.test.pem;
+ssl_certificate_key  site.test-key.pem;
+----
+
+You'll need to increase the size of request bodies you can send through nginx,
+the default is too restrictive.
+
+----
+client_max_body_size 16M;
+----
+
+You'll also need to configure the details of your the origin server (Site).
+
+----
+http {
+  ...
+  client_max_body_size 16M;
+  ...
+  server {
+    ...
+    ssl_certificate site.test.pem;
+    ssl_certificate_key site.test-key.pem;
+    ...
+    location / {
+      proxy_pass http://localhost:2021;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+----
+
+Test your final configuration before you start nginx and fix any errors.
+
+----
+sudo nginx -t
+----
+
+=== Start nginx
+
+Start nginx
+
+----
+sudo systemctl enable nginx
+sudo systemctl start nginx
+----
 
 === Clone this repo
 
@@ -124,7 +237,7 @@ $ rlwrap ncat localhost 50505
 ----
 --
 
-=== Bootstrap
+=== Bootstrap required resources
 
 Bootstrap the new system by adding the minimum resources that are required to allow remote access.
 
@@ -151,6 +264,39 @@ helps when auditing the system later on.
        :name "Malcolm Sparks"})
 ----
 
+==== Create actions
+
+----
+(create-action "https://home.test/_site/actions/create-person")
+(create-action "https://home.test/_site/actions/create-identity")
+----
+
+TODO: create-person
+
+==== Create an entity representing the administration app
+
+TODO: This could/should define scopes
+
+==== Create an entity representing yourself
+
+The entity can contain any details you like, but must of course have an `:xt/id`
+as a minimum.
+
+
+==== Create a subject
+
+----
+(put! {:xt/id "urn:site:subject:admin:mal"
+       :person "https://home.test/people/mal"})
+----
+
+==== Create an access token
+
+Finally, create the access token that has permission to call administrative actions.
+
+----
+(create-admin-access-token! "urn:site:subject:admin:mal")
+----
 
 === Run the site tool
 
