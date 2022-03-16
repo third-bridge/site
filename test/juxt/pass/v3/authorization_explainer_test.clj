@@ -179,7 +179,7 @@
 ;; would 'know' that all GET requests to a resource would involve this specific
 ;; action.
 (def GET_RESOURCE
-  {:xt/id "https://example.org/_site/actions/get"
+  {:xt/id "https://example.org/_site/actions/get-resource"
    ::site/type "Action"
    ::pass/scope "read:resource"})
 

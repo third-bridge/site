@@ -216,7 +216,7 @@
      (json/write-value-as-string %))
    config))
 
-(defn put-admin-app! [xt-node {::site/keys [base-uri] :as config}]
+(defn install-admin-app! [xt-node {::site/keys [base-uri] :as config}]
   (let [id (str base-uri "/_site/apps/admin")]
     (put!
      xt-node

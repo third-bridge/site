@@ -63,19 +63,6 @@ $ mkdir -p $HOME/.config/site
 $ cp site/etc/config.edn $HOME/.config/site/config.edn
 ----
 
-=== Configure a password
-
-[TIP]
---
-If you have `pass` installed, this is a good time to configure a password for
-your superuser. We'll assume the superuser will be named `admin`, but feel free
-to choose your own username here.
-
-----
-$ pass generate -n site/local/admin
-----
---
-
 === Start the server
 
 Start the Site server:
@@ -88,6 +75,7 @@ NOTE: Alternatively, if you're familiar with Clojure development, you can start
 the server via the `deps.edn` file and simply 'jack-in' with your editor or IDE
 as normal.
 
+//// should retain this somewhere else
 === Start multiple instances of the server
 
 If you require multiple Site servers to coexist on the same machine, you can start site passing a different configuration file as follows:
@@ -101,6 +89,7 @@ In this case please be sure to change the configuration so ports are different a
 ----
 $ SITE_BASE_URI=http://localhost:5509 site/bin/site get-token -u admin
 ----
+////
 
 === The REPL
 
@@ -145,6 +134,23 @@ Type :repl/quit to exit
 
 site>
 ----
+
+==== Install the admin app
+
+----
+(install-admin-app!)
+----
+
+==== Create a person entity to represent yourself
+
+It's good practise to associate actions with individuals carrying them out. This
+helps when auditing the system later on.
+
+----
+(put! {:xt/id "https://site.test/people/mal"  ; replace 'mal' with your username
+       :name "Malcolm Sparks"})
+----
+
 
 === Run the site tool
 

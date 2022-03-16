@@ -386,12 +386,12 @@
       {:complete? (xt/entity db (str base-uri "/_site/apps/admin"))
        :happy-message "Admin app exists."
        :sad-message "Admin app does not yet exist."
-       :fix "Enter (put-admin-app!) to fix this."}
+       :fix "Enter (install-admin-app!) to fix this."}
 
       {:complete? (seq (admin-access-tokens db base-uri))
-       :happy-message "Admin access-token exists."
-       :sad-message "Admin access-token does not yet exist."
-       :fix "Enter (create-admin-access-token! <subject>) to fix this."}
+       :happy-message "Local admin access-token exists."
+       :sad-message "Local admin access-token does not yet exist."
+       :fix "Enter (create-local-admin-access-token! <subject>) to fix this."}
 
       ])))
 
@@ -415,10 +415,10 @@
     (init/put-site-api! xt-node config)
     (status (steps config))))
 
-(defn put-admin-app! []
+(defn install-admin-app! []
   (let [config (config)
         xt-node (xt-node)]
-    (init/put-admin-app! xt-node config)
+    (init/install-admin-app! xt-node config)
     (status (steps config))))
 
 (defn create-admin-access-token! [subject]
