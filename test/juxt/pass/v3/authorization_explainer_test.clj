@@ -149,6 +149,127 @@
 ;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
 ;; PUBLIC
 
+(def EMPLOYEE_LIST
+  {:xt/id "https://example.org/employees/"
+   ::pass/classification "INTERNAL"})
+
+(def LOGIN_PAGE
+  {:xt/id "https://example.org/login"
+   ::pass/classification "PUBLIC"})
+
+;; Neither Alice nor Carlos can see this resource because it doesn't have an
+;; explicit classification.
+(def UNCLASSIFIED_PAGE
+  {:xt/id "https://example.org/sales-report.csv"})
+
+(def ANONYMOUS_SUBJECT
+  {:xt/id "https://example.org/subjects/anonymous"})
+
+(def ANONYMOUS_ACCESS_TOKEN
+  {:xt/id "https://example.org/tokens/anonymous"
+   ::site/type "AccessToken"
+   ::pass/subject (:xt/id ANONYMOUS_SUBJECT)
+   ;; This might be the 'web client app' as part of the 'web-server pack'
+   ::pass/application-client (:xt/id USER_APP)})
+
+;; Alice is an employee
+;; Carlos isn't an employee, but can access the login page
+
+;; This action might come as part of a 'web-server' capability 'pack' where Site
+;; would 'know' that all GET requests to a resource would involve this specific
+;; action.
+(def GET_RESOURCE
+  {:xt/id "https://example.org/_site/actions/get"
+   ::site/type "Action"
+   ::pass/scope "read:resource"})
+
+(def ANYONE_CAN_READ_PUBLIC_RESOURCES
+  {:xt/id "https://example.org/permissions/anyone-can-read-public-resources"
+   ::site/type "Permission"
+   ::pass/action (:xt/id GET_RESOURCE)
+   ::pass/purpose nil})
+
+(def ALICE_CAN_READ_INTERNAL_RESOURCES
+  {:xt/id "https://example.org/permissions/alice-can-read-internal-resources"
+   ::site/type "Permission"
+   ::pass/action (:xt/id GET_RESOURCE)
+   ::pass/purpose nil
+   ::person (:xt/id ALICE)})
+
+(deftest classified-resource-test
+  (submit-and-await!
+   [
+    ;; Actors
+    [::xt/put ALICE]
+    [::xt/put CARLOS]
+
+    ;; Actions
+    [::xt/put GET_RESOURCE]
+
+    ;; Subjects
+    [::xt/put ALICE_SUBJECT]
+    [::xt/put CARLOS_SUBJECT]
+    [::xt/put ANONYMOUS_SUBJECT]
+
+    ;; Access tokens
+    [::xt/put ALICE_ACCESS_TOKEN]
+    [::xt/put CARLOS_ACCESS_TOKEN]
+    [::xt/put ANONYMOUS_ACCESS_TOKEN]
+
+    ;; Resources
+    [::xt/put LOGIN_PAGE]
+    [::xt/put EMPLOYEE_LIST]
+
+    ;; Permissions
+    [::xt/put ANYONE_CAN_READ_PUBLIC_RESOURCES]
+    [::xt/put ALICE_CAN_READ_INTERNAL_RESOURCES]])
+
+  (let [db (xt/db *xt-node*)]
+    (are [access-token resource expected]
+        (let [permissions
+              (authz/check-permissions
+               db {:actions #{(:xt/id GET_RESOURCE)}
+                   :resource (:xt/id resource)
+                   :scope #{"read:resource"}
+                   :access-token (:xt/id access-token)
+                   :rules '[
+                            ;; Anyone can read PUBLIC resources
+                            [
+                             (allowed? permission access-token action resource)
+                             [resource ::pass/classification "PUBLIC"]
+                             [permission :xt/id]
+                             [access-token :xt/id]
+                             [action :xt/id]]
+
+                            ;; Only persons granted permission to read INTERNAL resources
+                            [
+                             (allowed? permission access-token action resource)
+                             [resource ::pass/classification "INTERNAL"]
+                             [permission :xt/id]
+                             [access-token :xt/id]
+                             [action :xt/id]
+                             [permission ::person person]
+                             [access-token ::pass/subject subject]
+                             [subject ::person person]
+                             ]]})]
+          (if expected
+            (is (seq permissions))
+            (is (not (seq permissions)))))
+
+      ALICE_ACCESS_TOKEN LOGIN_PAGE true
+      ALICE_ACCESS_TOKEN EMPLOYEE_LIST true
+
+      CARLOS_ACCESS_TOKEN LOGIN_PAGE true
+      CARLOS_ACCESS_TOKEN EMPLOYEE_LIST false
+
+      ANONYMOUS_ACCESS_TOKEN LOGIN_PAGE true
+      ANONYMOUS_ACCESS_TOKEN EMPLOYEE_LIST false)))
+
+
+#_((t/join-fixtures [with-xt])
+  (fn []
+))
+
 ;; User directories
 
 ;; A long time ago, web servers supported 'user directories'. If you had an
