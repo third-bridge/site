@@ -14,7 +14,7 @@
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
   [db {:keys [access-token scope actions purpose resource rules]}]
 
-  (assert rules "No rules provided")
+  (assert (seq rules) "No rules provided")
 
   (xt/q
    db

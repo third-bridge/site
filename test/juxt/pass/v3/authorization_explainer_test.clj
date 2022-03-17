@@ -294,19 +294,53 @@
   {:xt/id "https://example.org/actions/read-user-dir"
    ::site/type "Action"
    ::pass/scope "read:resource"
-   ::pass/resource-matches "https://example.org/~([a-z]+)/.+"})
+   ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
+   ::pass/rules
+   '[[(allowed? permission access-token action resource)
+      [action :xt/id "https://example.org/actions/read-user-dir"]
+      [action ::pass/resource-matches resource-regex]
+      [access-token ::pass/subject subject]
+      [permission ::person person]
+      [subject ::person person]
+      [person ::type "Person"]
+      [resource :xt/id]
+      [person ::username username]
+      [(re-pattern resource-regex) resource-pattern]
+      [(re-matches resource-pattern resource) [_ user]]
+      [(= user username)]]]})
 
 (def WRITE_USER_DIR_ACTION
   {:xt/id "https://example.org/actions/write-user-dir"
    ::site/type "Action"
    ::pass/scope "write:resource"
    ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
-   ::pass/action-args [{}]})
+   ::pass/action-args [{}]
+   ::pass/rules
+   '[[(allowed? permission access-token action resource)
+      [action :xt/id "https://example.org/actions/write-user-dir"]
+      [action ::pass/resource-matches resource-regex]
+      [access-token ::pass/subject subject]
+      [permission ::person person]
+      [subject ::person person]
+      [person ::type "Person"]
+      [person ::username username]
+      [(re-pattern resource-regex) resource-pattern]
+      [(re-matches resource-pattern resource) [_ user]]
+      [(= user username)]]]})
 
 (def READ_SHARED_ACTION
   {:xt/id "https://example.org/actions/read-shared"
    ::site/type "Action"
-   ::pass/scope "read:resource"})
+   ::pass/scope "read:resource"
+   ::pass/rules
+   '[[(allowed? permission access-token action resource)
+      [action :xt/id "https://example.org/actions/read-shared"]
+      [access-token ::pass/subject subject]
+      [permission ::person person]
+      [person ::type "Person"]
+      [subject ::person person]
+      [resource :xt/id]
+      [permission ::pass/resource resource]]]})
 
 (def ALICE_CAN_READ
   {:xt/id "https://example.org/permissions/alice-can-read"
@@ -345,43 +379,6 @@
    ::person "https://example.org/people/bob"
    ::pass/action "https://example.org/actions/write-user-dir"
    ::pass/purpose nil})
-
-(def WRITE_USER_DIR_RULES
-  '[[(allowed? permission access-token action resource)
-     [action :xt/id "https://example.org/actions/write-user-dir"]
-     [action ::pass/resource-matches resource-regex]
-     [access-token ::pass/subject subject]
-     [permission ::person person]
-     [subject ::person person]
-     [person ::type "Person"]
-     [person ::username username]
-     [(re-pattern resource-regex) resource-pattern]
-     [(re-matches resource-pattern resource) [_ user]]
-     [(= user username)]]])
-
-(def READ_USER_DIR_RULES
-  '[[(allowed? permission access-token action resource)
-     [action :xt/id "https://example.org/actions/read-user-dir"]
-     [action ::pass/resource-matches resource-regex]
-     [access-token ::pass/subject subject]
-     [permission ::person person]
-     [subject ::person person]
-     [person ::type "Person"]
-     [resource :xt/id]
-     [person ::username username]
-     [(re-pattern resource-regex) resource-pattern]
-     [(re-matches resource-pattern resource) [_ user]]
-     [(= user username)]]])
-
-(def READ_SHARED_RULES
-  '[[(allowed? permission access-token action resource)
-     [action :xt/id "https://example.org/actions/read-shared"]
-     [access-token ::pass/subject subject]
-     [permission ::person person]
-     [person ::type "Person"]
-     [subject ::person person]
-     [resource :xt/id]
-     [permission ::pass/resource resource]]])
 
 ;; Scopes. Actions inhabit scopes.
 
@@ -432,7 +429,7 @@
     [::xt/put BOB_CAN_WRITE_USER_DIR_CONTENT]
     [::xt/put ALICES_SHARES_FILE_WITH_BOB]])
 
-  (let [rules (vec (concat WRITE_USER_DIR_RULES READ_USER_DIR_RULES READ_SHARED_RULES))
+  (let [rules (vec (mapcat ::pass/rules [WRITE_USER_DIR_ACTION READ_USER_DIR_ACTION READ_SHARED_ACTION]))
         db (xt/db *xt-node*)]
 
     (are [access-token actions resource ok?]
