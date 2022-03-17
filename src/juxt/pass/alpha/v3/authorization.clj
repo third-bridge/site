@@ -253,15 +253,16 @@
       (log/errorf e "Error when calling action: %s" action)
       (throw e))))
 
-(defn call-action! [xt-node {:keys [access-token scope action resource args]}]
+(defn call-action! [xt-node {:keys [access-token scope resource]} action args]
   (let [tx (xt/submit-tx
             xt-node
-            [[::xt/fn "urn:site:tx-fns:call-action" {:access-token access-token :scope scope :resource resource} action args]])]
+            [[::xt/fn "urn:site:tx-fns:call-action"
+              {:access-token access-token :scope scope :resource resource} action args]])]
 
     (xt/await-tx xt-node tx)
     (assert (xt/tx-committed? xt-node tx))))
 
 (defn register-call-action-fn []
   {:xt/id "urn:site:tx-fns:call-action"
-   :xt/fn '(fn [xt-ctx pass-ctx action action-args]
-             (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) pass-ctx action action-args))})
+   :xt/fn '(fn [xt-ctx pass-ctx action args]
+             (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) pass-ctx action args))})

@@ -1146,9 +1146,9 @@
     (authz/call-action!
      *xt-node*
      {:access-token access-token
-      :scope scope
-      :action (:xt/id CREATE_PERSON_ACTION)
-      :args [{:xt/id ALICE ::username "alice"}]}))
+      :scope scope}
+     (:xt/id CREATE_PERSON_ACTION)
+     [{:xt/id ALICE ::username "alice"}]))
 
   (is (xt/entity (xt/db *xt-node*) ALICE))
 
@@ -1162,9 +1162,9 @@
       (authz/call-action!
        *xt-node*
        {:access-token access-token
-        :scope scope
-        :action (:xt/id CREATE_PERSON_ACTION)
-        :args [{:xt/id ALICE}]})))))
+        :scope scope}
+       (:xt/id CREATE_PERSON_ACTION)
+       [{:xt/id ALICE}])))))
 
 #_((t/join-fixtures [with-xt])
    (fn []
