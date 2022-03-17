@@ -112,46 +112,6 @@
 ;; the access token, or during its lifecycle (if the person represented by the
 ;; subject wishes to adjust the scope of the access token).
 
-(def ALICE_ACCESS_TOKEN
-  {:xt/id "https://example.org/tokens/alice"
-   ::site/type "AccessToken"
-   ::pass/subject (:xt/id ALICE_SUBJECT)
-   ::pass/application-client (:xt/id USER_APP)})
-
-(def ALICE_READONLY_ACCESS_TOKEN
-  {:xt/id "https://example.org/tokens/alice-readonly"
-   ::site/type "AccessToken"
-   ::pass/subject (:xt/id ALICE_SUBJECT)
-   ::pass/application-client (:xt/id USER_APP)
-   ::pass/scope (set
-                 (filter
-                  #(re-matches #"read:.*" %)
-                  (::pass/scope USER_APP)))})
-
-(def BOB_ACCESS_TOKEN
-  {:xt/id "https://example.org/tokens/bob"
-   ::site/type "AccessToken"
-   ::pass/subject (:xt/id BOB_SUBJECT)
-   ::pass/application-client (:xt/id USER_APP)})
-
-(def CARLOS_ACCESS_TOKEN
-  {:xt/id "https://example.org/tokens/carlos"
-   ::site/type "AccessToken"
-   ::pass/subject (:xt/id CARLOS_SUBJECT)
-   ::pass/application-client (:xt/id USER_APP)})
-
-(def FAYTHE_ACCESS_TOKEN
-  {:xt/id "https://example.org/tokens/faythe"
-   ::site/type "AccessToken"
-   ::pass/subject (:xt/id FAYTHE_SUBJECT)
-   ::pass/application-client (:xt/id USER_APP)})
-
-(def OSCAR_ACCESS_TOKEN
-  {:xt/id "https://example.org/tokens/oscar"
-   ::site/type "AccessToken"
-   ::pass/subject (:xt/id OSCAR_SUBJECT)
-   ::pass/application-client (:xt/id USER_APP)})
-
 ;; TODO: INTERNAL classification, different security models, see
 ;; https://en.m.wikipedia.org/wiki/Bell%E2%80%93LaPadula_model
 ;; PUBLIC
@@ -171,13 +131,6 @@
 
 (def ANONYMOUS_SUBJECT
   {:xt/id "https://example.org/subjects/anonymous"})
-
-(def ANONYMOUS_ACCESS_TOKEN
-  {:xt/id "https://example.org/tokens/anonymous"
-   ::site/type "AccessToken"
-   ::pass/subject (:xt/id ANONYMOUS_SUBJECT)
-   ;; This might be the 'web client app' as part of the 'web-server pack'
-   ::pass/application-client (:xt/id USER_APP)})
 
 ;; Alice is an employee
 ;; Carlos isn't an employee, but can access the login page
@@ -397,12 +350,6 @@
     [::xt/put BOB_SUBJECT]
     [::xt/put CARLOS_SUBJECT]
 
-    ;; Access tokens
-    [::xt/put ALICE_ACCESS_TOKEN]
-    [::xt/put ALICE_READONLY_ACCESS_TOKEN]
-    [::xt/put BOB_ACCESS_TOKEN]
-    [::xt/put CARLOS_ACCESS_TOKEN]
-
     ;; Actions
     [::xt/put READ_USER_DIR_ACTION]
     [::xt/put READ_SHARED_ACTION]
@@ -616,16 +563,11 @@
       [::xt/put BOB_SUBJECT]
       [::xt/put CARLOS_SUBJECT]
 
-      ;; Access tokens
-      [::xt/put ALICE_ACCESS_TOKEN]
-      [::xt/put BOB_ACCESS_TOKEN]
-      [::xt/put CARLOS_ACCESS_TOKEN]
-
       ;; Actions
       [::xt/put READ_USERNAME_ACTION]
       [::xt/put READ_SECRETS_ACTION]
 
-                                        ; Permissions
+      ;; Permissions
       [::xt/put BOB_CAN_READ_ALICE_USERNAME]
       [::xt/put BOB_CAN_READ_ALICE_SECRETS]
       [::xt/put CARLOS_CAN_READ_ALICE_USERNAME]
@@ -720,12 +662,6 @@
       [::xt/put BOB_SUBJECT]
       [::xt/put CARLOS_SUBJECT]
       [::xt/put FAYTHE_SUBJECT]
-
-      ;; Access tokens
-      [::xt/put ALICE_ACCESS_TOKEN]
-      [::xt/put BOB_ACCESS_TOKEN]
-      [::xt/put CARLOS_ACCESS_TOKEN]
-      [::xt/put FAYTHE_ACCESS_TOKEN]
 
       ;; Permissions
       [::xt/put ALICE_BELONGS_GROUP_A]
@@ -871,10 +807,6 @@
       [::xt/put ALICE_SUBJECT]
       [::xt/put OSCAR_SUBJECT]
 
-      ;; Access token
-      [::xt/put ALICE_ACCESS_TOKEN]
-      [::xt/put OSCAR_ACCESS_TOKEN]
-
       ;; Actions
       [::xt/put READ_MEDICAL_RECORD_ACTION]
       [::xt/put EMERGENCY_READ_MEDICAL_RECORD_ACTION]
@@ -944,10 +876,6 @@
       ;; Subjects
       [::xt/put ALICE_SUBJECT]
       [::xt/put OSCAR_SUBJECT]
-
-      ;; Access tokens
-      [::xt/put ALICE_ACCESS_TOKEN]
-      [::xt/put OSCAR_ACCESS_TOKEN]
 
       ;; Actions
       [::xt/put READ_MEDICAL_RECORD_ACTION]
@@ -1023,19 +951,6 @@
    ::person (:xt/id SUE)
    ::email-verified true})
 
-(def SUE_ACCESS_TOKEN
-  {:xt/id "https://example.org/tokens/sue"
-   ::site/type "AccessToken"
-   ::pass/subject (:xt/id SUE_SUBJECT)
-   ::pass/application-client (:xt/id ADMIN_APP)})
-
-(def SUE_READONLY_ACCESS_TOKEN
-  {:xt/id "https://example.org/tokens/sue-readonly"
-   ::site/type "AccessToken"
-   ::pass/subject (:xt/id SUE_SUBJECT)
-   ::pass/application-client (:xt/id ADMIN_APP)
-   ::pass/scope #{"read:admin"}})
-
 (def CREATE_PERSON_ACTION
   {:xt/id "https://example.org/actions/create-person"
    ::site/type "Action"
@@ -1078,11 +993,6 @@
     ;; Subjects
     [::xt/put SUE_SUBJECT]
     [::xt/put CARLOS_SUBJECT]
-
-    ;; Access tokens
-    [::xt/put SUE_ACCESS_TOKEN]
-    [::xt/put SUE_READONLY_ACCESS_TOKEN]
-    [::xt/put CARLOS_ACCESS_TOKEN]
 
     ;; Actions
     [::xt/put CREATE_PERSON_ACTION]
