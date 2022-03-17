@@ -1140,12 +1140,13 @@
            :scope (effective-scope db access-token)
            :actions #{(:xt/id CREATE_PERSON_ACTION)}}))))))
 
-  (authz/call-action!
-   *xt-node*
-   (let [db (xt/db *xt-node*)
-         access-token (:xt/id SUE_ACCESS_TOKEN)]
+  (let [db (xt/db *xt-node*)
+        access-token (:xt/id SUE_ACCESS_TOKEN)
+        scope (effective-scope db access-token)]
+    (authz/call-action!
+     *xt-node*
      {:access-token access-token
-      :scope (effective-scope db access-token)
+      :scope scope
       :action (:xt/id CREATE_PERSON_ACTION)
       :args [{:xt/id ALICE ::username "alice"}]}))
 
@@ -1155,12 +1156,13 @@
   (is
    (thrown?
     AssertionError
-    (authz/call-action!
-     *xt-node*
-     (let [db (xt/db *xt-node*)
-           access-token (:xt/id SUE_ACCESS_TOKEN)]
+    (let [db (xt/db *xt-node*)
+          access-token (:xt/id SUE_ACCESS_TOKEN)
+          scope (effective-scope db access-token)]
+      (authz/call-action!
+       *xt-node*
        {:access-token access-token
-        :scope (effective-scope db access-token)
+        :scope scope
         :action (:xt/id CREATE_PERSON_ACTION)
         :args [{:xt/id ALICE}]})))))
 

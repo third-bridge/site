@@ -253,7 +253,7 @@ There are a few useful Site REPL commands you should be familiar with:
 (apply evict! (ls)):: Start over. (Delete everything in the database!)
 --
 
-=== Create an action
+== Create the set of domain actions
 
 Actions are at the heart of Site:
 
@@ -263,6 +263,16 @@ Actions are at the heart of Site:
 * Actions are restricted to authorized users and applications.
 * Actions can be grouped into OAuth2 scopes
 * Actions can be exposed to the network, via OpenAPI and GraphQL.
+
+=== Register the call action function
+
+[source,clojure]
+----
+(register-call-action-fn!)
+----
+
+=== Create an action
+
 
 .Creating the create-user action
 ====
