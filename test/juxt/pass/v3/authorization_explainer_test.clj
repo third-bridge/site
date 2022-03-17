@@ -393,6 +393,12 @@
     (cond-> scope
       access-token-scope (set/intersection access-token-scope))))
 
+(defn actions->rules [db actions]
+  (vec (for [action actions
+             :let [e (xt/entity db action)]
+             rule (::pass/rules e)]
+         rule)))
+
 (deftest user-dir-test
   (submit-and-await!
    [
@@ -429,11 +435,10 @@
     [::xt/put BOB_CAN_WRITE_USER_DIR_CONTENT]
     [::xt/put ALICES_SHARES_FILE_WITH_BOB]])
 
-  (let [rules (vec (mapcat ::pass/rules [WRITE_USER_DIR_ACTION READ_USER_DIR_ACTION READ_SHARED_ACTION]))
-        db (xt/db *xt-node*)]
-
+  (let [db (xt/db *xt-node*)]
     (are [access-token actions resource ok?]
-        (let [scope (effective-scope db access-token)
+        (let [rules (actions->rules db actions)
+              scope (effective-scope db access-token)
               actual (authz/check-permissions
                       db {:access-token access-token
                           :scope scope
@@ -443,74 +448,74 @@
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
-      "https://example.org/tokens/alice"
-      #{"https://example.org/actions/read-user-dir"}
-      "https://example.org/~alice/private.txt"
-      true
+        "https://example.org/tokens/alice"
+        #{"https://example.org/actions/read-user-dir"}
+        "https://example.org/~alice/private.txt"
+        true
 
-      ;; Alice can read the file in her user directory which she has shared with
-      ;; Bob.
-      "https://example.org/tokens/alice"
-      #{"https://example.org/actions/read-user-dir"}
-      "https://example.org/~alice/shared.txt"
-      true
+        ;; Alice can read the file in her user directory which she has shared with
+        ;; Bob.
+        "https://example.org/tokens/alice"
+        #{"https://example.org/actions/read-user-dir"}
+        "https://example.org/~alice/shared.txt"
+        true
 
-      ;; Bob cannot read Alice's private file.
-      "https://example.org/tokens/bob"
-      #{"https://example.org/actions/read-user-dir"}
-      "https://example.org/~alice/private.txt"
-      false
+        ;; Bob cannot read Alice's private file.
+        "https://example.org/tokens/bob"
+        #{"https://example.org/actions/read-user-dir"}
+        "https://example.org/~alice/private.txt"
+        false
 
-      ;; Bob can read the file Alice has shared with him.
-      "https://example.org/tokens/bob"
-      #{"https://example.org/actions/read-shared"}
-      "https://example.org/~alice/shared.txt"
-      true
+        ;; Bob can read the file Alice has shared with him.
+        "https://example.org/tokens/bob"
+        #{"https://example.org/actions/read-shared"}
+        "https://example.org/~alice/shared.txt"
+        true
 
-      ;; Alice can put a file to her user directory
-      "https://example.org/tokens/alice"
-      #{"https://example.org/actions/write-user-dir"}
-      "https://example.org/~alice/foo.txt"
-      true
+        ;; Alice can put a file to her user directory
+        "https://example.org/tokens/alice"
+        #{"https://example.org/actions/write-user-dir"}
+        "https://example.org/~alice/foo.txt"
+        true
 
-      ;; Alice can't put a file to her user directory without write:resource
-      ;; scope
-      "https://example.org/tokens/alice-readonly"
-      #{"https://example.org/actions/write-user-dir"}
-      "https://example.org/~alice/foo.txt"
-      false
+        ;; Alice can't put a file to her user directory without write:resource
+        ;; scope
+        "https://example.org/tokens/alice-readonly"
+        #{"https://example.org/actions/write-user-dir"}
+        "https://example.org/~alice/foo.txt"
+        false
 
-      ;; Alice can't put a file to Bob's user directory
-      "https://example.org/tokens/alice"
-      #{"https://example.org/actions/write-user-dir"}
-      "https://example.org/~bob/foo.txt"
-      false
+        ;; Alice can't put a file to Bob's user directory
+        "https://example.org/tokens/alice"
+        #{"https://example.org/actions/write-user-dir"}
+        "https://example.org/~bob/foo.txt"
+        false
 
-      ;; Alice can't put a file outside her user directory
-      "https://example.org/tokens/alice"
-      #{"https://example.org/actions/write-user-dir"}
-      "https://example.org/index.html"
-      false
+        ;; Alice can't put a file outside her user directory
+        "https://example.org/tokens/alice"
+        #{"https://example.org/actions/write-user-dir"}
+        "https://example.org/index.html"
+        false
 
-      ;; Bob can put a file to his user directory
-      "https://example.org/tokens/bob"
-      #{"https://example.org/actions/write-user-dir"}
-      "https://example.org/~bob/foo.txt"
-      true
+        ;; Bob can put a file to his user directory
+        "https://example.org/tokens/bob"
+        #{"https://example.org/actions/write-user-dir"}
+        "https://example.org/~bob/foo.txt"
+        true
 
-      ;; Bob can't put a file to Alice's directory
-      "https://example.org/tokens/bob"
-      #{"https://example.org/actions/write-user-dir"}
-      "https://example.org/~alice/foo.txt"
-      false
+        ;; Bob can't put a file to Alice's directory
+        "https://example.org/tokens/bob"
+        #{"https://example.org/actions/write-user-dir"}
+        "https://example.org/~alice/foo.txt"
+        false
 
-      ;; Carlos cannot put a file to his user directory, as he hasn't been
-      ;; granted the write-user-dir action.
-      "https://example.org/tokens/carlos"
-      #{"https://example.org/actions/write-user-dir"}
-      "https://example.org/~carlos/foo.txt"
-      false
-      )
+        ;; Carlos cannot put a file to his user directory, as he hasn't been
+        ;; granted the write-user-dir action.
+        "https://example.org/tokens/carlos"
+        #{"https://example.org/actions/write-user-dir"}
+        "https://example.org/~carlos/foo.txt"
+        false
+        )
 
     (are [access-token actions rules expected]
         (let [scope (effective-scope db access-token)]
@@ -523,26 +528,26 @@
                    :rules rules}))))
 
       ;; Alice can see all her files.
-      "https://example.org/tokens/alice"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      (vec (mapcat ::pass/rules [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
-      #{["https://example.org/~alice/shared.txt"]
-        ["https://example.org/~alice/private.txt"]}
+        "https://example.org/tokens/alice"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        (vec (mapcat ::pass/rules [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
+        #{["https://example.org/~alice/shared.txt"]
+          ["https://example.org/~alice/private.txt"]}
 
-      ;; Bob can only see the file Alice has shared with him.
-      "https://example.org/tokens/bob"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      (vec (mapcat ::pass/rules [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
-      #{["https://example.org/~alice/shared.txt"]}
+        ;; Bob can only see the file Alice has shared with him.
+        "https://example.org/tokens/bob"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        (vec (mapcat ::pass/rules [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
+        #{["https://example.org/~alice/shared.txt"]}
 
-      ;; Carlos sees nothing
-      "https://example.org/tokens/carlos"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      (vec (mapcat ::pass/rules [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
-      #{})
+        ;; Carlos sees nothing
+        "https://example.org/tokens/carlos"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        (vec (mapcat ::pass/rules [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
+        #{})
 
     ;; Given a resource and a set of actions, which subjects can access
     ;; and via which actions?
@@ -555,31 +560,31 @@
                           :scope scope
                           :rules rules})))
 
-      "https://example.org/~alice/shared.txt"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      #{"read:resource"}
-      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-      #{{:subject "https://example.org/subjects/bob",
-         :action "https://example.org/actions/read-shared"}
-        {:subject "https://example.org/subjects/alice",
-         :action "https://example.org/actions/read-user-dir"}}
+        "https://example.org/~alice/shared.txt"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        #{"read:resource"}
+        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+        #{{:subject "https://example.org/subjects/bob",
+           :action "https://example.org/actions/read-shared"}
+          {:subject "https://example.org/subjects/alice",
+           :action "https://example.org/actions/read-user-dir"}}
 
-      "https://example.org/~alice/private.txt"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      #{"read:resource"}
-      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-      #{{:subject "https://example.org/subjects/alice",
-         :action "https://example.org/actions/read-user-dir"}}
+        "https://example.org/~alice/private.txt"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        #{"read:resource"}
+        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+        #{{:subject "https://example.org/subjects/alice",
+           :action "https://example.org/actions/read-user-dir"}}
 
-      ;; Cannot see anything without a scope
-      "https://example.org/~alice/shared.txt"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      #{}
-      (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
-      #{})))
+        ;; Cannot see anything without a scope
+        "https://example.org/~alice/shared.txt"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        #{}
+        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
+        #{})))
 
 (deftest constrained-pull-test
   (let [READ_USERNAME_ACTION
