@@ -670,13 +670,33 @@
         {:xt/id "https://example.org/actions/read-message-content"
          ::site/type "Action"
          ::pass/scope "read:messages"
-         ::pass/pull [::content]}
+         ::pass/pull [::content]
+         ::pass/rules
+         '[[(allowed? permission access-token action resource)
+            [action :xt/id "https://example.org/actions/read-message-content"]
+            [permission ::person person]
+            [subject ::person person]
+            [person ::type "Person"]
+            [access-token ::pass/subject subject]
+            [permission ::group group]
+            [resource ::group group]
+            [resource ::site/type "Message"]]]}
 
         READ_MESSAGE_METADATA_ACTION
         {:xt/id "https://example.org/actions/read-message-metadata"
          ::site/type "Action"
          ::pass/scope "read:messages"
-         ::pass/pull [::from ::to ::date]}
+         ::pass/pull [::from ::to ::date]
+         ::pass/rules
+         '[[(allowed? permission access-token action resource)
+            [action :xt/id "https://example.org/actions/read-message-metadata"]
+            [permission ::person person]
+            [subject ::person person]
+            [person ::type "Person"]
+            [access-token ::pass/subject subject]
+            [permission ::group group]
+            [resource ::group group]
+            [resource ::site/type "Message"]]]}
 
         ALICE_BELONGS_GROUP_A
         {:xt/id "https://example.org/group/a/alice"
@@ -704,28 +724,8 @@
          ::person (:xt/id FAYTHE)
          ::group :a
          ::pass/action #{(:xt/id READ_MESSAGE_METADATA_ACTION)}
-         ::pass/purpose nil}
+         ::pass/purpose nil}]
 
-        rules
-        '[[(allowed? permission access-token action resource)
-           [action :xt/id "https://example.org/actions/read-message-content"]
-           [permission ::person person]
-           [subject ::person person]
-           [person ::type "Person"]
-           [access-token ::pass/subject subject]
-           [permission ::group group]
-           [resource ::group group]
-           [resource ::site/type "Message"]]
-
-          [(allowed? permission access-token action resource)
-           [action :xt/id "https://example.org/actions/read-message-metadata"]
-           [permission ::person person]
-           [subject ::person person]
-           [person ::type "Person"]
-           [access-token ::pass/subject subject]
-           [permission ::group group]
-           [resource ::group group]
-           [resource ::site/type "Message"]]]]
 
     (submit-and-await!
      [
@@ -813,13 +813,15 @@
 
     (let [get-messages
           (fn [access-token]
-            (authz/pull-allowed-resources
-             (xt/db *xt-node*)
-             {:access-token (:xt/id access-token)
-              :scope #{"read:messages"}
-              :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                         (:xt/id READ_MESSAGE_METADATA_ACTION)}
-              :rules rules}))]
+            (let [db (xt/db *xt-node*)]
+              (authz/pull-allowed-resources
+               db
+               {:access-token (:xt/id access-token)
+                :scope #{"read:messages"}
+                :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                           (:xt/id READ_MESSAGE_METADATA_ACTION)}
+                :rules (authz/actions->rules db #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                                                  (:xt/id READ_MESSAGE_METADATA_ACTION)})})))]
 
       ;; Alice and Bob can read all the messages in the group
       (let [messages (get-messages ALICE_ACCESS_TOKEN)]
@@ -844,15 +846,17 @@
       ;; criteria. Currently this is as close as we get to providing full query
       ;; capabilities.
       (is (= 3 (count
-                (authz/pull-allowed-resources
-                 (xt/db *xt-node*)
-                 {:access-token (:xt/id ALICE_ACCESS_TOKEN)
-                  :scope #{"read:messages"}
-                  :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                             (:xt/id READ_MESSAGE_METADATA_ACTION)}
-                  :rules rules
-                  :include-rules [['(include? access-token action message)
-                                   ['message ::from (:xt/id ALICE)]]]})))))))
+                (let [db (xt/db *xt-node*)]
+                  (authz/pull-allowed-resources
+                   db
+                   {:access-token (:xt/id ALICE_ACCESS_TOKEN)
+                    :scope #{"read:messages"}
+                    :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                               (:xt/id READ_MESSAGE_METADATA_ACTION)}
+                    :rules (authz/actions->rules db #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                                                      (:xt/id READ_MESSAGE_METADATA_ACTION)})
+                    :include-rules [['(include? access-token action message)
+                                     ['message ::from (:xt/id ALICE)]]]}))))))))
 
 ;; Alice has a medical record. She wants to allow Oscar access to it, but only
 ;; in emergencies (to provide to a doctor in case of urgent need).
