@@ -141,7 +141,7 @@
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed, and
   get me the documents"
-  [db {:keys [access-token scope actions purpose include-rules]}]
+  [db subject actions {:keys [purpose include-rules]}]
   (let [rules (actions->rules db actions)
         results
         (xt/q
@@ -155,26 +155,22 @@
                     ;; Only consider given actions
                     [(contains? actions action)]
 
-                    ;; Only consider the action if in scope
-                    [action ::pass/scope action-scope]
-                    [(contains? scope action-scope)]
-
                     ;; Only consider a permitted action
                     [permission ::site/type "Permission"]
                     [permission ::pass/action action]
-                    (allowed? permission access-token action resource)
+                    (allowed? permission subject action resource)
 
                     ;; Only permissions that match our purpose
                     [permission ::pass/purpose purpose]]
 
             include-rules
-            (conj '(include? access-token action resource)))
+            (conj '(include? subject action resource)))
 
           :rules (vec (concat rules include-rules))
 
-          :in '[access-token scope actions purpose]}
+          :in '[subject actions purpose]}
 
-         access-token scope actions purpose)
+         subject actions purpose)
 
         pull-expr (vec (mapcat (comp ::pass/pull :action) results))]
 

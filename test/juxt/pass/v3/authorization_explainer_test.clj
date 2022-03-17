@@ -646,11 +646,10 @@
          ::pass/scope "read:messages"
          ::pass/pull [::content]
          ::pass/rules
-         '[[(allowed? permission access-token action resource)
+         '[[(allowed? permission subject action resource)
             [permission ::person person]
             [subject ::person person]
             [person ::type "Person"]
-            [access-token ::pass/subject subject]
             [permission ::group group]
             [resource ::group group]
             [resource ::site/type "Message"]]]}
@@ -661,11 +660,10 @@
          ::pass/scope "read:messages"
          ::pass/pull [::from ::to ::date]
          ::pass/rules
-         '[[(allowed? permission access-token action resource)
+         '[[(allowed? permission subject action resource)
             [permission ::person person]
             [subject ::person person]
             [person ::type "Person"]
-            [access-token ::pass/subject subject]
             [permission ::group group]
             [resource ::group group]
             [resource ::site/type "Message"]]]}
@@ -697,7 +695,6 @@
          ::group :a
          ::pass/action #{(:xt/id READ_MESSAGE_METADATA_ACTION)}
          ::pass/purpose nil}]
-
 
     (submit-and-await!
      [
@@ -784,30 +781,30 @@
         ::content "Thanks Alice, that's very kind of you - see you at lunch!"}]])
 
     (let [get-messages
-          (fn [access-token]
+          (fn [subject]
             (let [db (xt/db *xt-node*)]
               (authz/pull-allowed-resources
                db
-               {:access-token (:xt/id access-token)
-                :scope #{"read:messages"}
-                :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                           (:xt/id READ_MESSAGE_METADATA_ACTION)}})))]
+               (:xt/id subject)
+               #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                 (:xt/id READ_MESSAGE_METADATA_ACTION)}
+               {})))]
 
       ;; Alice and Bob can read all the messages in the group
-      (let [messages (get-messages ALICE_ACCESS_TOKEN)]
+      (let [messages (get-messages ALICE_SUBJECT)]
         (is (= 6 (count messages)))
         (is (= #{::from ::to ::date ::content} (set (keys (first messages))))))
 
-      (let [messages (get-messages BOB_ACCESS_TOKEN)]
+      (let [messages (get-messages BOB_SUBJECT)]
         (is (= 6 (count messages)))
         (is (= #{::from ::to ::date ::content} (set (keys (first messages))))))
 
       ;; Carlos cannot see any of the messages
-      (is (zero? (count (get-messages CARLOS_ACCESS_TOKEN))))
+      (is (zero? (count (get-messages CARLOS_SUBJECT))))
 
       ;; Faythe can read meta-data of the conversation between Alice and Bob but
       ;; not the content of the messages.
-      (let [messages (get-messages FAYTHE_ACCESS_TOKEN)]
+      (let [messages (get-messages FAYTHE_SUBJECT)]
         (is (= 6 (count messages)))
         (is (= #{::from ::to ::date} (set (keys (first messages))))))
 
@@ -819,11 +816,10 @@
                 (let [db (xt/db *xt-node*)]
                   (authz/pull-allowed-resources
                    db
-                   {:access-token (:xt/id ALICE_ACCESS_TOKEN)
-                    :scope #{"read:messages"}
-                    :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                               (:xt/id READ_MESSAGE_METADATA_ACTION)}
-                    :include-rules [['(include? access-token action message)
+                   (:xt/id ALICE_SUBJECT)
+                   #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
+                     (:xt/id READ_MESSAGE_METADATA_ACTION)}
+                   {:include-rules [['(include? subject action message)
                                      ['message ::from (:xt/id ALICE)]]]}))))))))
 
 ;; Alice has a medical record. She wants to allow Oscar access to it, but only
