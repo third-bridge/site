@@ -960,17 +960,16 @@
         {:xt/id "https://example.org/actions/read-medical-record"
          ::site/type "Action"
          ::pass/scope "read:health"
-         ::pass/pull ['*]}
-
-        rules
-        '[[(allowed? permission access-token action resource)
+         ::pass/pull ['*]
+         ::pass/rules
+         '[[(allowed? permission access-token action resource)
            [action :xt/id "https://example.org/actions/read-medical-record"]
            [permission ::person person]
            [subject ::person person]
            [person ::type "Person"]
            [access-token ::pass/subject subject]
            [permission ::pass/purpose purpose]
-           [resource ::site/type "MedicalRecord"]]]]
+           [resource ::site/type "MedicalRecord"]]]}]
 
     (submit-and-await!
      [
@@ -1012,24 +1011,26 @@
 
     (let [get-medical-records
           (fn [access-token action purpose]
-            (authz/pull-allowed-resources
-             (xt/db *xt-node*)
-             {:access-token (:xt/id access-token)
-              :scope #{"read:health"}
-              :actions #{(:xt/id action)}
-              :purpose purpose
-              :rules rules}))
+            (let [db (xt/db *xt-node*)]
+              (authz/pull-allowed-resources
+               db
+               {:access-token (:xt/id access-token)
+                :scope #{"read:health"}
+                :actions #{(:xt/id action)}
+                :purpose purpose
+                :rules (authz/actions->rules db #{(:xt/id action)})})))
 
           get-medical-record
           (fn [access-token action purpose]
-            (authz/pull-allowed-resource
-             (xt/db *xt-node*)
-             {:access-token (:xt/id access-token)
-              :scope #{"read:health"}
-              :actions #{(:xt/id action)}
-              :purpose purpose
-              :resource "https://example.org/alice/medical-record"
-              :rules rules}))]
+            (let [db (xt/db *xt-node*)]
+              (authz/pull-allowed-resource
+               db
+               {:access-token (:xt/id access-token)
+                :scope #{"read:health"}
+                :actions #{(:xt/id action)}
+                :purpose purpose
+                :resource "https://example.org/alice/medical-record"
+                :rules (authz/actions->rules db #{(:xt/id action)})})))]
 
       (is (zero? (count (get-medical-records OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing"))))
       (is (= 1 (count (get-medical-records OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency"))))
