@@ -13,6 +13,9 @@
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
   [db {:keys [access-token scope actions purpose resource rules]}]
+
+  (assert rules "No rules provided")
+
   (xt/q
    db
    {:find '[(pull permission [*]) (pull action [*])]
@@ -220,13 +223,12 @@
 (defn call-action! [xt-node {:keys [access-token scope action resource rules args]}]
   (let [tx (xt/submit-tx
             xt-node
-            [[::xt/fn ::pass/call-action access-token scope action resource rules args]])]
+            [[::xt/fn "urn:site:tx-fns:call-action" access-token scope action resource rules args]])]
 
     (xt/await-tx xt-node tx)
     (assert (xt/tx-committed? xt-node tx))))
 
 (defn register-call-action-fn []
-  [::xt/put
-   {:xt/id ::pass/call-action
-    :xt/fn '(fn [xt-ctx access-token scope action resource rules action-args]
-              (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) access-token scope action resource rules action-args))}])
+  {:xt/id "urn:site:tx-fns:call-action"
+   :xt/fn '(fn [xt-ctx access-token scope action resource rules action-args]
+             (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) access-token scope action resource rules action-args))})

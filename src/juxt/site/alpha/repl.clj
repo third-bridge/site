@@ -11,6 +11,7 @@
    [clojure.java.shell :as sh]
    [io.aviso.ansi :as ansi]
    [juxt.pass.alpha.authentication :as authn]
+   [juxt.pass.alpha.v3.authorization :as authz]
    [juxt.site.alpha.graphql :as graphql]
    [juxt.grab.alpha.schema :as graphql.schema]
    [juxt.grab.alpha.document :as graphql.document]
@@ -522,3 +523,11 @@
         schema (:juxt.grab.alpha/schema (e (format "%s/_site/graphql" (::site/base-uri config))))
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
+
+(defn call-action! [m]
+  (authz/call-action!
+   (xt-node)
+   m))
+
+(defn register-call-action-fn! []
+  (put! (authz/register-call-action-fn)))

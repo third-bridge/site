@@ -236,18 +236,19 @@
                             ;; Anyone can read PUBLIC resources
                             [
                              (allowed? permission access-token action resource)
+                             [action :xt/id "https://example.org/_site/actions/get-resource"]
                              [resource ::pass/classification "PUBLIC"]
                              [permission :xt/id]
                              [access-token :xt/id]
-                             [action :xt/id]]
+                             ]
 
                             ;; Only persons granted permission to read INTERNAL resources
                             [
                              (allowed? permission access-token action resource)
+                             [action :xt/id "https://example.org/_site/actions/get-resource"]
                              [resource ::pass/classification "INTERNAL"]
                              [permission :xt/id]
                              [access-token :xt/id]
-                             [action :xt/id]
                              [permission ::person person]
                              [access-token ::pass/subject subject]
                              [subject ::person person]
@@ -347,12 +348,12 @@
 
 (def WRITE_USER_DIR_RULES
   '[[(allowed? permission access-token action resource)
+     [action :xt/id "https://example.org/actions/write-user-dir"]
+     [action ::pass/resource-matches resource-regex]
      [access-token ::pass/subject subject]
      [permission ::person person]
      [subject ::person person]
      [person ::type "Person"]
-     [action :xt/id "https://example.org/actions/write-user-dir"]
-     [action ::pass/resource-matches resource-regex]
      [person ::username username]
      [(re-pattern resource-regex) resource-pattern]
      [(re-matches resource-pattern resource) [_ user]]
@@ -360,12 +361,12 @@
 
 (def READ_USER_DIR_RULES
   '[[(allowed? permission access-token action resource)
+     [action :xt/id "https://example.org/actions/read-user-dir"]
+     [action ::pass/resource-matches resource-regex]
      [access-token ::pass/subject subject]
      [permission ::person person]
      [subject ::person person]
      [person ::type "Person"]
-     [action :xt/id "https://example.org/actions/read-user-dir"]
-     [action ::pass/resource-matches resource-regex]
      [resource :xt/id]
      [person ::username username]
      [(re-pattern resource-regex) resource-pattern]
@@ -374,12 +375,12 @@
 
 (def READ_SHARED_RULES
   '[[(allowed? permission access-token action resource)
+     [action :xt/id "https://example.org/actions/read-shared"]
      [access-token ::pass/subject subject]
      [permission ::person person]
      [person ::type "Person"]
      [subject ::person person]
      [resource :xt/id]
-     [action :xt/id "https://example.org/actions/read-shared"]
      [permission ::pass/resource resource]]])
 
 ;; Scopes. Actions inhabit scopes.
@@ -622,19 +623,19 @@
 
         rules
         '[[(allowed? permission access-token action resource)
+           [action :xt/id "https://example.org/actions/read-username"]
            [permission ::person person]
            [subject ::person person]
            [person ::type "Person"]
            [access-token ::pass/subject subject]
-           [action :xt/id "https://example.org/actions/read-username"]
            [permission ::pass/resource resource]]
 
           [(allowed? permission access-token action resource)
+           [action :xt/id "https://example.org/actions/read-secrets"]
            [permission ::person person]
            [subject ::person person]
            [person ::type "Person"]
            [access-token ::pass/subject subject]
-           [action :xt/id "https://example.org/actions/read-secrets"]
            [permission ::pass/resource resource]]]]
 
     (submit-and-await!
@@ -721,21 +722,21 @@
 
         rules
         '[[(allowed? permission access-token action resource)
+           [action :xt/id "https://example.org/actions/read-message-content"]
            [permission ::person person]
            [subject ::person person]
            [person ::type "Person"]
            [access-token ::pass/subject subject]
-           [action :xt/id "https://example.org/actions/read-message-content"]
            [permission ::group group]
            [resource ::group group]
            [resource ::site/type "Message"]]
 
           [(allowed? permission access-token action resource)
+           [action :xt/id "https://example.org/actions/read-message-metadata"]
            [permission ::person person]
            [subject ::person person]
            [person ::type "Person"]
            [access-token ::pass/subject subject]
-           [action :xt/id "https://example.org/actions/read-message-metadata"]
            [permission ::group group]
            [resource ::group group]
            [resource ::site/type "Message"]]]]
@@ -889,19 +890,19 @@
 
         rules
         '[[(allowed? permission access-token action resource)
+           [action :xt/id "https://example.org/actions/read-medical-record"]
            [permission ::person person]
            [subject ::person person]
            [person ::type "Person"]
            [access-token ::pass/subject subject]
-           [action :xt/id "https://example.org/actions/read-medical-record"]
            [resource ::site/type "MedicalRecord"]]
 
           [(allowed? permission access-token action resource)
+           [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
            [permission ::person person]
            [subject ::person person]
            [person ::type "Person"]
            [access-token ::pass/subject subject]
-           [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
            [resource ::site/type "MedicalRecord"]]]]
 
     (submit-and-await!
@@ -972,12 +973,12 @@
 
         rules
         '[[(allowed? permission access-token action resource)
+           [action :xt/id "https://example.org/actions/read-medical-record"]
            [permission ::person person]
            [subject ::person person]
            [person ::type "Person"]
            [access-token ::pass/subject subject]
            [permission ::pass/purpose purpose]
-           [action :xt/id "https://example.org/actions/read-medical-record"]
            [resource ::site/type "MedicalRecord"]]]]
 
     (submit-and-await!
@@ -1109,6 +1110,7 @@
 
 (deftest call-action-test
   (let [rules ['[(allowed? permission access-token action resource)
+                 [action :xt/id "https://example.org/actions/create-person"]
                  [permission ::person person]
                  [subject ::person person]
                  [person ::type "Person"]
@@ -1144,7 +1146,7 @@
         ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
       ;; Functions
-      (authz/register-call-action-fn)])
+      [::xt/put (authz/register-call-action-fn)]])
 
     ;; Sue creates the user Alice, with an identity
     (let [db (xt/db *xt-node*)]
