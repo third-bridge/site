@@ -2,6 +2,11 @@
 
 #_(remove-ns 'juxt.pass.v3.authorization-explainer-test)
 
+;; TODO: Remove access-tokens
+
+;; TODO: Build back access-token concept, scopes and filtering of available
+;; actions.
+
 (ns juxt.pass.v3.authorization-explainer-test
   (:require
    [clojure.test :refer [deftest is are use-fixtures] :as t]
@@ -1051,11 +1056,10 @@
       [::pass/merge {::type "Person"}]
       [::pass.malli/validate]]}]
    ::pass/rules
-   '[[(allowed? permission access-token action resource)
+   '[[(allowed? permission subject action resource)
       [permission ::person person]
       [subject ::person person]
-      [person ::type "Person"]
-      [access-token ::pass/subject subject]]]})
+      [person ::type "Person"]]]})
 
 (def CREATE_IDENTITY_ACTION
   {:xt/id "https://example.org/actions/create-identity"
@@ -1103,27 +1107,24 @@
      (seq
       (authz/check-permissions
        db
-       (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
-         {:access-token access-token
-          :scope (effective-scope db access-token)
-          :actions #{(:xt/id CREATE_PERSON_ACTION)}}))))
+       (:xt/id SUE_SUBJECT)
+       #{(:xt/id CREATE_PERSON_ACTION)}
+       {})))
     (is
      (not
       (seq
        (authz/check-permissions
         db
-        (let [access-token (:xt/id SUE_READONLY_ACCESS_TOKEN)]
-          {:access-token access-token
-           :scope (effective-scope db access-token)
-           :actions #{(:xt/id CREATE_PERSON_ACTION)}}))))))
+        (:xt/id SUE_SUBJECT)
+        #{}
+        {}
+        )))))
 
-  (let [db (xt/db *xt-node*)
-        access-token (:xt/id SUE_ACCESS_TOKEN)
-        scope (effective-scope db access-token)]
+  (let [db (xt/db *xt-node*)]
     (authz/call-action!
      *xt-node*
-     {:access-token access-token
-      :scope scope}
+     {}
+     (:xt/id SUE_SUBJECT)
      (:xt/id CREATE_PERSON_ACTION)
      {:xt/id ALICE ::username "alice"}))
 
@@ -1133,13 +1134,11 @@
   (is
    (thrown?
     AssertionError
-    (let [db (xt/db *xt-node*)
-          access-token (:xt/id SUE_ACCESS_TOKEN)
-          scope (effective-scope db access-token)]
+    (let [db (xt/db *xt-node*)]
       (authz/call-action!
        *xt-node*
-       {:access-token access-token
-        :scope scope}
+       {}
+       (:xt/id ALICE_SUBJECT)
        (:xt/id CREATE_PERSON_ACTION)
        {:xt/id ALICE})))))
 

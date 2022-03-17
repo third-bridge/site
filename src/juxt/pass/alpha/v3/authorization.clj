@@ -15,48 +15,41 @@
   action."
   [db actions]
 
-  (when-not (seq actions)
-    (throw (ex-info "No actions passed" {:actions actions})))
-
-  (let [rules
-        (vec (for [action actions
-                   :let [e (xt/entity db action)]
-                   rule (::pass/rules e)]
-               (conj rule ['action :xt/id action])))]
-    (when-not (seq rules)
-      (throw (ex-info "No rules found for actions" {:actions actions})))
-
-    rules))
+  (vec (for [action actions
+             :let [e (xt/entity db action)]
+             rule (::pass/rules e)]
+         (conj rule ['action :xt/id action]))))
 
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
   [db subject actions {:keys [resource purpose]}]
 
   (let [rules (actions->rules db actions)]
-    (xt/q
-     db
-     {:find '[(pull permission [*]) (pull action [*])]
-      :keys '[permission action]
-      :where
-      '[
-        [action ::site/type "Action"]
+    (when (seq rules)
+      (xt/q
+       db
+       {:find '[(pull permission [*]) (pull action [*])]
+        :keys '[permission action]
+        :where
+        '[
+          [action ::site/type "Action"]
 
-        ;; Only consider given actions
-        [(contains? actions action)]
+          ;; Only consider given actions
+          [(contains? actions action)]
 
-        ;; Only consider a permitted action
-        [permission ::site/type "Permission"]
-        [permission ::pass/action action]
-        (allowed? permission subject action resource)
+          ;; Only consider a permitted action
+          [permission ::site/type "Permission"]
+          [permission ::pass/action action]
+          (allowed? permission subject action resource)
 
-        ;; Only permissions that match our purpose
-        [permission ::pass/purpose purpose]]
+          ;; Only permissions that match our purpose
+          [permission ::pass/purpose purpose]]
 
-      :rules rules
+        :rules rules
 
-      :in '[subject actions resource purpose]}
+        :in '[subject actions resource purpose]}
 
-     subject actions resource purpose)))
+       subject actions resource purpose))))
 
 (defn allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
@@ -203,18 +196,21 @@
    arg
    (::pass/process arg-def)))
 
-(defn call-action [db {:keys [access-token scope resource]} action action-args]
+(defn call-action [db {:keys [resource purpose]} subject action action-args]
   (try
     ;; Check that we /can/ call the action
     (let [check-permissions-result
           (check-permissions
            db
-           {:access-token access-token
-            :scope scope
-            :actions #{action}
-            :resource resource})
+           subject
+           #{action}
+           {:resource resource :purpose purpose})
           action-doc (xt/entity db action)
-          _ (when-not action-doc (throw (ex-info "Action not found in db" {:action action})))
+          _ (when-not action-doc
+              (throw
+               (ex-info
+                (format "Action '%s' not found in db" action)
+                {:action action})))
           action-arg-defs (::pass/action-args action-doc [])
           _ (when-not (= (count action-arg-defs) (count action-args))
               (throw
@@ -224,7 +220,16 @@
                  :count-action-args (count action-args)})))]
 
       (when-not (seq check-permissions-result)
-        (throw (ex-info "Don't have permission!" {})))
+        (throw
+         (ex-info
+          (str "Don't have permission! " (pr-str {:subject subject
+                                                 :action action
+                                                 :resource resource
+                                                 :purpose purpose}))
+          {:subject subject
+           :action action
+           :resource resource
+           :purpose purpose})))
 
       (mapv
        (fn [arg arg-def]
@@ -236,15 +241,15 @@
       (log/errorf e "Error when calling action: %s" action)
       (throw e))))
 
-(defn call-action! [xt-node pass-ctx action & args]
+(defn call-action! [xt-node pass-ctx subject action & args]
   (let [tx (xt/submit-tx
             xt-node
-            [[::xt/fn "urn:site:tx-fns:call-action" pass-ctx action args]])]
+            [[::xt/fn "urn:site:tx-fns:call-action" pass-ctx subject action args]])]
 
     (xt/await-tx xt-node tx)
     (assert (xt/tx-committed? xt-node tx))))
 
 (defn register-call-action-fn []
   {:xt/id "urn:site:tx-fns:call-action"
-   :xt/fn '(fn [xt-ctx pass-ctx action args]
-             (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) pass-ctx action args))})
+   :xt/fn '(fn [xt-ctx pass-ctx subject action args]
+             (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) pass-ctx subject action args))})
