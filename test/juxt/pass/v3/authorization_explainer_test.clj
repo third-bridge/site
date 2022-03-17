@@ -181,7 +181,25 @@
 (def GET_RESOURCE
   {:xt/id "https://example.org/_site/actions/get-resource"
    ::site/type "Action"
-   ::pass/scope "read:resource"})
+   ::pass/scope "read:resource"
+   ::pass/rules
+   '[
+     ;; Anyone can read PUBLIC resources
+     [(allowed? permission access-token action resource)
+      [resource ::pass/classification "PUBLIC"]
+      [permission :xt/id]
+      [access-token :xt/id]
+      ]
+
+     ;; Only persons granted permission to read INTERNAL resources
+     [(allowed? permission access-token action resource)
+      [resource ::pass/classification "INTERNAL"]
+      [permission :xt/id]
+      [access-token :xt/id]
+      [permission ::person person]
+      [access-token ::pass/subject subject]
+      [subject ::person person]
+      ]]})
 
 (def ANYONE_CAN_READ_PUBLIC_RESOURCES
   {:xt/id "https://example.org/permissions/anyone-can-read-public-resources"
@@ -232,27 +250,7 @@
                    :resource (:xt/id resource)
                    :scope #{"read:resource"}
                    :access-token (:xt/id access-token)
-                   :rules '[
-                            ;; Anyone can read PUBLIC resources
-                            [
-                             (allowed? permission access-token action resource)
-                             [action :xt/id "https://example.org/_site/actions/get-resource"]
-                             [resource ::pass/classification "PUBLIC"]
-                             [permission :xt/id]
-                             [access-token :xt/id]
-                             ]
-
-                            ;; Only persons granted permission to read INTERNAL resources
-                            [
-                             (allowed? permission access-token action resource)
-                             [action :xt/id "https://example.org/_site/actions/get-resource"]
-                             [resource ::pass/classification "INTERNAL"]
-                             [permission :xt/id]
-                             [access-token :xt/id]
-                             [permission ::person person]
-                             [access-token ::pass/subject subject]
-                             [subject ::person person]
-                             ]]})]
+                   :rules (authz/actions->rules db #{(:xt/id GET_RESOURCE)})})]
           (if expected
             (is (seq permissions))
             (is (not (seq permissions)))))
@@ -297,7 +295,6 @@
    ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
    ::pass/rules
    '[[(allowed? permission access-token action resource)
-      #_[action :xt/id "https://example.org/actions/read-user-dir"]
       [action ::pass/resource-matches resource-regex]
       [access-token ::pass/subject subject]
       [permission ::person person]
@@ -317,7 +314,6 @@
    ::pass/action-args [{}]
    ::pass/rules
    '[[(allowed? permission access-token action resource)
-      #_[action :xt/id "https://example.org/actions/write-user-dir"]
       [action ::pass/resource-matches resource-regex]
       [access-token ::pass/subject subject]
       [permission ::person person]
@@ -334,7 +330,6 @@
    ::pass/scope "read:resource"
    ::pass/rules
    '[[(allowed? permission access-token action resource)
-      #_[action :xt/id "https://example.org/actions/read-shared"]
       [access-token ::pass/subject subject]
       [permission ::person person]
       [person ::type "Person"]
