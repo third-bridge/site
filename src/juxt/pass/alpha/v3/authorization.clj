@@ -93,34 +93,35 @@
 (defn allowed-subjects
   "Given a resource and a set of actions, which subjects can access and via which
   actions?"
-  [db {:keys [resource actions purpose scope rules]}]
-  (->> (xt/q
-        db
-        {:find '[subject action]
-         :keys '[subject action]
-         :where
-         '[
-           [permission ::site/type "Permission"]
-           [action ::site/type "Action"]
-           [permission ::pass/action action]
+  [db {:keys [resource actions purpose scope]}]
+  (let [rules (actions->rules db actions)]
+    (->> (xt/q
+          db
+          {:find '[subject action]
+           :keys '[subject action]
+           :where
+           '[
+             [permission ::site/type "Permission"]
+             [action ::site/type "Action"]
+             [permission ::pass/action action]
 
-           ;; Purpose
-           [permission ::pass/purpose purpose]
+             ;; Purpose
+             [permission ::pass/purpose purpose]
 
-           ;; Scope
-           [action ::pass/scope action-scope]
-           [(contains? scope action-scope)]
+             ;; Scope
+             [action ::pass/scope action-scope]
+             [(contains? scope action-scope)]
 
-           [(contains? actions action)]
-           [access-token ::pass/subject subject]
+             [(contains? actions action)]
+             [access-token ::pass/subject subject]
 
-           (allowed? permission access-token action resource)]
+             (allowed? permission access-token action resource)]
 
-         :rules rules
+           :rules rules
 
-         :in '[resource actions purpose scope]}
+           :in '[resource actions purpose scope]}
 
-        resource actions purpose scope)))
+          resource actions purpose scope))))
 
 (defn pull-allowed-resource
   "Given a subject, a set of possible actions and a resource, pull the allowed

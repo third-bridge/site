@@ -265,8 +265,8 @@
 
 
 #_((t/join-fixtures [with-xt])
-  (fn []
-))
+   (fn []
+     ))
 
 ;; User directories
 
@@ -425,8 +425,7 @@
 
   (let [db (xt/db *xt-node*)]
     (are [access-token actions resource ok?]
-        (let [rules (authz/actions->rules db actions)
-              scope (effective-scope db access-token)
+        (let [scope (effective-scope db access-token)
               actual (authz/check-permissions
                       db {:access-token access-token
                           :scope scope
@@ -435,74 +434,74 @@
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/read-user-dir"}
-        "https://example.org/~alice/private.txt"
-        true
+      "https://example.org/tokens/alice"
+      #{"https://example.org/actions/read-user-dir"}
+      "https://example.org/~alice/private.txt"
+      true
 
-        ;; Alice can read the file in her user directory which she has shared with
-        ;; Bob.
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/read-user-dir"}
-        "https://example.org/~alice/shared.txt"
-        true
+      ;; Alice can read the file in her user directory which she has shared with
+      ;; Bob.
+      "https://example.org/tokens/alice"
+      #{"https://example.org/actions/read-user-dir"}
+      "https://example.org/~alice/shared.txt"
+      true
 
-        ;; Bob cannot read Alice's private file.
-        "https://example.org/tokens/bob"
-        #{"https://example.org/actions/read-user-dir"}
-        "https://example.org/~alice/private.txt"
-        false
+      ;; Bob cannot read Alice's private file.
+      "https://example.org/tokens/bob"
+      #{"https://example.org/actions/read-user-dir"}
+      "https://example.org/~alice/private.txt"
+      false
 
-        ;; Bob can read the file Alice has shared with him.
-        "https://example.org/tokens/bob"
-        #{"https://example.org/actions/read-shared"}
-        "https://example.org/~alice/shared.txt"
-        true
+      ;; Bob can read the file Alice has shared with him.
+      "https://example.org/tokens/bob"
+      #{"https://example.org/actions/read-shared"}
+      "https://example.org/~alice/shared.txt"
+      true
 
-        ;; Alice can put a file to her user directory
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~alice/foo.txt"
-        true
+      ;; Alice can put a file to her user directory
+      "https://example.org/tokens/alice"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~alice/foo.txt"
+      true
 
-        ;; Alice can't put a file to her user directory without write:resource
-        ;; scope
-        "https://example.org/tokens/alice-readonly"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~alice/foo.txt"
-        false
+      ;; Alice can't put a file to her user directory without write:resource
+      ;; scope
+      "https://example.org/tokens/alice-readonly"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~alice/foo.txt"
+      false
 
-        ;; Alice can't put a file to Bob's user directory
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~bob/foo.txt"
-        false
+      ;; Alice can't put a file to Bob's user directory
+      "https://example.org/tokens/alice"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~bob/foo.txt"
+      false
 
-        ;; Alice can't put a file outside her user directory
-        "https://example.org/tokens/alice"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/index.html"
-        false
+      ;; Alice can't put a file outside her user directory
+      "https://example.org/tokens/alice"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/index.html"
+      false
 
-        ;; Bob can put a file to his user directory
-        "https://example.org/tokens/bob"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~bob/foo.txt"
-        true
+      ;; Bob can put a file to his user directory
+      "https://example.org/tokens/bob"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~bob/foo.txt"
+      true
 
-        ;; Bob can't put a file to Alice's directory
-        "https://example.org/tokens/bob"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~alice/foo.txt"
-        false
+      ;; Bob can't put a file to Alice's directory
+      "https://example.org/tokens/bob"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~alice/foo.txt"
+      false
 
-        ;; Carlos cannot put a file to his user directory, as he hasn't been
-        ;; granted the write-user-dir action.
-        "https://example.org/tokens/carlos"
-        #{"https://example.org/actions/write-user-dir"}
-        "https://example.org/~carlos/foo.txt"
-        false
-        )
+      ;; Carlos cannot put a file to his user directory, as he hasn't been
+      ;; granted the write-user-dir action.
+      "https://example.org/tokens/carlos"
+      #{"https://example.org/actions/write-user-dir"}
+      "https://example.org/~carlos/foo.txt"
+      false
+      )
 
     (are [access-token actions expected]
         (let [scope (effective-scope db access-token)]
@@ -515,57 +514,56 @@
 
       ;; Alice can see all her files.
       "https://example.org/tokens/alice"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        #{["https://example.org/~alice/shared.txt"]
-          ["https://example.org/~alice/private.txt"]}
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      #{["https://example.org/~alice/shared.txt"]
+        ["https://example.org/~alice/private.txt"]}
 
-        ;; Bob can only see the file Alice has shared with him.
-        "https://example.org/tokens/bob"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        #{["https://example.org/~alice/shared.txt"]}
+      ;; Bob can only see the file Alice has shared with him.
+      "https://example.org/tokens/bob"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      #{["https://example.org/~alice/shared.txt"]}
 
-        ;; Carlos sees nothing
-        "https://example.org/tokens/carlos"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        #{})
+      ;; Carlos sees nothing
+      "https://example.org/tokens/carlos"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      #{})
 
     ;; Given a resource and a set of actions, which subjects can access
     ;; and via which actions?
 
     (are [resource actions scope expected]
-        (let [rules (authz/actions->rules db actions)]
-          (is (= expected (authz/allowed-subjects
-                           db
-                           {:resource resource
-                            :actions actions
-                            :scope scope
-                            :rules rules}))))
+        (is (= expected (authz/allowed-subjects
+                         db
+                         {:resource resource
+                          :actions actions
+                          :scope scope})))
 
-        "https://example.org/~alice/shared.txt"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        #{"read:resource"}
-        #{{:subject "https://example.org/subjects/bob",
-           :action "https://example.org/actions/read-shared"}
-          {:subject "https://example.org/subjects/alice",
-           :action "https://example.org/actions/read-user-dir"}}
 
-        "https://example.org/~alice/private.txt"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        #{"read:resource"}
-        #{{:subject "https://example.org/subjects/alice",
-           :action "https://example.org/actions/read-user-dir"}}
+      "https://example.org/~alice/shared.txt"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      #{"read:resource"}
+      #{{:subject "https://example.org/subjects/bob",
+         :action "https://example.org/actions/read-shared"}
+        {:subject "https://example.org/subjects/alice",
+         :action "https://example.org/actions/read-user-dir"}}
 
-        ;; Cannot see anything without a scope
-        "https://example.org/~alice/shared.txt"
-        #{"https://example.org/actions/read-user-dir"
-          "https://example.org/actions/read-shared"}
-        #{}
-        #{})))
+      "https://example.org/~alice/private.txt"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      #{"read:resource"}
+      #{{:subject "https://example.org/subjects/alice",
+         :action "https://example.org/actions/read-user-dir"}}
+
+      ;; Cannot see anything without a scope
+      "https://example.org/~alice/shared.txt"
+      #{"https://example.org/actions/read-user-dir"
+        "https://example.org/actions/read-shared"}
+      #{}
+      #{})))
 
 (deftest constrained-pull-test
   (let [READ_USERNAME_ACTION
@@ -574,7 +572,7 @@
          ::pass/scope "read:user"
          ::pass/pull [::username]
          ::pass/rules
-        '[[(allowed? permission access-token action resource)
+         '[[(allowed? permission access-token action resource)
             [permission ::person person]
             [subject ::person person]
             [person ::type "Person"]
@@ -639,7 +637,7 @@
       [::xt/put READ_USERNAME_ACTION]
       [::xt/put READ_SECRETS_ACTION]
 
-      ; Permissions
+                                        ; Permissions
       [::xt/put BOB_CAN_READ_ALICE_USERNAME]
       [::xt/put BOB_CAN_READ_ALICE_SECRETS]
       [::xt/put CARLOS_CAN_READ_ALICE_USERNAME]
@@ -658,8 +656,8 @@
                   :rules (authz/actions->rules db #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)})})]
             (is (= expected actual)))
 
-          BOB_ACCESS_TOKEN {::username "alice" ::secret "foo"}
-          CARLOS_ACCESS_TOKEN {::username "alice"}))))
+        BOB_ACCESS_TOKEN {::username "alice" ::secret "foo"}
+        CARLOS_ACCESS_TOKEN {::username "alice"}))))
 
 (deftest pull-allowed-resources-test
   (let [READ_MESSAGE_CONTENT_ACTION
@@ -955,12 +953,12 @@
          ::pass/pull ['*]
          ::pass/rules
          '[[(allowed? permission access-token action resource)
-           [permission ::person person]
-           [subject ::person person]
-           [person ::type "Person"]
-           [access-token ::pass/subject subject]
-           [permission ::pass/purpose purpose]
-           [resource ::site/type "MedicalRecord"]]]}]
+            [permission ::person person]
+            [subject ::person person]
+            [person ::type "Person"]
+            [access-token ::pass/subject subject]
+            [permission ::pass/purpose purpose]
+            [resource ::site/type "MedicalRecord"]]]}]
 
     (submit-and-await!
      [
