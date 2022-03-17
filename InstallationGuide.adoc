@@ -1,4 +1,5 @@
 = Installation Guide
+:toc: preamble
 
 This is the long-winded installation guide to explain how to bootstrap a Site
 instance.
@@ -12,8 +13,8 @@ NOTE: In future it would be a good idea to create a docker image of a pre-instal
 Before you start, you'll need to have the following installed:
 
 * Java 17+ (Site uses new Java APIs such as `java.util.HexFormat`)
-* https://clojure.org/guides/getting_started[Clojure] and
-* https://github.com/babashka/babashka[Babashka] installed on your system.
+* https://clojure.org/guides/getting_started[Clojure]
+* https://github.com/babashka/babashka[Babashka]
 
 == Before you start
 
@@ -23,12 +24,28 @@ platform, if different.
 Run each command under your user account (i.e. not as root).
 
 For documentation purposes, we'll assume your Site server will be set up to run
-on the host site.test. If you choose another hostname, or are setting up for
-production, please amend instructions accordingly.
+on the host `site.test`. If you choose another hostname, or are setting up for
+production, please amend these instructions accordingly.
 
-== Configure your local DNS or /etc/hosts
+== Preparing your development environment for Site
 
-Edit /etc/hosts to point site.test at 127.0.0.1.
+=== Decide on a fully qualified hostname
+
+Site is a web server and is designed to be accessed over the network. Since Site
+resources are identified by URIs, you should decide on a hostname in a domain
+that you control.
+
+For the purposes of learning, development and local testing, it is a good idea
+to use a test hostname, such as `site.test`. These instructions are written
+assuming that you've chosen `site.test` as your hostname. If you're using your
+own hostname in a domain you control, amend these instructions accordingly.
+
+=== Configure your local DNS or /etc/hosts
+
+To access Site locally for bootstrapping we need to ensure requests to
+`site.test` are directed to the local service.
+
+Edit /etc/hosts to direct requests for `site.test` to 127.0.0.1.
 
 ----
 # Static table lookup for hostnames.
@@ -36,7 +53,9 @@ Edit /etc/hosts to point site.test at 127.0.0.1.
 127.0.0.1	localhost site.test
 ----
 
-== mkcert
+=== mkcert
+
+// TODO: Explain why we are doing this
 
 Install mkcert
 
@@ -54,13 +73,13 @@ The local CA is now installed in the system trust store! ⚡️
 The local CA is now installed in the Firefox and/or Chrome/Chromium trust store (requires browser restart)! 🦊
 ----
 
-== Install nginx
+=== Install nginx
 
 ----
 sudo pacman -Sy nginx-mainline
 ----
 
-== Create private key and cert
+=== Create private key and cert
 
 Create a new cert for the local development server, and move these into your
 nginx config directory.
@@ -70,7 +89,7 @@ mkcert site.test
 sudo mv site.test-key.pem site.test.pem /etc/nginx
 ----
 
-== Configure nginx
+=== Configure nginx
 
 Configure nginx. Use `etc/dev/nginx.conf` as a guide to what to configure. You'll need to reference your private key and cert via the `ssl_certificate` and `ssl_certificate_key` parameters.
 
@@ -113,7 +132,7 @@ Test your final configuration before you start nginx and fix any errors.
 sudo nginx -t
 ----
 
-== Start nginx
+=== Start nginx
 
 Start nginx
 
@@ -122,13 +141,17 @@ sudo systemctl enable nginx
 sudo systemctl start nginx
 ----
 
-== Clone this repo
+== Install Site
+
+=== Clone this repo
 
 ----
 $ git clone https://github.com/juxt/site
 ----
 
-== Configure
+== Configure the Site service
+
+=== Install the configuration file
 
 There's a sample configuration in `etc` you should copy to `$HOME/.config/site/config.edn`.
 
@@ -137,7 +160,11 @@ $ mkdir -p $HOME/.config/site
 $ cp site/etc/config.edn $HOME/.config/site/config.edn
 ----
 
-== Start the server
+IMPORTANT: If you're aren't using `site.test` as a hostname, edit the
+configuration to replace `https://site.test` with the URI that corresponds to
+the hostname you have chosen,
+
+== Start the Site server
 
 Start the Site server:
 
@@ -149,7 +176,10 @@ NOTE: Alternatively, if you're familiar with Clojure development, you can start
 the server via the `deps.edn` file and simply 'jack-in' with your editor or IDE
 as normal.
 
-//// should retain this somewhere else
+////
+
+(should retain this somewhere else)
+
 === Start multiple instances of the server
 
 If you require multiple Site servers to coexist on the same machine, you can start site passing a different configuration file as follows:
@@ -165,13 +195,13 @@ $ SITE_BASE_URI=http://localhost:5509 site/bin/site get-token -u admin
 ----
 ////
 
-== The REPL
+== Connect to Site's REPL
 
 If you've run Site via your development environment and 'jacked-in' you'll
 already have a REPL. Proceed to the next step.
 
 If you're running Site with `site/bin/site-server`, you'll need to connect a
-terminal to Site to access the REPL. You can do this via port 50505, which is a
+terminal to Site to access the REPL. You can do this via port `50505`, which is a
 socket REPL that Site starts by default.
 
 How you connect to this port is up to you. One way is via `ncat`, but you can replace `ncat` with `telnet`, or `netcat`, depending on what's available for your system.
@@ -200,7 +230,11 @@ $ rlwrap ncat localhost 50505
 
 == Bootstrap required resources
 
-Bootstrap the new system by adding the minimum resources that are required to allow remote access.
+A Site instance is a collection of documents, stored in XTDB. Like XTDB, Site is
+schemaless and requires that you define your own documents. However, by included
+document attributes known to Site (usually in the `juxt.site.alpha` namespace)
+Site is able to interpret the documents as web or API resources, and serve them
+over HTTP.
 
 ----
 Site by JUXT. Copyright (c) 2021, JUXT LTD.
@@ -208,6 +242,48 @@ Type :repl/quit to exit
 
 site>
 ----
+
+[TIP]
+--
+There are a few useful Site REPL commands you should be familiar with:
+
+(ls):: List all resources
+(ls <pat>):: List all resources whose URIs match the pattern
+(evict! <uri>+):: Delete resource(s)
+--
+
+=== Create actions
+
+Actions are at the heart of Site:
+
+* Actions allow you to read and write to the database.
+* Actions are composeable.
+* Actions can call external functions, such as lambdas.
+* Actions are restricted to authorized users and applications.
+* Actions can be exposed to the network, via OpenAPI and GraphQL.
+
+.Creating the create-user action
+====
+
+[source,clojure]
+----
+{:xt/id "https://example.org/actions/create-person"
+ :juxt.site.alpha/type "Action"
+ :juxt.pass.alpha/scope "write:admin"
+ :juxt.pass.alpha/action-args
+ [{:juxt.pass.alpha.malli/schema
+   [:map
+    [:my/type [:= "Person"]]
+    [:my/username [:string]]]
+
+   :juxt.pass.alpha/process
+   [
+    [:juxt.pass.alpha/merge {:my/type "Person"}]
+    [:juxt.pass.alpha.malli/validate]]}]}
+----
+
+====
+
 
 === Install the admin app
 
@@ -263,11 +339,13 @@ Finally, create the access token that has permission to call administrative acti
 
 The site tool is a command-line utility that allows you to remotely administer site.
 
+****
 If you're on MacOS, you will need to install the GNU version of `readlink`. You can do so with brew:
 ```
 brew install coreutils
 ln -s /usr/local/bin/readlink /usr/local/bin/readlink
 ```
+****
 
 We must first get a token that we can use for API access. This process authenticates to the site server using your password.
 
@@ -282,7 +360,9 @@ Now we can use the site tool for remote administration. Try the following:
 $ site/bin/site list-users
 ----
 
-== Configure the expiry time for tokens
+== Post installation steps
+
+=== Configure the expiry time for tokens
 
 By default, tokens last for an hour. That can sometimes mean they expire during
 work sessions. You can set the expiry time of new tokens via the REPL.
