@@ -21,35 +21,37 @@
 
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
-  [db {:keys [access-token scope actions purpose resource rules]}]
+  [db {:keys [access-token scope actions purpose resource]}]
 
-  (assert (seq rules) "No rules provided")
+  (let [rules (actions->rules db actions)]
 
-  (xt/q
-   db
-   {:find '[(pull permission [*]) (pull action [*])]
-    :keys '[permission action]
-    :where
-    '[
-      [permission ::site/type "Permission"]
-      [action ::site/type "Action"]
-      [permission ::pass/action action]
+    (assert (seq rules) "No rules provided")
 
-      ;; Purpose
-      [permission ::pass/purpose purpose]
+    (xt/q
+     db
+     {:find '[(pull permission [*]) (pull action [*])]
+      :keys '[permission action]
+      :where
+      '[
+        [permission ::site/type "Permission"]
+        [action ::site/type "Action"]
+        [permission ::pass/action action]
 
-      ;; Scope
-      [action ::pass/scope action-scope]
-      [(contains? scope action-scope)]
+        ;; Purpose
+        [permission ::pass/purpose purpose]
 
-      [(contains? actions action)]
-      (allowed? permission access-token action resource)]
+        ;; Scope
+        [action ::pass/scope action-scope]
+        [(contains? scope action-scope)]
 
-    :rules rules
+        [(contains? actions action)]
+        (allowed? permission access-token action resource)]
 
-    :in '[access-token scope actions purpose resource]}
+      :rules rules
 
-   access-token scope actions purpose resource))
+      :in '[access-token scope actions purpose resource]}
+
+     access-token scope actions purpose resource)))
 
 (defn allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"

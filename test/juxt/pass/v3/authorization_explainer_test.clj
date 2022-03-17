@@ -249,8 +249,7 @@
                db {:actions #{(:xt/id GET_RESOURCE)}
                    :resource (:xt/id resource)
                    :scope #{"read:resource"}
-                   :access-token (:xt/id access-token)
-                   :rules (authz/actions->rules db #{(:xt/id GET_RESOURCE)})})]
+                   :access-token (:xt/id access-token)})]
           (if expected
             (is (seq permissions))
             (is (not (seq permissions)))))
@@ -432,8 +431,7 @@
                       db {:access-token access-token
                           :scope scope
                           :actions actions
-                          :resource resource
-                          :rules rules})]
+                          :resource resource})]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
@@ -1144,8 +1142,7 @@
        (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
          {:access-token access-token
           :scope (effective-scope db access-token)
-          :actions #{(:xt/id CREATE_PERSON_ACTION)}
-          :rules (authz/actions->rules db #{(:xt/id CREATE_PERSON_ACTION)})}))))
+          :actions #{(:xt/id CREATE_PERSON_ACTION)}}))))
     (is
      (not
       (seq
@@ -1154,8 +1151,7 @@
         (let [access-token (:xt/id SUE_READONLY_ACCESS_TOKEN)]
           {:access-token access-token
            :scope (effective-scope db access-token)
-           :actions #{(:xt/id CREATE_PERSON_ACTION)}
-           :rules (authz/actions->rules db #{(:xt/id CREATE_PERSON_ACTION)})}))))))
+           :actions #{(:xt/id CREATE_PERSON_ACTION)}}))))))
 
   (authz/call-action!
    *xt-node*
