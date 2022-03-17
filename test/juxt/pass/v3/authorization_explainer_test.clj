@@ -505,18 +505,16 @@
         )
 
     (are [access-token actions expected]
-        (let [rules (authz/actions->rules db actions)
-              scope (effective-scope db access-token)]
+        (let [scope (effective-scope db access-token)]
           (is (= expected
                  (authz/allowed-resources
                   db
                   {:access-token access-token
                    :scope scope
-                   :actions actions
-                   :rules rules}))))
+                   :actions actions}))))
 
       ;; Alice can see all her files.
-        "https://example.org/tokens/alice"
+      "https://example.org/tokens/alice"
         #{"https://example.org/actions/read-user-dir"
           "https://example.org/actions/read-shared"}
         #{["https://example.org/~alice/shared.txt"]

@@ -14,19 +14,25 @@
   "Determine rules for the given action ids. Each rule is bound to the given
   action."
   [db actions]
-  (vec (for [action actions
-             :let [e (xt/entity db action)]
-             rule (::pass/rules e)]
-         (conj rule ['action :xt/id action]))))
+
+  (when-not (seq actions)
+    (throw (ex-info "No actions passed" {:actions actions})))
+
+  (let [rules
+        (vec (for [action actions
+                   :let [e (xt/entity db action)]
+                   rule (::pass/rules e)]
+               (conj rule ['action :xt/id action])))]
+    (when-not (seq rules)
+      (throw (ex-info "No rules found for actions" {:actions actions})))
+
+    rules))
 
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
   [db {:keys [access-token scope actions purpose resource]}]
 
   (let [rules (actions->rules db actions)]
-
-    (assert (seq rules) "No rules provided")
-
     (xt/q
      db
      {:find '[(pull permission [*]) (pull action [*])]
@@ -55,31 +61,32 @@
 
 (defn allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
-  [db {:keys [access-token scope actions purpose rules]}]
-  (xt/q
-   db
-   {:find '[resource]
-    :where
-    '[
-      [permission ::site/type "Permission"]
-      [action ::site/type "Action"]
-      [permission ::pass/action action]
+  [db {:keys [access-token scope actions purpose]}]
+  (let [rules (actions->rules db actions)]
+    (xt/q
+     db
+     {:find '[resource]
+      :where
+      '[
+        [permission ::site/type "Permission"]
+        [action ::site/type "Action"]
+        [permission ::pass/action action]
 
-      ;; Purpose
-      [permission ::pass/purpose purpose]
+        ;; Purpose
+        [permission ::pass/purpose purpose]
 
-      ;; Scope
-      [action ::pass/scope action-scope]
-      [(contains? scope action-scope)]
+        ;; Scope
+        [action ::pass/scope action-scope]
+        [(contains? scope action-scope)]
 
-      [(contains? actions action)]
-      (allowed? permission access-token action resource)]
+        [(contains? actions action)]
+        (allowed? permission access-token action resource)]
 
-    :rules rules
+      :rules rules
 
-    :in '[access-token scope actions purpose]}
+      :in '[access-token scope actions purpose]}
 
-   access-token scope actions purpose))
+     access-token scope actions purpose)))
 
 ;; TODO: How is this call protected from unauthorized use? Must call this with
 ;; access-token to verify subject.
