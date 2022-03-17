@@ -1148,7 +1148,7 @@
      {:access-token access-token
       :scope scope}
      (:xt/id CREATE_PERSON_ACTION)
-     [{:xt/id ALICE ::username "alice"}]))
+     {:xt/id ALICE ::username "alice"}))
 
   (is (xt/entity (xt/db *xt-node*) ALICE))
 
@@ -1164,7 +1164,7 @@
        {:access-token access-token
         :scope scope}
        (:xt/id CREATE_PERSON_ACTION)
-       [{:xt/id ALICE}])))))
+       {:xt/id ALICE})))))
 
 #_((t/join-fixtures [with-xt])
    (fn []

@@ -253,7 +253,7 @@
       (log/errorf e "Error when calling action: %s" action)
       (throw e))))
 
-(defn call-action! [xt-node {:keys [access-token scope resource]} action args]
+(defn call-action! [xt-node {:keys [access-token scope resource]} action & args]
   (let [tx (xt/submit-tx
             xt-node
             [[::xt/fn "urn:site:tx-fns:call-action"
