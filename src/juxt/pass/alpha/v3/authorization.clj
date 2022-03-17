@@ -144,8 +144,9 @@
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed, and
   get me the documents"
-  [db {:keys [access-token scope actions purpose rules include-rules]}]
-  (let [results
+  [db {:keys [access-token scope actions purpose include-rules]}]
+  (let [rules (actions->rules db actions)
+        results
         (xt/q
          db
          {:find '[resource (pull action [::xt/id ::pass/pull]) purpose permission]

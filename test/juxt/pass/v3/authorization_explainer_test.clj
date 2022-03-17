@@ -652,8 +652,7 @@
                  {:access-token (:xt/id access-token)
                   :scope #{"read:user"}
                   :actions #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
-                  :resource (:xt/id ALICE)
-                  :rules (authz/actions->rules db #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)})})]
+                  :resource (:xt/id ALICE)})]
             (is (= expected actual)))
 
         BOB_ACCESS_TOKEN {::username "alice" ::secret "foo"}
@@ -811,9 +810,7 @@
                {:access-token (:xt/id access-token)
                 :scope #{"read:messages"}
                 :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                           (:xt/id READ_MESSAGE_METADATA_ACTION)}
-                :rules (authz/actions->rules db #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                                                  (:xt/id READ_MESSAGE_METADATA_ACTION)})})))]
+                           (:xt/id READ_MESSAGE_METADATA_ACTION)}})))]
 
       ;; Alice and Bob can read all the messages in the group
       (let [messages (get-messages ALICE_ACCESS_TOKEN)]
@@ -845,8 +842,6 @@
                     :scope #{"read:messages"}
                     :actions #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                                (:xt/id READ_MESSAGE_METADATA_ACTION)}
-                    :rules (authz/actions->rules db #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
-                                                      (:xt/id READ_MESSAGE_METADATA_ACTION)})
                     :include-rules [['(include? access-token action message)
                                      ['message ::from (:xt/id ALICE)]]]}))))))))
 
@@ -923,8 +918,7 @@
                db
                {:access-token (:xt/id access-token)
                 :scope #{"read:health"}
-                :actions #{(:xt/id action)}
-                :rules (authz/actions->rules db #{(:xt/id action)})})))
+                :actions #{(:xt/id action)}})))
 
           get-medical-record
           (fn [access-token action]
@@ -934,8 +928,7 @@
                {:access-token (:xt/id access-token)
                 :scope #{"read:health"}
                 :actions #{(:xt/id action)}
-                :resource "https://example.org/alice/medical-record"
-                :rules (authz/actions->rules db #{(:xt/id action)})})))]
+                :resource "https://example.org/alice/medical-record"})))]
 
       (is (zero? (count (get-medical-records OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION))))
       (is (= 1 (count (get-medical-records OSCAR_ACCESS_TOKEN EMERGENCY_READ_MEDICAL_RECORD_ACTION))))
@@ -1006,8 +999,7 @@
                {:access-token (:xt/id access-token)
                 :scope #{"read:health"}
                 :actions #{(:xt/id action)}
-                :purpose purpose
-                :rules (authz/actions->rules db #{(:xt/id action)})})))
+                :purpose purpose})))
 
           get-medical-record
           (fn [access-token action purpose]
@@ -1018,8 +1010,7 @@
                 :scope #{"read:health"}
                 :actions #{(:xt/id action)}
                 :purpose purpose
-                :resource "https://example.org/alice/medical-record"
-                :rules (authz/actions->rules db #{(:xt/id action)})})))]
+                :resource "https://example.org/alice/medical-record"})))]
 
       (is (zero? (count (get-medical-records OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing"))))
       (is (= 1 (count (get-medical-records OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency"))))
