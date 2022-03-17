@@ -71,19 +71,22 @@
      {:find '[resource]
       :where
       '[
-        [permission ::site/type "Permission"]
         [action ::site/type "Action"]
-        [permission ::pass/action action]
 
-        ;; Purpose
-        [permission ::pass/purpose purpose]
+        ;; Only consider given actions
+        [(contains? actions action)]
 
-        ;; Scope
+        ;; Only consider the action if in scope
         [action ::pass/scope action-scope]
         [(contains? scope action-scope)]
 
-        [(contains? actions action)]
-        (allowed? permission access-token action resource)]
+        ;; Only consider a permitted action
+        [permission ::site/type "Permission"]
+        [permission ::pass/action action]
+        (allowed? permission access-token action resource)
+
+        ;; Only permissions that match our purpose
+        [permission ::pass/purpose purpose]]
 
       :rules rules
 
@@ -104,21 +107,24 @@
            :keys '[subject action]
            :where
            '[
-             [permission ::site/type "Permission"]
              [action ::site/type "Action"]
-             [permission ::pass/action action]
 
-             ;; Purpose
-             [permission ::pass/purpose purpose]
+             ;; Only consider given actions
+             [(contains? actions action)]
 
-             ;; Scope
+             ;; Only consider the action if in scope
              [action ::pass/scope action-scope]
              [(contains? scope action-scope)]
 
-             [(contains? actions action)]
-             [access-token ::pass/subject subject]
+             ;; Only consider a permitted action
+             [permission ::site/type "Permission"]
+             [permission ::pass/action action]
+             (allowed? permission access-token action resource)
 
-             (allowed? permission access-token action resource)]
+             ;; Only permissions that match our purpose
+             [permission ::pass/purpose purpose]
+
+             [access-token ::pass/subject subject]]
 
            :rules rules
 
