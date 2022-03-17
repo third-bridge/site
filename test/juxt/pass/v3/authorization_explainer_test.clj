@@ -2,12 +2,8 @@
 
 #_(remove-ns 'juxt.pass.v3.authorization-explainer-test)
 
-;; TODO: Remove access-tokens
-
 ;; TODO: Build back access-token concept, scopes and filtering of available
 ;; actions.
-
-;; TODO: Make consistent with subjects
 
 (ns juxt.pass.v3.authorization-explainer-test
   (:require
@@ -61,7 +57,7 @@
 ;; Applications. Applications access APIs on behalf of subjects. In most cases,
 ;; you can't access an API, certainly not a private one, without an application.
 
-(def USER_APP
+#_(def USER_APP
   {:xt/id "https://example.org/_site/apps/user"
    ::name "User App"
    ::pass/client-id "100"
