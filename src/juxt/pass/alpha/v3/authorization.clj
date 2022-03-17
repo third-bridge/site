@@ -10,6 +10,12 @@
 (alias 'pass.malli (create-ns 'juxt.pass.alpha.malli))
 (alias 'site (create-ns 'juxt.site.alpha))
 
+(defn actions->rules [db actions]
+  (vec (for [action actions
+             :let [e (xt/entity db action)]
+             rule (::pass/rules e)]
+         rule)))
+
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
   [db {:keys [access-token scope actions purpose resource rules]}]

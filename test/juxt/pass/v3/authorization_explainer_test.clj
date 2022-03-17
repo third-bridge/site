@@ -393,12 +393,6 @@
     (cond-> scope
       access-token-scope (set/intersection access-token-scope))))
 
-(defn actions->rules [db actions]
-  (vec (for [action actions
-             :let [e (xt/entity db action)]
-             rule (::pass/rules e)]
-         rule)))
-
 (deftest user-dir-test
   (submit-and-await!
    [
@@ -437,7 +431,7 @@
 
   (let [db (xt/db *xt-node*)]
     (are [access-token actions resource ok?]
-        (let [rules (actions->rules db actions)
+        (let [rules (authz/actions->rules db actions)
               scope (effective-scope db access-token)
               actual (authz/check-permissions
                       db {:access-token access-token
@@ -518,7 +512,7 @@
         )
 
     (are [access-token actions expected]
-        (let [rules (actions->rules db actions)
+        (let [rules (authz/actions->rules db actions)
               scope (effective-scope db access-token)]
           (is (= expected
                  (authz/allowed-resources
@@ -550,19 +544,19 @@
     ;; Given a resource and a set of actions, which subjects can access
     ;; and via which actions?
 
-    (are [resource actions scope rules expected]
-        (is (= expected (authz/allowed-subjects
-                         db
-                         {:resource resource
-                          :actions actions
-                          :scope scope
-                          :rules rules})))
+    (are [resource actions scope expected]
+        (let [rules (authz/actions->rules db actions)]
+          (is (= expected (authz/allowed-subjects
+                           db
+                           {:resource resource
+                            :actions actions
+                            :scope scope
+                            :rules rules}))))
 
         "https://example.org/~alice/shared.txt"
         #{"https://example.org/actions/read-user-dir"
           "https://example.org/actions/read-shared"}
         #{"read:resource"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
         #{{:subject "https://example.org/subjects/bob",
            :action "https://example.org/actions/read-shared"}
           {:subject "https://example.org/subjects/alice",
@@ -572,7 +566,6 @@
         #{"https://example.org/actions/read-user-dir"
           "https://example.org/actions/read-shared"}
         #{"read:resource"}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
         #{{:subject "https://example.org/subjects/alice",
            :action "https://example.org/actions/read-user-dir"}}
 
@@ -581,7 +574,6 @@
         #{"https://example.org/actions/read-user-dir"
           "https://example.org/actions/read-shared"}
         #{}
-        (vec (concat READ_USER_DIR_RULES READ_SHARED_RULES))
         #{})))
 
 (deftest constrained-pull-test
