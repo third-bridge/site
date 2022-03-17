@@ -30,7 +30,7 @@
 
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
-  [db {:keys [access-token scope actions purpose resource]}]
+  [db subject actions {:keys [resource purpose]}]
 
   (let [rules (actions->rules db actions)]
     (xt/q
@@ -44,27 +44,23 @@
         ;; Only consider given actions
         [(contains? actions action)]
 
-        ;; Only consider the action if in scope
-        [action ::pass/scope action-scope]
-        [(contains? scope action-scope)]
-
         ;; Only consider a permitted action
         [permission ::site/type "Permission"]
         [permission ::pass/action action]
-        (allowed? permission access-token action resource)
+        (allowed? permission subject action resource)
 
         ;; Only permissions that match our purpose
         [permission ::pass/purpose purpose]]
 
       :rules rules
 
-      :in '[access-token scope actions purpose resource]}
+      :in '[subject actions resource purpose]}
 
-     access-token scope actions purpose resource)))
+     subject actions resource purpose)))
 
 (defn allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
-  [db {:keys [access-token scope actions purpose]}]
+  [db subject actions {:keys [purpose]}]
   (let [rules (actions->rules db actions)]
     (xt/q
      db
@@ -76,30 +72,26 @@
         ;; Only consider given actions
         [(contains? actions action)]
 
-        ;; Only consider the action if in scope
-        [action ::pass/scope action-scope]
-        [(contains? scope action-scope)]
-
         ;; Only consider a permitted action
         [permission ::site/type "Permission"]
         [permission ::pass/action action]
-        (allowed? permission access-token action resource)
+        (allowed? permission subject action resource)
 
         ;; Only permissions that match our purpose
         [permission ::pass/purpose purpose]]
 
       :rules rules
 
-      :in '[access-token scope actions purpose]}
+      :in '[subject actions purpose]}
 
-     access-token scope actions purpose)))
+      subject actions purpose)))
 
 ;; TODO: How is this call protected from unauthorized use? Must call this with
 ;; access-token to verify subject.
 (defn allowed-subjects
   "Given a resource and a set of actions, which subjects can access and via which
   actions?"
-  [db {:keys [resource actions purpose scope]}]
+  [db resource actions {:keys [purpose]}]
   (let [rules (actions->rules db actions)]
     (->> (xt/q
           db
@@ -112,37 +104,32 @@
              ;; Only consider given actions
              [(contains? actions action)]
 
-             ;; Only consider the action if in scope
-             [action ::pass/scope action-scope]
-             [(contains? scope action-scope)]
-
              ;; Only consider a permitted action
              [permission ::site/type "Permission"]
              [permission ::pass/action action]
-             (allowed? permission access-token action resource)
+             (allowed? permission subject action resource)
 
              ;; Only permissions that match our purpose
              [permission ::pass/purpose purpose]
 
-             [access-token ::pass/subject subject]]
+             #_[access-token ::pass/subject subject]]
 
            :rules rules
 
-           :in '[resource actions purpose scope]}
+           :in '[resource actions purpose]}
 
-          resource actions purpose scope))))
+          resource actions purpose))))
 
 (defn pull-allowed-resource
   "Given a subject, a set of possible actions and a resource, pull the allowed
   attributes."
-  [db {:keys [access-token scope actions purpose resource]}]
+  [db subject actions resource {:keys [purpose]}]
   (let [check-result
         (check-permissions
          db
-         {:access-token access-token
-          :scope scope
-          :actions actions
-          :purpose purpose
+         subject
+         actions
+         {:purpose purpose
           :resource resource})
 
         pull-expr (vec (mapcat

@@ -185,19 +185,17 @@
    ::pass/rules
    '[
      ;; Anyone can read PUBLIC resources
-     [(allowed? permission access-token action resource)
+     [(allowed? permission subject action resource)
       [resource ::pass/classification "PUBLIC"]
       [permission :xt/id]
-      [access-token :xt/id]
+      [subject :xt/id]
       ]
 
      ;; Only persons granted permission to read INTERNAL resources
-     [(allowed? permission access-token action resource)
+     [(allowed? permission subject action resource)
       [resource ::pass/classification "INTERNAL"]
       [permission :xt/id]
-      [access-token :xt/id]
       [permission ::person person]
-      [access-token ::pass/subject subject]
       [subject ::person person]
       ]]})
 
@@ -229,11 +227,6 @@
     [::xt/put CARLOS_SUBJECT]
     [::xt/put ANONYMOUS_SUBJECT]
 
-    ;; Access tokens
-    [::xt/put ALICE_ACCESS_TOKEN]
-    [::xt/put CARLOS_ACCESS_TOKEN]
-    [::xt/put ANONYMOUS_ACCESS_TOKEN]
-
     ;; Resources
     [::xt/put LOGIN_PAGE]
     [::xt/put EMPLOYEE_LIST]
@@ -243,25 +236,25 @@
     [::xt/put ALICE_CAN_READ_INTERNAL_RESOURCES]])
 
   (let [db (xt/db *xt-node*)]
-    (are [access-token resource expected]
+    (are [subject resource expected]
         (let [permissions
               (authz/check-permissions
-               db {:actions #{(:xt/id GET_RESOURCE_ACTION)}
-                   :resource (:xt/id resource)
-                   :scope #{"read:resource"}
-                   :access-token (:xt/id access-token)})]
+               db
+               (:xt/id subject)
+               #{(:xt/id GET_RESOURCE_ACTION)}
+               {:resource (:xt/id resource)})]
           (if expected
             (is (seq permissions))
             (is (not (seq permissions)))))
 
-      ALICE_ACCESS_TOKEN LOGIN_PAGE true
-      ALICE_ACCESS_TOKEN EMPLOYEE_LIST true
+      ALICE_SUBJECT LOGIN_PAGE true
+      ALICE_SUBJECT EMPLOYEE_LIST true
 
-      CARLOS_ACCESS_TOKEN LOGIN_PAGE true
-      CARLOS_ACCESS_TOKEN EMPLOYEE_LIST false
+      CARLOS_SUBJECT LOGIN_PAGE true
+      CARLOS_SUBJECT EMPLOYEE_LIST false
 
-      ANONYMOUS_ACCESS_TOKEN LOGIN_PAGE true
-      ANONYMOUS_ACCESS_TOKEN EMPLOYEE_LIST false)))
+      ANONYMOUS_SUBJECT LOGIN_PAGE true
+      ANONYMOUS_SUBJECT EMPLOYEE_LIST false)))
 
 
 #_((t/join-fixtures [with-xt])
@@ -293,9 +286,8 @@
    ::pass/scope "read:resource"
    ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
    ::pass/rules
-   '[[(allowed? permission access-token action resource)
+   '[[(allowed? permission subject action resource)
       [action ::pass/resource-matches resource-regex]
-      [access-token ::pass/subject subject]
       [permission ::person person]
       [subject ::person person]
       [person ::type "Person"]
@@ -312,9 +304,8 @@
    ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
    ::pass/action-args [{}]
    ::pass/rules
-   '[[(allowed? permission access-token action resource)
+   '[[(allowed? permission subject action resource)
       [action ::pass/resource-matches resource-regex]
-      [access-token ::pass/subject subject]
       [permission ::person person]
       [subject ::person person]
       [person ::type "Person"]
@@ -328,8 +319,7 @@
    ::site/type "Action"
    ::pass/scope "read:resource"
    ::pass/rules
-   '[[(allowed? permission access-token action resource)
-      [access-token ::pass/subject subject]
+   '[[(allowed? permission subject action resource)
       [permission ::person person]
       [person ::type "Person"]
       [subject ::person person]
@@ -424,109 +414,107 @@
     [::xt/put ALICES_SHARES_FILE_WITH_BOB]])
 
   (let [db (xt/db *xt-node*)]
-    (are [access-token actions resource ok?]
-        (let [scope (effective-scope db access-token)
-              actual (authz/check-permissions
-                      db {:access-token access-token
-                          :scope scope
-                          :actions actions
-                          :resource resource})]
+    (are [subject actions resource ok?]
+        (let [actual (authz/check-permissions
+                      db
+                      (:xt/id subject) actions
+                      {:resource resource})]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
-      "https://example.org/tokens/alice"
+      ALICE_SUBJECT
       #{"https://example.org/actions/read-user-dir"}
       "https://example.org/~alice/private.txt"
       true
 
       ;; Alice can read the file in her user directory which she has shared with
       ;; Bob.
-      "https://example.org/tokens/alice"
+      ALICE_SUBJECT
       #{"https://example.org/actions/read-user-dir"}
       "https://example.org/~alice/shared.txt"
       true
 
       ;; Bob cannot read Alice's private file.
-      "https://example.org/tokens/bob"
+      BOB_SUBJECT
       #{"https://example.org/actions/read-user-dir"}
       "https://example.org/~alice/private.txt"
       false
 
       ;; Bob can read the file Alice has shared with him.
-      "https://example.org/tokens/bob"
+      BOB_SUBJECT
       #{"https://example.org/actions/read-shared"}
       "https://example.org/~alice/shared.txt"
       true
 
       ;; Alice can put a file to her user directory
-      "https://example.org/tokens/alice"
+      ALICE_SUBJECT
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/~alice/foo.txt"
       true
 
       ;; Alice can't put a file to her user directory without write:resource
       ;; scope
-      "https://example.org/tokens/alice-readonly"
-      #{"https://example.org/actions/write-user-dir"}
-      "https://example.org/~alice/foo.txt"
-      false
+
+      ;; TODO: Scope checks can and should be done independently of checking permissions
+                                        ;      "https://example.org/tokens/alice-readonly"
+                                        ;      #{"https://example.org/actions/write-user-dir"}
+                                        ;      "https://example.org/~alice/foo.txt"
+                                        ;      false
 
       ;; Alice can't put a file to Bob's user directory
-      "https://example.org/tokens/alice"
+      ALICE_SUBJECT
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/~bob/foo.txt"
       false
 
       ;; Alice can't put a file outside her user directory
-      "https://example.org/tokens/alice"
+      ALICE_SUBJECT
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/index.html"
       false
 
       ;; Bob can put a file to his user directory
-      "https://example.org/tokens/bob"
+      BOB_SUBJECT
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/~bob/foo.txt"
       true
 
       ;; Bob can't put a file to Alice's directory
-      "https://example.org/tokens/bob"
+      BOB_SUBJECT
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/~alice/foo.txt"
       false
 
       ;; Carlos cannot put a file to his user directory, as he hasn't been
       ;; granted the write-user-dir action.
-      "https://example.org/tokens/carlos"
+      CARLOS_SUBJECT
       #{"https://example.org/actions/write-user-dir"}
       "https://example.org/~carlos/foo.txt"
       false
       )
 
-    (are [access-token actions expected]
-        (let [scope (effective-scope db access-token)]
-          (is (= expected
-                 (authz/allowed-resources
-                  db
-                  {:access-token access-token
-                   :scope scope
-                   :actions actions}))))
+    (are [subject actions expected]
+        (is (= expected
+               (authz/allowed-resources
+                db
+                (:xt/id subject) actions
+                {})))
 
       ;; Alice can see all her files.
-      "https://example.org/tokens/alice"
+      ALICE_SUBJECT
       #{"https://example.org/actions/read-user-dir"
         "https://example.org/actions/read-shared"}
       #{["https://example.org/~alice/shared.txt"]
         ["https://example.org/~alice/private.txt"]}
 
       ;; Bob can only see the file Alice has shared with him.
-      "https://example.org/tokens/bob"
+      BOB_SUBJECT
       #{"https://example.org/actions/read-user-dir"
         "https://example.org/actions/read-shared"}
       #{["https://example.org/~alice/shared.txt"]}
 
       ;; Carlos sees nothing
-      "https://example.org/tokens/carlos"
+      CARLOS_SUBJECT
       #{"https://example.org/actions/read-user-dir"
         "https://example.org/actions/read-shared"}
       #{})
@@ -534,36 +522,31 @@
     ;; Given a resource and a set of actions, which subjects can access
     ;; and via which actions?
 
-    (are [resource actions scope expected]
-        (is (= expected (authz/allowed-subjects
-                         db
-                         {:resource resource
-                          :actions actions
-                          :scope scope})))
-
+    #_(are [resource actions expected]
+          (is (= expected (authz/allowed-subjects
+                           db
+                           resource actions
+                           {})))
 
       "https://example.org/~alice/shared.txt"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      #{"read:resource"}
-      #{{:subject "https://example.org/subjects/bob",
-         :action "https://example.org/actions/read-shared"}
-        {:subject "https://example.org/subjects/alice",
-         :action "https://example.org/actions/read-user-dir"}}
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        #{{:subject "https://example.org/subjects/bob",
+           :action "https://example.org/actions/read-shared"}
+          {:subject "https://example.org/subjects/alice",
+           :action "https://example.org/actions/read-user-dir"}}
 
-      "https://example.org/~alice/private.txt"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      #{"read:resource"}
-      #{{:subject "https://example.org/subjects/alice",
-         :action "https://example.org/actions/read-user-dir"}}
+        "https://example.org/~alice/private.txt"
+        #{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        #{{:subject "https://example.org/subjects/alice",
+           :action "https://example.org/actions/read-user-dir"}}
 
-      ;; Cannot see anything without a scope
-      "https://example.org/~alice/shared.txt"
-      #{"https://example.org/actions/read-user-dir"
-        "https://example.org/actions/read-shared"}
-      #{}
-      #{})))
+        ;; Cannot see anything without a scope
+        #_"https://example.org/~alice/shared.txt"
+        #_#{"https://example.org/actions/read-user-dir"
+          "https://example.org/actions/read-shared"}
+        #_#{})))
 
 (deftest constrained-pull-test
   (let [READ_USERNAME_ACTION
@@ -572,11 +555,10 @@
          ::pass/scope "read:user"
          ::pass/pull [::username]
          ::pass/rules
-         '[[(allowed? permission access-token action resource)
+         '[[(allowed? permission subject action resource)
             [permission ::person person]
             [subject ::person person]
             [person ::type "Person"]
-            [access-token ::pass/subject subject]
             [permission ::pass/resource resource]]]}
 
         READ_SECRETS_ACTION
@@ -585,11 +567,10 @@
          ::pass/scope "read:user"
          ::pass/pull [::secret]
          ::pass/rules
-         '[[(allowed? permission access-token action resource)
+         '[[(allowed? permission subject action resource)
             [permission ::person person]
             [subject ::person person]
             [person ::type "Person"]
-            [access-token ::pass/subject subject]
             [permission ::pass/resource resource]]]}
 
         BOB_CAN_READ_ALICE_USERNAME
@@ -645,18 +626,18 @@
 
     ;; Bob can read Alice's secret
     (let [db (xt/db *xt-node*)]
-      (are [access-token expected]
+      (are [subject expected]
           (let [actual
                 (authz/pull-allowed-resource
                  db
-                 {:access-token (:xt/id access-token)
-                  :scope #{"read:user"}
-                  :actions #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
-                  :resource (:xt/id ALICE)})]
+                 (:xt/id subject)
+                 #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
+                 (:xt/id ALICE)
+                 {})]
             (is (= expected actual)))
 
-        BOB_ACCESS_TOKEN {::username "alice" ::secret "foo"}
-        CARLOS_ACCESS_TOKEN {::username "alice"}))))
+        BOB_SUBJECT {::username "alice" ::secret "foo"}
+        CARLOS_SUBJECT {::username "alice"}))))
 
 (deftest pull-allowed-resources-test
   (let [READ_MESSAGE_CONTENT_ACTION
