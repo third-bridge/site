@@ -7,6 +7,8 @@
 ;; TODO: Build back access-token concept, scopes and filtering of available
 ;; actions.
 
+;; TODO: Make consistent with subjects
+
 (ns juxt.pass.v3.authorization-explainer-test
   (:require
    [clojure.test :refer [deftest is are use-fixtures] :as t]
