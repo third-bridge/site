@@ -1147,7 +1147,6 @@
      {:access-token access-token
       :scope (effective-scope db access-token)
       :action (:xt/id CREATE_PERSON_ACTION)
-      :rules (authz/actions->rules db #{(:xt/id CREATE_PERSON_ACTION)})
       :args [{:xt/id ALICE ::username "alice"}]}))
 
   (is (xt/entity (xt/db *xt-node*) ALICE))

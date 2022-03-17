@@ -126,15 +126,16 @@
 (defn pull-allowed-resource
   "Given a subject, a set of possible actions and a resource, pull the allowed
   attributes."
-  [db {:keys [access-token scope actions purpose resource rules]}]
-  (let [check-result (check-permissions
-                      db
-                      {:access-token access-token
-                       :scope scope
-                       :actions actions
-                       :purpose purpose
-                       :resource resource
-                       :rules rules})
+  [db {:keys [access-token scope actions purpose resource]}]
+  (let [check-result
+        (check-permissions
+         db
+         {:access-token access-token
+          :scope scope
+          :actions actions
+          :purpose purpose
+          :resource resource})
+
         pull-expr (vec (mapcat
                         (fn [{:keys [action]}]
                           (::pass/pull action))
@@ -175,6 +176,7 @@
           :in '[access-token scope actions purpose]}
 
          access-token scope actions purpose)
+
         pull-expr (vec (mapcat (comp ::pass/pull :action) results))]
 
     (->> results
