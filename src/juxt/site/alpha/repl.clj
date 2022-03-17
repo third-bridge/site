@@ -524,10 +524,8 @@
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
 
-(defn call-action! [m]
-  (authz/call-action!
-   (xt-node)
-   m))
+(defn call-action! [pass-ctx action & args]
+  (apply authz/call-action! (xt-node) pass-ctx action args))
 
 (defn register-call-action-fn! []
   (put! (authz/register-call-action-fn)))

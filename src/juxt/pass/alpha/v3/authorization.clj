@@ -253,11 +253,10 @@
       (log/errorf e "Error when calling action: %s" action)
       (throw e))))
 
-(defn call-action! [xt-node {:keys [access-token scope resource]} action & args]
+(defn call-action! [xt-node pass-ctx action & args]
   (let [tx (xt/submit-tx
             xt-node
-            [[::xt/fn "urn:site:tx-fns:call-action"
-              {:access-token access-token :scope scope :resource resource} action args]])]
+            [[::xt/fn "urn:site:tx-fns:call-action" pass-ctx action args]])]
 
     (xt/await-tx xt-node tx)
     (assert (xt/tx-committed? xt-node tx))))
