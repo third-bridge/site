@@ -178,7 +178,7 @@
 ;; This action might come as part of a 'web-server' capability 'pack' where Site
 ;; would 'know' that all GET requests to a resource would involve this specific
 ;; action.
-(def GET_RESOURCE
+(def GET_RESOURCE_ACTION
   {:xt/id "https://example.org/_site/actions/get-resource"
    ::site/type "Action"
    ::pass/scope "read:resource"
@@ -204,13 +204,13 @@
 (def ANYONE_CAN_READ_PUBLIC_RESOURCES
   {:xt/id "https://example.org/permissions/anyone-can-read-public-resources"
    ::site/type "Permission"
-   ::pass/action (:xt/id GET_RESOURCE)
+   ::pass/action (:xt/id GET_RESOURCE_ACTION)
    ::pass/purpose nil})
 
 (def ALICE_CAN_READ_INTERNAL_RESOURCES
   {:xt/id "https://example.org/permissions/alice-can-read-internal-resources"
    ::site/type "Permission"
-   ::pass/action (:xt/id GET_RESOURCE)
+   ::pass/action (:xt/id GET_RESOURCE_ACTION)
    ::pass/purpose nil
    ::person (:xt/id ALICE)})
 
@@ -222,7 +222,7 @@
     [::xt/put CARLOS]
 
     ;; Actions
-    [::xt/put GET_RESOURCE]
+    [::xt/put GET_RESOURCE_ACTION]
 
     ;; Subjects
     [::xt/put ALICE_SUBJECT]
@@ -246,7 +246,7 @@
     (are [access-token resource expected]
         (let [permissions
               (authz/check-permissions
-               db {:actions #{(:xt/id GET_RESOURCE)}
+               db {:actions #{(:xt/id GET_RESOURCE_ACTION)}
                    :resource (:xt/id resource)
                    :scope #{"read:resource"}
                    :access-token (:xt/id access-token)})]
