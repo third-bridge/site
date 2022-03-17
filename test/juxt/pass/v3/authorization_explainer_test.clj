@@ -869,31 +869,30 @@
          ::site/type "Action"
          ::pass/scope "read:health"
          ::pass/pull ['*]
-         ::pass/alert-log false}
+         ::pass/alert-log false
+         ::pass/rules
+         '[[(allowed? permission access-token action resource)
+            [action :xt/id "https://example.org/actions/read-medical-record"]
+            [permission ::person person]
+            [subject ::person person]
+            [person ::type "Person"]
+            [access-token ::pass/subject subject]
+            [resource ::site/type "MedicalRecord"]]]}
 
         EMERGENCY_READ_MEDICAL_RECORD_ACTION
         {:xt/id "https://example.org/actions/emergency-read-medical-record"
          ::site/type "Action"
          ::pass/scope "read:health"
          ::pass/pull ['*]
-         ::pass/alert-log true}
-
-        rules
-        '[[(allowed? permission access-token action resource)
-           [action :xt/id "https://example.org/actions/read-medical-record"]
-           [permission ::person person]
-           [subject ::person person]
-           [person ::type "Person"]
-           [access-token ::pass/subject subject]
-           [resource ::site/type "MedicalRecord"]]
-
-          [(allowed? permission access-token action resource)
-           [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
-           [permission ::person person]
-           [subject ::person person]
-           [person ::type "Person"]
-           [access-token ::pass/subject subject]
-           [resource ::site/type "MedicalRecord"]]]]
+         ::pass/alert-log true
+         ::pass/rules
+         '[[(allowed? permission access-token action resource)
+            [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
+            [permission ::person person]
+            [subject ::person person]
+            [person ::type "Person"]
+            [access-token ::pass/subject subject]
+            [resource ::site/type "MedicalRecord"]]]}]
 
     (submit-and-await!
      [
@@ -929,22 +928,24 @@
 
     (let [get-medical-records
           (fn [access-token action]
-            (authz/pull-allowed-resources
-             (xt/db *xt-node*)
-             {:access-token (:xt/id access-token)
-              :scope #{"read:health"}
-              :actions #{(:xt/id action)}
-              :rules rules}))
+            (let [db (xt/db *xt-node*)]
+              (authz/pull-allowed-resources
+               db
+               {:access-token (:xt/id access-token)
+                :scope #{"read:health"}
+                :actions #{(:xt/id action)}
+                :rules (authz/actions->rules db #{(:xt/id action)})})))
 
           get-medical-record
           (fn [access-token action]
-            (authz/pull-allowed-resource
-             (xt/db *xt-node*)
-             {:access-token (:xt/id access-token)
-              :scope #{"read:health"}
-              :actions #{(:xt/id action)}
-              :resource "https://example.org/alice/medical-record"
-              :rules rules}))]
+            (let [db (xt/db *xt-node*)]
+              (authz/pull-allowed-resource
+               db
+               {:access-token (:xt/id access-token)
+                :scope #{"read:health"}
+                :actions #{(:xt/id action)}
+                :resource "https://example.org/alice/medical-record"
+                :rules (authz/actions->rules db #{(:xt/id action)})})))]
 
       (is (zero? (count (get-medical-records OSCAR_ACCESS_TOKEN READ_MEDICAL_RECORD_ACTION))))
       (is (= 1 (count (get-medical-records OSCAR_ACCESS_TOKEN EMERGENCY_READ_MEDICAL_RECORD_ACTION))))
