@@ -154,20 +154,22 @@
           :keys '[resource action purpose permission]
           :where
           (cond-> '[
-                    [permission ::site/type "Permission"]
                     [action ::site/type "Action"]
-                    [permission ::pass/action action]
+                    ;; Only consider given actions
+                    [(contains? actions action)]
 
-                    ;; Purpose
-                    [permission ::pass/purpose purpose]
-
-                    ;; Scope
+                    ;; Only consider the action if in scope
                     [action ::pass/scope action-scope]
                     [(contains? scope action-scope)]
 
-                    [(contains? actions action)]
+                    ;; Only consider a permitted action
+                    [permission ::site/type "Permission"]
+                    [permission ::pass/action action]
+                    (allowed? permission access-token action resource)
 
-                    (allowed? permission access-token action resource)]
+                    ;; Only permissions that match our purpose
+                    [permission ::pass/purpose purpose]]
+
             include-rules
             (conj '(include? access-token action resource)))
 
@@ -192,7 +194,7 @@
 (defmethod apply-processor ::pass/merge [[_ m-to-merge] val _]
   (merge val m-to-merge))
 
-(defmethod apply-processor ::pass.malli/validate [[_ form] val {::pass.malli/keys [schema]}]
+(defmethod apply-processor ::pass.malli/validate [_ val {::pass.malli/keys [schema]}]
   (assert schema)
   (when-not (m/validate schema val)
     (throw
