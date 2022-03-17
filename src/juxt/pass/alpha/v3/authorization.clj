@@ -206,7 +206,7 @@
    arg
    (::pass/process arg-def)))
 
-(defn call-action [db access-token scope action resource rules action-args]
+(defn call-action [db access-token scope action resource action-args]
   (try
     ;; Check that we /can/ call the action
     (let [check-permissions-result
@@ -215,7 +215,6 @@
            {:access-token access-token
             :scope scope
             :actions #{action}
-            :rules rules
             :resource resource})
           action-doc (xt/entity db action)
           _ (when-not action-doc (throw (ex-info "Action not found in db" {:action action})))
@@ -240,15 +239,15 @@
       (log/errorf e "Error when calling action: %s" action)
       (throw e))))
 
-(defn call-action! [xt-node {:keys [access-token scope action resource rules args]}]
+(defn call-action! [xt-node {:keys [access-token scope action resource args]}]
   (let [tx (xt/submit-tx
             xt-node
-            [[::xt/fn "urn:site:tx-fns:call-action" access-token scope action resource rules args]])]
+            [[::xt/fn "urn:site:tx-fns:call-action" access-token scope action resource args]])]
 
     (xt/await-tx xt-node tx)
     (assert (xt/tx-committed? xt-node tx))))
 
 (defn register-call-action-fn []
   {:xt/id "urn:site:tx-fns:call-action"
-   :xt/fn '(fn [xt-ctx access-token scope action resource rules action-args]
-             (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) access-token scope action resource rules action-args))})
+   :xt/fn '(fn [xt-ctx access-token scope action resource action-args]
+             (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) access-token scope action resource action-args))})

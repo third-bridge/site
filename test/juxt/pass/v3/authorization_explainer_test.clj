@@ -1163,7 +1163,6 @@
        {:access-token access-token
         :scope (effective-scope db access-token)
         :action (:xt/id CREATE_PERSON_ACTION)
-        :rules (authz/actions->rules db #{(:xt/id CREATE_PERSON_ACTION)})
         :args [{:xt/id ALICE}]})))))
 
 #_((t/join-fixtures [with-xt])
