@@ -673,7 +673,6 @@
          ::pass/pull [::content]
          ::pass/rules
          '[[(allowed? permission access-token action resource)
-            [action :xt/id "https://example.org/actions/read-message-content"]
             [permission ::person person]
             [subject ::person person]
             [person ::type "Person"]
@@ -689,7 +688,6 @@
          ::pass/pull [::from ::to ::date]
          ::pass/rules
          '[[(allowed? permission access-token action resource)
-            [action :xt/id "https://example.org/actions/read-message-metadata"]
             [permission ::person person]
             [subject ::person person]
             [person ::type "Person"]
@@ -872,7 +870,6 @@
          ::pass/alert-log false
          ::pass/rules
          '[[(allowed? permission access-token action resource)
-            [action :xt/id "https://example.org/actions/read-medical-record"]
             [permission ::person person]
             [subject ::person person]
             [person ::type "Person"]
@@ -887,7 +884,6 @@
          ::pass/alert-log true
          ::pass/rules
          '[[(allowed? permission access-token action resource)
-            [action :xt/id "https://example.org/actions/emergency-read-medical-record"]
             [permission ::person person]
             [subject ::person person]
             [person ::type "Person"]
@@ -963,7 +959,6 @@
          ::pass/pull ['*]
          ::pass/rules
          '[[(allowed? permission access-token action resource)
-           [action :xt/id "https://example.org/actions/read-medical-record"]
            [permission ::person person]
            [subject ::person person]
            [person ::type "Person"]
