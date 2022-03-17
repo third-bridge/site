@@ -2,7 +2,7 @@
 
 #_(remove-ns 'juxt.pass.v3.authorization-explainer-test)
 
-;; TODO: Build back access-token concept, scopes and filtering of available
+;; TODO: Build back access-token concept, apps, scopes and filtering of available
 ;; actions.
 
 (ns juxt.pass.v3.authorization-explainer-test
