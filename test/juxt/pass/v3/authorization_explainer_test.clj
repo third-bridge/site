@@ -517,8 +517,9 @@
         false
         )
 
-    (are [access-token actions rules expected]
-        (let [scope (effective-scope db access-token)]
+    (are [access-token actions expected]
+        (let [rules (actions->rules db actions)
+              scope (effective-scope db access-token)]
           (is (= expected
                  (authz/allowed-resources
                   db
@@ -531,7 +532,6 @@
         "https://example.org/tokens/alice"
         #{"https://example.org/actions/read-user-dir"
           "https://example.org/actions/read-shared"}
-        (vec (mapcat ::pass/rules [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
         #{["https://example.org/~alice/shared.txt"]
           ["https://example.org/~alice/private.txt"]}
 
@@ -539,14 +539,12 @@
         "https://example.org/tokens/bob"
         #{"https://example.org/actions/read-user-dir"
           "https://example.org/actions/read-shared"}
-        (vec (mapcat ::pass/rules [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
         #{["https://example.org/~alice/shared.txt"]}
 
         ;; Carlos sees nothing
         "https://example.org/tokens/carlos"
         #{"https://example.org/actions/read-user-dir"
           "https://example.org/actions/read-shared"}
-        (vec (mapcat ::pass/rules [READ_USER_DIR_ACTION READ_SHARED_ACTION]))
         #{})
 
     ;; Given a resource and a set of actions, which subjects can access
