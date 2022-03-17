@@ -576,13 +576,27 @@
         {:xt/id "https://example.org/actions/read-username"
          ::site/type "Action"
          ::pass/scope "read:user"
-         ::pass/pull [::username]}
+         ::pass/pull [::username]
+         ::pass/rules
+        '[[(allowed? permission access-token action resource)
+            [permission ::person person]
+            [subject ::person person]
+            [person ::type "Person"]
+            [access-token ::pass/subject subject]
+            [permission ::pass/resource resource]]]}
 
         READ_SECRETS_ACTION
         {:xt/id "https://example.org/actions/read-secrets"
          ::site/type "Action"
          ::pass/scope "read:user"
-         ::pass/pull [::secret]}
+         ::pass/pull [::secret]
+         ::pass/rules
+         '[[(allowed? permission access-token action resource)
+            [permission ::person person]
+            [subject ::person person]
+            [person ::type "Person"]
+            [access-token ::pass/subject subject]
+            [permission ::pass/resource resource]]]}
 
         BOB_CAN_READ_ALICE_USERNAME
         {:xt/id "https://example.org/permissions/bob-can-read-alice-username"
@@ -606,24 +620,7 @@
          ::person "https://example.org/people/carlos"
          ::pass/action "https://example.org/actions/read-username"
          ::pass/purpose nil
-         ::pass/resource "https://example.org/people/alice"}
-
-        rules
-        '[[(allowed? permission access-token action resource)
-           [action :xt/id "https://example.org/actions/read-username"]
-           [permission ::person person]
-           [subject ::person person]
-           [person ::type "Person"]
-           [access-token ::pass/subject subject]
-           [permission ::pass/resource resource]]
-
-          [(allowed? permission access-token action resource)
-           [action :xt/id "https://example.org/actions/read-secrets"]
-           [permission ::person person]
-           [subject ::person person]
-           [person ::type "Person"]
-           [access-token ::pass/subject subject]
-           [permission ::pass/resource resource]]]]
+         ::pass/resource "https://example.org/people/alice"}]
 
     (submit-and-await!
      [
@@ -645,6 +642,8 @@
       ;; Actions
       [::xt/put READ_USERNAME_ACTION]
       [::xt/put READ_SECRETS_ACTION]
+
+      ; Permissions
       [::xt/put BOB_CAN_READ_ALICE_USERNAME]
       [::xt/put BOB_CAN_READ_ALICE_SECRETS]
       [::xt/put CARLOS_CAN_READ_ALICE_USERNAME]
@@ -660,11 +659,11 @@
                   :scope #{"read:user"}
                   :actions #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
                   :resource (:xt/id ALICE)
-                  :rules rules})]
+                  :rules (authz/actions->rules db #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)})})]
             (is (= expected actual)))
 
-        BOB_ACCESS_TOKEN {::username "alice" ::secret "foo"}
-        CARLOS_ACCESS_TOKEN {::username "alice"}))))
+          BOB_ACCESS_TOKEN {::username "alice" ::secret "foo"}
+          CARLOS_ACCESS_TOKEN {::username "alice"}))))
 
 (deftest pull-allowed-resources-test
   (let [READ_MESSAGE_CONTENT_ACTION
