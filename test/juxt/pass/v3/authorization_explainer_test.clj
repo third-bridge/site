@@ -424,38 +424,38 @@
     (are [subject actions resource ok?]
         (let [actual (authz/check-permissions
                       db
-                      (:xt/id subject) actions
+                      (:xt/id subject) (set (map :xt/id actions))
                       {:resource resource})]
           (if ok? (is (seq actual)) (is (not (seq actual)))))
 
       ;; Alice can read her own private file.
       ALICE_SUBJECT
-      #{"https://example.org/actions/read-user-dir"}
+      #{READ_USER_DIR_ACTION}
       "https://example.org/~alice/private.txt"
       true
 
       ;; Alice can read the file in her user directory which she has shared with
       ;; Bob.
       ALICE_SUBJECT
-      #{"https://example.org/actions/read-user-dir"}
+      #{READ_USER_DIR_ACTION}
       "https://example.org/~alice/shared.txt"
       true
 
       ;; Bob cannot read Alice's private file.
       BOB_SUBJECT
-      #{"https://example.org/actions/read-user-dir"}
+      #{READ_USER_DIR_ACTION}
       "https://example.org/~alice/private.txt"
       false
 
       ;; Bob can read the file Alice has shared with him.
       BOB_SUBJECT
-      #{"https://example.org/actions/read-shared"}
+      #{READ_SHARED_ACTION}
       "https://example.org/~alice/shared.txt"
       true
 
       ;; Alice can put a file to her user directory
       ALICE_SUBJECT
-      #{"https://example.org/actions/write-user-dir"}
+      #{WRITE_USER_DIR_ACTION}
       "https://example.org/~alice/foo.txt"
       true
 
@@ -470,32 +470,32 @@
 
       ;; Alice can't put a file to Bob's user directory
       ALICE_SUBJECT
-      #{"https://example.org/actions/write-user-dir"}
+      #{WRITE_USER_DIR_ACTION}
       "https://example.org/~bob/foo.txt"
       false
 
       ;; Alice can't put a file outside her user directory
       ALICE_SUBJECT
-      #{"https://example.org/actions/write-user-dir"}
+      #{WRITE_USER_DIR_ACTION}
       "https://example.org/index.html"
       false
 
       ;; Bob can put a file to his user directory
       BOB_SUBJECT
-      #{"https://example.org/actions/write-user-dir"}
+      #{WRITE_USER_DIR_ACTION}
       "https://example.org/~bob/foo.txt"
       true
 
       ;; Bob can't put a file to Alice's directory
       BOB_SUBJECT
-      #{"https://example.org/actions/write-user-dir"}
+      #{WRITE_USER_DIR_ACTION}
       "https://example.org/~alice/foo.txt"
       false
 
       ;; Carlos cannot put a file to his user directory, as he hasn't been
       ;; granted the write-user-dir action.
       CARLOS_SUBJECT
-      #{"https://example.org/actions/write-user-dir"}
+      #{WRITE_USER_DIR_ACTION}
       "https://example.org/~carlos/foo.txt"
       false
       )
