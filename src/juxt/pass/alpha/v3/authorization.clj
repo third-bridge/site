@@ -10,11 +10,14 @@
 (alias 'pass.malli (create-ns 'juxt.pass.alpha.malli))
 (alias 'site (create-ns 'juxt.site.alpha))
 
-(defn actions->rules [db actions]
+(defn actions->rules
+  "Determine rules for the given action ids. Each rule is bound to the given
+  action."
+  [db actions]
   (vec (for [action actions
              :let [e (xt/entity db action)]
              rule (::pass/rules e)]
-         rule)))
+         (conj rule ['action :xt/id action]))))
 
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."

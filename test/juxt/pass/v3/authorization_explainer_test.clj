@@ -297,7 +297,7 @@
    ::pass/resource-matches "https://example.org/~([a-z]+)/.+"
    ::pass/rules
    '[[(allowed? permission access-token action resource)
-      [action :xt/id "https://example.org/actions/read-user-dir"]
+      #_[action :xt/id "https://example.org/actions/read-user-dir"]
       [action ::pass/resource-matches resource-regex]
       [access-token ::pass/subject subject]
       [permission ::person person]
@@ -317,7 +317,7 @@
    ::pass/action-args [{}]
    ::pass/rules
    '[[(allowed? permission access-token action resource)
-      [action :xt/id "https://example.org/actions/write-user-dir"]
+      #_[action :xt/id "https://example.org/actions/write-user-dir"]
       [action ::pass/resource-matches resource-regex]
       [access-token ::pass/subject subject]
       [permission ::person person]
@@ -334,7 +334,7 @@
    ::pass/scope "read:resource"
    ::pass/rules
    '[[(allowed? permission access-token action resource)
-      [action :xt/id "https://example.org/actions/read-shared"]
+      #_[action :xt/id "https://example.org/actions/read-shared"]
       [access-token ::pass/subject subject]
       [permission ::person person]
       [person ::type "Person"]
