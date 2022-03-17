@@ -1168,7 +1168,7 @@
              :actions #{(:xt/id CREATE_PERSON_ACTION)}
              :rules rules}))))))
 
-    (authz/submit-call-action-sync
+    (authz/call-action!
      *xt-node*
      (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
        {:access-token access-token
@@ -1183,7 +1183,7 @@
     (is
      (thrown?
       AssertionError
-      (authz/submit-call-action-sync
+      (authz/call-action!
        *xt-node*
        (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
          {:access-token access-token

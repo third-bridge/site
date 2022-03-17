@@ -249,10 +249,11 @@ There are a few useful Site REPL commands you should be familiar with:
 
 (ls):: List all resources
 (ls <pat>):: List all resources whose URIs match the pattern
-(evict! <uri>+):: Delete resource(s)
+(evict! <uri>+):: Kill resource(s) across time
+(apply evict! (ls)):: Start over. (Delete everything in the database!)
 --
 
-=== Create actions
+=== Create an action
 
 Actions are at the heart of Site:
 
@@ -260,6 +261,7 @@ Actions are at the heart of Site:
 * Actions are composeable.
 * Actions can call external functions, such as lambdas.
 * Actions are restricted to authorized users and applications.
+* Actions can be grouped into OAuth2 scopes
 * Actions can be exposed to the network, via OpenAPI and GraphQL.
 
 .Creating the create-user action
@@ -267,22 +269,29 @@ Actions are at the heart of Site:
 
 [source,clojure]
 ----
-{:xt/id "https://example.org/actions/create-person"
+(put!
+{:xt/id "https://site.test/actions/create-person"
  :juxt.site.alpha/type "Action"
  :juxt.pass.alpha/scope "write:admin"
  :juxt.pass.alpha/action-args
  [{:juxt.pass.alpha.malli/schema
    [:map
-    [:my/type [:= "Person"]]
-    [:my/username [:string]]]
+    [:example/type [:= "Person"]]]
 
    :juxt.pass.alpha/process
    [
-    [:juxt.pass.alpha/merge {:my/type "Person"}]
+    [:juxt.pass.alpha/merge {:example/type "Person"}]
     [:juxt.pass.alpha.malli/validate]]}]}
+)
 ----
-
 ====
+
+=== Call the action (TODO)
+
+[source,clojure]
+----
+(call-action! "https://site.test/actions/create-person" {:name "Alice"})
+----
 
 
 === Install the admin app
