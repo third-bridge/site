@@ -387,15 +387,14 @@
 (deftest user-dir-test
   (submit-and-await!
    [
-    ;; Applications
-    [::xt/put USER_APP]
+    ;; Actors
+    [::xt/put ALICE]
+    [::xt/put BOB]
+    [::xt/put CARLOS]
 
     ;; Subjects
-    [::xt/put ALICE]
     [::xt/put ALICE_SUBJECT]
-    [::xt/put BOB]
     [::xt/put BOB_SUBJECT]
-    [::xt/put CARLOS]
     [::xt/put CARLOS_SUBJECT]
 
     ;; Access tokens
