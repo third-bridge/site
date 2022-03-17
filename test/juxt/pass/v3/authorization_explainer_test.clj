@@ -1092,7 +1092,13 @@
       ;; doesn't feel beneficial to lean too heavily on Malli's extensive
       ;; feature set.
       [::pass/merge {::type "Person"}]
-      [::pass.malli/validate]]}]})
+      [::pass.malli/validate]]}]
+   ::pass/rules
+   '[[(allowed? permission access-token action resource)
+      [permission ::person person]
+      [subject ::person person]
+      [person ::type "Person"]
+      [access-token ::pass/subject subject]]]})
 
 (def CREATE_IDENTITY_ACTION
   {:xt/id "https://example.org/actions/create-identity"
@@ -1101,90 +1107,86 @@
    ::pass/action-args [{}]})
 
 (deftest call-action-test
-  (let [rules ['[(allowed? permission access-token action resource)
-                 [action :xt/id "https://example.org/actions/create-person"]
-                 [permission ::person person]
-                 [subject ::person person]
-                 [person ::type "Person"]
-                 [access-token ::pass/subject subject]]]]
-    (submit-and-await!
-     [
-      ;; Applications
-      [::xt/put ADMIN_APP]
+  (submit-and-await!
+   [
+    ;; Applications
+    [::xt/put ADMIN_APP]
 
-      ;; Actors
-      [::xt/put SUE]
-      [::xt/put CARLOS]
+    ;; Actors
+    [::xt/put SUE]
+    [::xt/put CARLOS]
 
-      ;; Subjects
-      [::xt/put SUE_SUBJECT]
-      [::xt/put CARLOS_SUBJECT]
+    ;; Subjects
+    [::xt/put SUE_SUBJECT]
+    [::xt/put CARLOS_SUBJECT]
 
-      ;; Access tokens
-      [::xt/put SUE_ACCESS_TOKEN]
-      [::xt/put SUE_READONLY_ACCESS_TOKEN]
-      [::xt/put CARLOS_ACCESS_TOKEN]
+    ;; Access tokens
+    [::xt/put SUE_ACCESS_TOKEN]
+    [::xt/put SUE_READONLY_ACCESS_TOKEN]
+    [::xt/put CARLOS_ACCESS_TOKEN]
 
-      ;; Actions
-      [::xt/put CREATE_PERSON_ACTION]
-      [::xt/put CREATE_IDENTITY_ACTION]
+    ;; Actions
+    [::xt/put CREATE_PERSON_ACTION]
+    [::xt/put CREATE_IDENTITY_ACTION]
 
-      ;; Permissions
-      [::xt/put
-       {:xt/id "https://example.org/permissions/sue/create-person"
-        ::site/type "Permission"
-        ::person (:xt/id SUE)
-        ::pass/action (:xt/id CREATE_PERSON_ACTION)
-        ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
+    ;; Permissions
+    [::xt/put
+     {:xt/id "https://example.org/permissions/sue/create-person"
+      ::site/type "Permission"
+      ::person (:xt/id SUE)
+      ::pass/action (:xt/id CREATE_PERSON_ACTION)
+      ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
-      ;; Functions
-      [::xt/put (authz/register-call-action-fn)]])
+    ;; Functions
+    [::xt/put (authz/register-call-action-fn)]])
 
-    ;; Sue creates the user Alice, with an identity
-    (let [db (xt/db *xt-node*)]
-      (is
-       (seq
-        (authz/check-permissions
-         db
-         (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
-           {:access-token access-token
-            :scope (effective-scope db access-token)
-            :actions #{(:xt/id CREATE_PERSON_ACTION)}
-            :rules rules}))))
-      (is
-       (not
-        (seq
-         (authz/check-permissions
-          db
-          (let [access-token (:xt/id SUE_READONLY_ACCESS_TOKEN)]
-            {:access-token access-token
-             :scope (effective-scope db access-token)
-             :actions #{(:xt/id CREATE_PERSON_ACTION)}
-             :rules rules}))))))
-
-    (authz/call-action!
-     *xt-node*
-     (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
-       {:access-token access-token
-        :scope (effective-scope (xt/db *xt-node*) access-token)
-        :action (:xt/id CREATE_PERSON_ACTION)
-        :rules rules
-        :args [{:xt/id ALICE ::username "alice"}]}))
-
-    (is (xt/entity (xt/db *xt-node*) ALICE))
-
-    ;; This fails because we haven't provided the ::username
+  ;; Sue creates the user Alice, with an identity
+  (let [db (xt/db *xt-node*)]
     (is
-     (thrown?
-      AssertionError
-      (authz/call-action!
-       *xt-node*
+     (seq
+      (authz/check-permissions
+       db
        (let [access-token (:xt/id SUE_ACCESS_TOKEN)]
          {:access-token access-token
-          :scope (effective-scope (xt/db *xt-node*) access-token)
-          :action (:xt/id CREATE_PERSON_ACTION)
-          :rules rules
-          :args [{:xt/id ALICE}]}))))))
+          :scope (effective-scope db access-token)
+          :actions #{(:xt/id CREATE_PERSON_ACTION)}
+          :rules (authz/actions->rules db #{(:xt/id CREATE_PERSON_ACTION)})}))))
+    (is
+     (not
+      (seq
+       (authz/check-permissions
+        db
+        (let [access-token (:xt/id SUE_READONLY_ACCESS_TOKEN)]
+          {:access-token access-token
+           :scope (effective-scope db access-token)
+           :actions #{(:xt/id CREATE_PERSON_ACTION)}
+           :rules (authz/actions->rules db #{(:xt/id CREATE_PERSON_ACTION)})}))))))
+
+  (authz/call-action!
+   *xt-node*
+   (let [db (xt/db *xt-node*)
+         access-token (:xt/id SUE_ACCESS_TOKEN)]
+     {:access-token access-token
+      :scope (effective-scope db access-token)
+      :action (:xt/id CREATE_PERSON_ACTION)
+      :rules (authz/actions->rules db #{(:xt/id CREATE_PERSON_ACTION)})
+      :args [{:xt/id ALICE ::username "alice"}]}))
+
+  (is (xt/entity (xt/db *xt-node*) ALICE))
+
+  ;; This fails because we haven't provided the ::username
+  (is
+   (thrown?
+    AssertionError
+    (authz/call-action!
+     *xt-node*
+     (let [db (xt/db *xt-node*)
+           access-token (:xt/id SUE_ACCESS_TOKEN)]
+       {:access-token access-token
+        :scope (effective-scope db access-token)
+        :action (:xt/id CREATE_PERSON_ACTION)
+        :rules (authz/actions->rules db #{(:xt/id CREATE_PERSON_ACTION)})
+        :args [{:xt/id ALICE}]})))))
 
 #_((t/join-fixtures [with-xt])
    (fn []
