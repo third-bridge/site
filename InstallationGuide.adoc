@@ -1,12 +1,14 @@
 = Installation Guide
 :toc: preamble
+:toclevels: 5
 
 This is the long-winded installation guide to explain how to bootstrap a Site
 instance.
 
-This is partly for pedagogical purposes.
-
-NOTE: In future it would be a good idea to create a docker image of a pre-installed Site.
+This is partly for pedagogical purposes. It is a good idea to learn in depth how
+Site's builds up its secure foundation. But if you are in a hurry, there are (or will be)
+quicker 'install packs' and Docker images that provide shortcuts to setting up a
+Site instance.
 
 == Requirements
 
@@ -228,18 +230,7 @@ $ rlwrap ncat localhost 50505
 ----
 --
 
-== Install sufficient resources for creating an access token
-
-A Site instance is a collection of documents, stored in XTDB.
-
-Like XTDB, Site is schemaless and requires that you define your own
-documents. However, by included document attributes known to Site (usually in
-the `juxt.site.alpha` namespace) Site is able to interpret the documents as web
-or API resources, and serve them over HTTP.
-
-In this section we use the REPL to build up the minimal resources required to
-acquire an *access token* which can let us continue setting up the server
-remotely, without requiring further REPL access.
+=== Introducing Site's REPL
 
 ----
 Site by JUXT. Copyright (c) 2021, JUXT LTD.
@@ -258,7 +249,30 @@ There are a few useful Site REPL commands you should be familiar with:
 (apply evict! (ls)):: Start over. (Delete everything in the database!)
 --
 
-=== Register the call action function
+== Configure remote access to Site
+
+A Site instance is a collection of documents, stored in XTDB.
+
+Like XTDB, Site is schemaless and requires that you define your own
+documents. However, by included document attributes known to Site (usually in
+the `juxt.site.alpha` namespace) Site is able to interpret the documents as web
+or API resources, and serve them over HTTP.
+
+We need to set up sufficient resources in the REPL so that we no longer need to
+access Site via the REPL.
+
+Secure remote access to Site resources requires an *access token*.
+
+In this section we use the REPL to build up the minimal resources required to
+acquire an access token which can let us continue setting up the server
+remotely, without requiring further REPL access.
+
+An access token is granted for a *subject* and an *application*, so we'll need
+to create those too.
+
+But first, we need to install some preliminary resources into our REPL.
+
+=== Install the capability to call actions
 
 Actions are at the heart of Site:
 
@@ -269,25 +283,32 @@ Actions are at the heart of Site:
 * Actions can be grouped into OAuth2 scopes
 * Actions can be exposed to the network, via OpenAPI and GraphQL.
 
+==== Register the call action function
+
 Actions are executed in an XTDB transaction function. This guarantees
 consistency, eliminating potential race-conditions. For example, it's important
 that any revocations to authorization permissions are fully processed if they
 occur before a call to an action.
 
-So we must first install the transaction function.
+So, we must install the transaction function.
 
 [source,clojure]
 ----
 (install-call-action-fn!)
 ----
 
-=== Create a subject to represent the REPL
+==== Create a REPL subject
 
 Actions are performed by subjects.
 
-To call actions from the REPL, we have to install a subject so that we can have
-something to grant permission to. The `(me)` function returns a special built-in
-identifier for the REPL user. It can't be used remotely.
+A *subject* represents an authenticated person, which will include personal data
+as well as details about their login session (e.g. the device they are using,
+whether their email address has been verified, whether their login required use
+of a second factor, etc.).
+
+To call actions from the REPL, we'll install a subject that can only be used
+from the REPL. The `(me)` function returns a special built-in identifier for the
+REPL subject. It can't be used remotely.
 
 [source,clojure]
 .Add the REPL subject
@@ -295,23 +316,18 @@ identifier for the REPL user. It can't be used remotely.
 (put! {:xt/id (me)})
 ----
 
-== Generating the initial access-token
+NOTE: In future we might allow different users using the same REPL to identify
+themselves. Of course, REPL users have no restrictions to what they can do, so
+this is just for audit purposes among trusted users. Access to the REPL must be
+restricted to a very limited set of authorized users.
 
-Secure remote access to Site resources requires an access token.
-
-An access token is granted for a *subject* and an *application*. A *subject*
-represents an authenticated person, which will include personal data as well as
-details about their login session (e.g. the device they are using, whether their
-email address has been verified, whether their login required use of a second
-factor, etc.)
+=== Create 'Alice'
 
 For the purposes of this example, we'll create a person entity to represent the
 person. We'll use the name `Alice` but feel free to replace this with your own
 personal details.
 
-
-=== Create an action to create a person
-
+==== Create an action to create a person
 
 .Creating the create-person action
 ====
@@ -347,7 +363,7 @@ personal details.
 <5> An action declares the rules as to who is authorized to call it
 ====
 
-=== Permit the REPL to call the create-person action
+==== Permit the REPL to call the create-person action
 
 [source,clojure]
 ----
@@ -361,7 +377,7 @@ personal details.
 )
 ----
 
-=== Call the create-person action
+==== Call the create-person action
 
 [source,clojure]
 ----
@@ -370,26 +386,39 @@ personal details.
   :example/name "Alice"})
 ----
 
-=== Create an action to register an application
+=== Create a subject entity to represent the Alice's login
 
+==== Create an action to create a subject
 
+TODO
+
+==== Permit the REPL to call the create-subject action
+
+TODO
+
+==== Call the create-subject action
+
+TODO
 
 === Register an application
 
-----
-(-admin-app!)
-----
+TODO
 
+==== Create an action to register an application
 
-TODO: create-person
+TODO
 
-=== Create an entity representing the administration app
+==== Permit the REPL to call the register-application action
 
-TODO: This could/should define scopes
+TODO
+
+==== Call the register-application action
+
+TODO
 
 === Create an access token
 
-TODO:
+TODO
 
 == Run the site tool
 
