@@ -271,36 +271,72 @@ Actions are at the heart of Site:
 (register-call-action-fn!)
 ----
 
-=== Create an action
+=== Create an action to create a person
 
-
-.Creating the create-user action
+.Creating the create-person action
 ====
 
 [source,clojure]
 ----
 (put!
 {:xt/id "https://site.test/actions/create-person"
- :juxt.site.alpha/type "Action"
- :juxt.pass.alpha/scope "write:admin"
- :juxt.pass.alpha/action-args
- [{:juxt.pass.alpha.malli/schema
+ :juxt.site.alpha/type "Action" <1>
+ :juxt.pass.alpha/scope "write:admin" <2>
+ :juxt.pass.alpha/action-args <3>
+ [{:juxt.pass.alpha.malli/schema <4>
    [:map
+    [:xt/id [:re "https://site.test/(.+)"]]
     [:example/type [:= "Person"]]]
+    [:example/name [:string]]
 
    :juxt.pass.alpha/process
    [
     [:juxt.pass.alpha/merge {:example/type "Person"}]
-    [:juxt.pass.alpha.malli/validate]]}]}
+    [:juxt.pass.alpha.malli/validate]]}]
+
+ ::pass/rules <5>
+ '[
+   [(allowed? permission subject action resource)
+    [permission ::pass/subject subject]]]}
 )
 ----
+<1> An action must have this exact entry
+<2> Actions are grouped into OAuth2 scopes
+<3> An action is called with zero-or-more arguments
+<4> An argument if often a document to put, and can be subject to validation
+<5> An action declares the rules as to who is authorized to call it
 ====
 
-=== Call the action (TODO)
+=== Create a subject to represent the REPL
+
+To call actions from the REPL, we have to create a built-in subject so that we
+can have something to grant permission to.
+
+[source,clojure]
+.Add the REPL subject
+----
+(put! {:xt/id (me)})
+----
+
+=== Permit the REPL to call the create-person action
 
 [source,clojure]
 ----
-(call-action! "https://site.test/actions/create-person" {:name "Alice"})
+(put!
+{:xt/id "https://site.test/permissions/repl"
+   ::site/type "Permission"
+   ::pass/subject "urn:site:subjects:repl"
+   ::pass/action #{"https://site.test/actions/create-person"}
+   ::pass/purpose nil
+   }
+   )
+----
+
+=== Call the action
+
+[source,clojure]
+----
+(call-action! "https://site.test/actions/create-person" {:example/name "Alice"})
 ----
 
 
@@ -310,41 +346,12 @@ Actions are at the heart of Site:
 (install-admin-app!)
 ----
 
-=== Create a person entity to represent yourself
-
-It's good practise to associate actions with individuals carrying them out. This
-helps when auditing the system later on.
-
-----
-(put! {:xt/id "https://site.test/people/mal"  ; replace 'mal' with your username
-       :name "Malcolm Sparks"})
-----
-
-=== Create actions
-
-----
-(create-action "https://home.test/_site/actions/create-person")
-(create-action "https://home.test/_site/actions/create-identity")
-----
 
 TODO: create-person
 
 === Create an entity representing the administration app
 
 TODO: This could/should define scopes
-
-=== Create an entity representing yourself
-
-The entity can contain any details you like, but must of course have an `:xt/id`
-as a minimum.
-
-
-=== Create a subject
-
-----
-(put! {:xt/id "urn:site:subject:admin:mal"
-       :person "https://home.test/people/mal"})
-----
 
 === Create an access token
 

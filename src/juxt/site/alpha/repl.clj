@@ -524,8 +524,44 @@
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
 
-(defn call-action! [pass-ctx action & args]
-  (apply authz/call-action! (xt-node) pass-ctx action args))
+(defn call-action! [action & args]
+  (let [subject "urn:site:subjects:repl"]
+    (apply authz/call-action! (xt-node) {} subject action args)))
 
 (defn register-call-action-fn! []
   (put! (authz/register-call-action-fn)))
+
+(defn me [] "urn:site:subjects:repl")
+
+(defn check-permissions [subject actions options]
+  (authz/check-permissions (db) subject actions options))
+
+(comment
+  {:xt/id "https://site.test/actions/create-person"
+   :juxt.site.alpha/type "Action"
+   :juxt.pass.alpha/scope "write:admin"
+   :juxt.pass.alpha/action-args
+   [{:juxt.pass.alpha.malli/schema
+     [:map
+      [:example/type [:= "Person"]]]
+
+     :juxt.pass.alpha/process
+     [
+      [:juxt.pass.alpha/merge {:example/type "Person"}]
+      [:juxt.pass.alpha.malli/validate]]}]
+
+   ::pass/rules
+   '[
+     [(allowed? permission subject action resource)
+      ;; Permission granted to the subject
+      [permission ::pass/subject subject]
+      ]]}
+
+  {:xt/id (me)}
+
+  {:xt/id "https://site.test/permissions/repl"
+   ::site/type "Permission"
+   ::pass/subject "urn:site:subjects:repl"
+   ::pass/action #{"https://site.test/actions/create-person"}
+   ::pass/purpose nil
+   })
