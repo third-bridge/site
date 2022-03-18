@@ -1,0 +1,52 @@
+= What is Site?
+
+Site is a secure foundation for modern API services.
+
+Today, businesses are increasingly turning to APIs to automate processes not
+just internally but between other businesses. This is driving increased
+sophistication of business processes through disaggregation: services that were
+traditionally offered by a single business and supported by a single IT
+department, are now being disassembled into automated online business processes
+involving mutliple businesses. The technical foundation enabling this is the
+maturity of web standards for building and securing APIs.
+
+Now that API standards have been agreed and established, businesses are faced
+with a number of new challenges:
+
+1. Speed. How to develop APIs to support business functions as rapidly as
+possible. In the competitive landscape opened up by APIs, companies must be fast
+to adapt or lose business to competitors that adapt faster, as wel as meet the
+threat of new entrants.
+
+2. Cost. Software developers are both scarse and costly, increasingly
+so. Developing new API services can still take many weeks or months.
+
+3. Security. - not enough developer time available to really focus on security
+
+4. Longevity - constant maintenance of existing services
+
+
+Site has been developed to meet these challenges:
+
+1. Speed.
+
+2. Cost.
+
+3. Security.
+
+Reusable server - audited, not rewritten from scratch for each service - this is achieved by the separation of business domain from 'machine aspects' (see https://vvvvalvalval.github.io/posts/2018-07-23-datascript-as-a-lingua-franca-for-domain-modeling.html)
+E.g. Single code path for all HTTP endpoints
+
+Pen Testing can be done on one code-base and transfer to other servers
+
+Open Source - commits can be audited, signed by trusted individuals
+
+Safe language (Clojure = JVM GC + immutable data + safe concurrency + small language)
+
+Authorization
+
+Audit trail
+
+4. Longevity
+
+Standards based (HTTP, OpenAPI, GraphQL, OAuth2)

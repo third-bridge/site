@@ -384,12 +384,12 @@
          :sad-message "No superusers exist."
          :fix "Enter (put-superuser! <username> <fullname>) or (put-superuser! <username> <fullname> <password>) to fix this."}
 
-      {:complete? (xt/entity db (str base-uri "/_site/apps/admin"))
+      #_{:complete? (xt/entity db (str base-uri "/_site/apps/admin"))
        :happy-message "Admin app exists."
        :sad-message "Admin app does not yet exist."
        :fix "Enter (install-admin-app!) to fix this."}
 
-      {:complete? (seq (admin-access-tokens db base-uri))
+      #_{:complete? (seq (admin-access-tokens db base-uri))
        :happy-message "Local admin access-token exists."
        :sad-message "Local admin access-token does not yet exist."
        :fix "Enter (create-local-admin-access-token! <subject>) to fix this."}
@@ -416,13 +416,13 @@
     (init/put-site-api! xt-node config)
     (status (steps config))))
 
-(defn install-admin-app! []
+#_(defn install-admin-app! []
   (let [config (config)
         xt-node (xt-node)]
     (init/install-admin-app! xt-node config)
     (status (steps config))))
 
-(defn create-admin-access-token! [subject]
+#_(defn create-admin-access-token! [subject]
   (let [config (config)
         xt-node (xt-node)]
     (init/create-admin-access-token! xt-node subject config)
@@ -528,7 +528,7 @@
   (let [subject "urn:site:subjects:repl"]
     (apply authz/call-action! (xt-node) {} subject action args)))
 
-(defn register-call-action-fn! []
+(defn install-call-action-fn! []
   (put! (authz/register-call-action-fn)))
 
 (defn me [] "urn:site:subjects:repl")

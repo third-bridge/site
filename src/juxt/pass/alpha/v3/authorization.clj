@@ -249,7 +249,7 @@
     (xt/await-tx xt-node tx)
     (assert (xt/tx-committed? xt-node tx))))
 
-(defn register-call-action-fn []
+(defn install-call-action-fn []
   {:xt/id "urn:site:tx-fns:call-action"
    :xt/fn '(fn [xt-ctx pass-ctx subject action args]
              (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) pass-ctx subject action args))})

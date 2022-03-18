@@ -228,13 +228,18 @@ $ rlwrap ncat localhost 50505
 ----
 --
 
-== Bootstrap required resources
+== Install sufficient resources for creating an access token
 
-A Site instance is a collection of documents, stored in XTDB. Like XTDB, Site is
-schemaless and requires that you define your own documents. However, by included
-document attributes known to Site (usually in the `juxt.site.alpha` namespace)
-Site is able to interpret the documents as web or API resources, and serve them
-over HTTP.
+A Site instance is a collection of documents, stored in XTDB.
+
+Like XTDB, Site is schemaless and requires that you define your own
+documents. However, by included document attributes known to Site (usually in
+the `juxt.site.alpha` namespace) Site is able to interpret the documents as web
+or API resources, and serve them over HTTP.
+
+In this section we use the REPL to build up the minimal resources required to
+acquire an *access token* which can let us continue setting up the server
+remotely, without requiring further REPL access.
 
 ----
 Site by JUXT. Copyright (c) 2021, JUXT LTD.
@@ -253,7 +258,7 @@ There are a few useful Site REPL commands you should be familiar with:
 (apply evict! (ls)):: Start over. (Delete everything in the database!)
 --
 
-== Create the set of domain actions
+=== Register the call action function
 
 Actions are at the heart of Site:
 
@@ -264,14 +269,49 @@ Actions are at the heart of Site:
 * Actions can be grouped into OAuth2 scopes
 * Actions can be exposed to the network, via OpenAPI and GraphQL.
 
-=== Register the call action function
+Actions are executed in an XTDB transaction function. This guarantees
+consistency, eliminating potential race-conditions. For example, it's important
+that any revocations to authorization permissions are fully processed if they
+occur before a call to an action.
+
+So we must first install the transaction function.
 
 [source,clojure]
 ----
-(register-call-action-fn!)
+(install-call-action-fn!)
 ----
 
+=== Create a subject to represent the REPL
+
+Actions are performed by subjects.
+
+To call actions from the REPL, we have to install a subject so that we can have
+something to grant permission to. The `(me)` function returns a special built-in
+identifier for the REPL user. It can't be used remotely.
+
+[source,clojure]
+.Add the REPL subject
+----
+(put! {:xt/id (me)})
+----
+
+== Generating the initial access-token
+
+Secure remote access to Site resources requires an access token.
+
+An access token is granted for a *subject* and an *application*. A *subject*
+represents an authenticated person, which will include personal data as well as
+details about their login session (e.g. the device they are using, whether their
+email address has been verified, whether their login required use of a second
+factor, etc.)
+
+For the purposes of this example, we'll create a person entity to represent the
+person. We'll use the name `Alice` but feel free to replace this with your own
+personal details.
+
+
 === Create an action to create a person
+
 
 .Creating the create-person action
 ====
@@ -307,43 +347,37 @@ Actions are at the heart of Site:
 <5> An action declares the rules as to who is authorized to call it
 ====
 
-=== Create a subject to represent the REPL
-
-To call actions from the REPL, we have to create a built-in subject so that we
-can have something to grant permission to.
-
-[source,clojure]
-.Add the REPL subject
-----
-(put! {:xt/id (me)})
-----
-
 === Permit the REPL to call the create-person action
 
 [source,clojure]
 ----
 (put!
 {:xt/id "https://site.test/permissions/repl"
-   ::site/type "Permission"
-   ::pass/subject "urn:site:subjects:repl"
-   ::pass/action #{"https://site.test/actions/create-person"}
-   ::pass/purpose nil
-   }
-   )
+ ::site/type "Permission"
+ ::pass/subject "urn:site:subjects:repl"
+ ::pass/action #{"https://site.test/actions/create-person"}
+ ::pass/purpose nil
+ }
+)
 ----
 
-=== Call the action
+=== Call the create-person action
 
 [source,clojure]
 ----
-(call-action! "https://site.test/actions/create-person" {:example/name "Alice"})
+(call-action! "https://site.test/actions/create-person"
+  {:xt/id "https://site.test/persons/alice"
+  :example/name "Alice"})
 ----
 
+=== Create an action to register an application
 
-=== Install the admin app
+
+
+=== Register an application
 
 ----
-(install-admin-app!)
+(-admin-app!)
 ----
 
 
@@ -355,11 +389,7 @@ TODO: This could/should define scopes
 
 === Create an access token
 
-Finally, create the access token that has permission to call administrative actions.
-
-----
-(create-admin-access-token! "urn:site:subject:admin:mal")
-----
+TODO:
 
 == Run the site tool
 

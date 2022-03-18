@@ -1003,7 +1003,7 @@
       ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
     ;; Functions
-    [::xt/put (authz/register-call-action-fn)]])
+    [::xt/put (authz/install-call-action-fn)]])
 
   ;; Sue creates the user Alice, with an identity
   (let [db (xt/db *xt-node*)]

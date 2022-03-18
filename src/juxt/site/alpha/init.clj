@@ -216,7 +216,7 @@
      (json/write-value-as-string %))
    config))
 
-(defn install-admin-app! [xt-node {::site/keys [base-uri] :as config}]
+#_(defn install-admin-app! [xt-node {::site/keys [base-uri] :as config}]
   (let [id (str base-uri "/_site/apps/admin")]
     (put!
      xt-node
@@ -225,7 +225,7 @@
       ::pass/client-secret (make-nonce 16)
       ::pass/scope #{"read:admin" "write:admin"}})))
 
-(defn create-admin-access-token! [xt-node subject-id {::site/keys [base-uri] :as config}]
+#_(defn create-admin-access-token! [xt-node subject-id {::site/keys [base-uri] :as config}]
   (put!
    xt-node
    (at/make-access-token-doc subject-id (str base-uri "/_site/apps/admin"))))
