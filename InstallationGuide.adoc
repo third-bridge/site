@@ -342,8 +342,8 @@ personal details.
  [{:juxt.pass.alpha.malli/schema <4>
    [:map
     [:xt/id [:re "https://site.test/(.+)"]]
-    [:example/type [:= "Person"]]]
-    [:example/name [:string]]
+    [:example/type [:= "Person"]]
+    [:example/name [:re "[\\p{Alpha} ]{2,}"]]]
 
    :juxt.pass.alpha/process
    [
@@ -377,7 +377,7 @@ personal details.
 )
 ----
 
-==== Call the create-person action
+==== Create 'Alice' with the create-person action
 
 [source,clojure]
 ----
@@ -386,11 +386,36 @@ personal details.
   :example/name "Alice"})
 ----
 
-=== Create a subject entity to represent the Alice's login
+=== Create a subject entity to represent Alice's login
 
 ==== Create an action to create a subject
 
-TODO
+[source,clojure]
+----
+(put!
+{:xt/id "https://site.test/actions/create-subject"
+ :juxt.site.alpha/type "Action"
+ :juxt.pass.alpha/scope "write:admin"
+ :juxt.pass.alpha/action-args
+ [{:juxt.pass.alpha.malli/schema
+   [:map
+    [:xt/id [:re "https://site.test/(.+)"]]
+    [:example/type [:= "Subject"]]
+    [:example/person [:re "https://site.test/persons/\\p{Alpha}{2,}"]]]
+
+   :juxt.pass.alpha/process
+   [
+    [:juxt.pass.alpha/merge {:example/type "Subject"}]
+    [:juxt.pass.alpha.malli/validate]]}]
+
+ ::pass/rules
+ '[
+   [(allowed? permission subject action resource)
+    ;; Permission granted to the subject
+    [permission ::pass/subject subject]
+    ]]}
+)
+----
 
 ==== Permit the REPL to call the create-subject action
 

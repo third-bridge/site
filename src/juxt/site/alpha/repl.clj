@@ -529,7 +529,7 @@
     (apply authz/call-action! (xt-node) {} subject action args)))
 
 (defn install-call-action-fn! []
-  (put! (authz/register-call-action-fn)))
+  (put! (authz/install-call-action-fn)))
 
 (defn me [] "urn:site:subjects:repl")
 
@@ -543,7 +543,9 @@
    :juxt.pass.alpha/action-args
    [{:juxt.pass.alpha.malli/schema
      [:map
-      [:example/type [:= "Person"]]]
+      [:xt/id [:re "https://site.test/persons/\\p{alpha}{2,}"]]
+      [:example/type [:= "Person"]]
+      [:example/name [:re "[\\p{alpha} ]{2,}"]]]
 
      :juxt.pass.alpha/process
      [
@@ -564,4 +566,26 @@
    ::pass/subject "urn:site:subjects:repl"
    ::pass/action #{"https://site.test/actions/create-person"}
    ::pass/purpose nil
-   })
+   }
+
+  {:xt/id "https://site.test/actions/create-subject"
+   :juxt.site.alpha/type "Action"
+   :juxt.pass.alpha/scope "write:admin"
+   :juxt.pass.alpha/action-args
+   [{:juxt.pass.alpha.malli/schema
+     [:map
+      [:xt/id [:re "https://site.test/(.+)"]]
+      [:example/type [:= "Subject"]]
+      [:example/person [:re "https://site.test/persons/\\p{alpha}{2,}"]]]
+
+     :juxt.pass.alpha/process
+     [
+      [:juxt.pass.alpha/merge {:example/type "Subject"}]
+      [:juxt.pass.alpha.malli/validate]]}]
+
+   ::pass/rules
+   '[
+     [(allowed? permission subject action resource)
+      ;; Permission granted to the subject
+      [permission ::pass/subject subject]
+      ]]})
