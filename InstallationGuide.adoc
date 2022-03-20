@@ -368,7 +368,7 @@ personal details.
 [source,clojure]
 ----
 (put!
-{:xt/id "https://site.test/permissions/repl"
+{:xt/id "https://site.test/permissions/repl/create-person"
  ::site/type "Permission"
  ::pass/subject "urn:site:subjects:repl"
  ::pass/action #{"https://site.test/actions/create-person"}
@@ -382,7 +382,7 @@ personal details.
 [source,clojure]
 ----
 (call-action! "https://site.test/actions/create-person"
-  {:xt/id "https://site.test/persons/alice"
+  {:xt/id "https://site.test/people/alice"
   :example/name "Alice"})
 ----
 
@@ -399,9 +399,9 @@ personal details.
  :juxt.pass.alpha/action-args
  [{:juxt.pass.alpha.malli/schema
    [:map
-    [:xt/id [:re "https://site.test/(.+)"]]
+    [:xt/id [:re "https://site.test/subjects(.+)"]]
     [:example/type [:= "Subject"]]
-    [:example/person [:re "https://site.test/persons/\\p{Alpha}{2,}"]]]
+    [:example/person [:re "https://site.test/people/\\p{Alpha}{2,}"]]]
 
    :juxt.pass.alpha/process
    [
@@ -419,11 +419,26 @@ personal details.
 
 ==== Permit the REPL to call the create-subject action
 
-TODO
+[source,clojure]
+----
+(put!
+{:xt/id "https://site.test/permissions/repl/create-subject"
+ ::site/type "Permission"
+ ::pass/subject "urn:site:subjects:repl"
+ ::pass/action #{"https://site.test/actions/create-subject"}
+ ::pass/purpose nil
+ }
+)
+----
 
 ==== Call the create-subject action
 
-TODO
+[source,clojure]
+----
+(call-action! "https://site.test/actions/create-subject"
+  {:xt/id "https://site.test/subjects/alice"
+   :example/person "https://site.test/people/alice"})
+----
 
 === Register an application
 
