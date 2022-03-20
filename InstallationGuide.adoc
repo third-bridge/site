@@ -365,6 +365,9 @@ personal details.
 
 ==== Permit the REPL to call the create-person action
 
+.Adding the permission for the REPL to create a person
+====
+
 [source,clojure]
 ----
 (put!
@@ -376,8 +379,12 @@ personal details.
  }
 )
 ----
+====
 
 ==== Create 'Alice' with the create-person action
+
+.Creating 'Alice'
+====
 
 [source,clojure]
 ----
@@ -385,11 +392,14 @@ personal details.
   {:xt/id "https://site.test/people/alice"
   :example/name "Alice"})
 ----
+====
 
 === Create a subject entity to represent Alice's login
 
 ==== Create an action to create a subject
 
+.Creating an action for creating the subject
+====
 [source,clojure]
 ----
 (put!
@@ -413,11 +423,14 @@ personal details.
    [(allowed? permission subject action resource)
     ;; Permission granted to the subject
     [permission ::pass/subject subject]
-    ]]}
-)
+    ]]})
 ----
+====
 
 ==== Permit the REPL to call the create-subject action
+
+.Adding a permission on the create-subject action
+====
 
 [source,clojure]
 ----
@@ -430,15 +443,19 @@ personal details.
  }
 )
 ----
+====
 
 ==== Call the create-subject action
 
+.Calling the create-subject action
+====
 [source,clojure]
 ----
 (call-action! "https://site.test/actions/create-subject"
   {:xt/id "https://site.test/subjects/alice"
    :example/person "https://site.test/people/alice"})
 ----
+====
 
 === Register an application
 
