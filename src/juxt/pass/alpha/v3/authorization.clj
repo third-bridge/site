@@ -196,50 +196,66 @@
    arg
    (::pass/process arg-def)))
 
-(defn call-action [db {:keys [resource purpose]} subject action action-args]
-  (try
-    ;; Check that we /can/ call the action
-    (let [check-permissions-result
-          (check-permissions
-           db
-           subject
-           #{action}
-           {:resource resource :purpose purpose})
-          action-doc (xt/entity db action)
-          _ (when-not action-doc
-              (throw
-               (ex-info
-                (format "Action '%s' not found in db" action)
-                {:action action})))
-          action-arg-defs (::pass/action-args action-doc [])
-          _ (when-not (= (count action-arg-defs) (count action-args))
-              (throw
-               (ex-info
-                "Arguments given to call-action do not match the number of arguments defined on the action"
-                {:count-action-arg-defs (count action-arg-defs)
-                 :count-action-args (count action-args)})))]
+(defn call-action [xt-ctx {:keys [resource purpose]} subject action action-args]
+  (let [db (xt/db xt-ctx)
+        tx-id (::xt/tx-id (xt/indexing-tx xt-ctx))]
+    (try
+      ;; Check that we /can/ call the action
+      (let [check-permissions-result
+            (check-permissions
+             db
+             subject
+             #{action}
+             {:resource resource :purpose purpose})
+            action-doc (xt/entity db action)
+            _ (when-not action-doc
+                (throw
+                 (ex-info
+                  (format "Action '%s' not found in db" action)
+                  {:action action})))
+            action-arg-defs (::pass/action-args action-doc [])
+            _ (when-not (= (count action-arg-defs) (count action-args))
+                (throw
+                 (ex-info
+                  "Arguments given to call-action do not match the number of arguments defined on the action"
+                  {:count-action-arg-defs (count action-arg-defs)
+                   :count-action-args (count action-args)})))]
 
-      (when-not (seq check-permissions-result)
-        (throw
-         (ex-info
-          (str "Don't have permission! " (pr-str {:subject subject
-                                                 :action action
-                                                 :resource resource
-                                                 :purpose purpose}))
-          {:subject subject
-           :action action
-           :resource resource
-           :purpose purpose})))
+        (when-not (seq check-permissions-result)
+          (throw
+           (ex-info
+            (str "Don't have permission! " (pr-str {:subject subject
+                                                    :action action
+                                                    :resource resource
+                                                    :purpose purpose}))
+            {:subject subject
+             :action action
+             :resource resource
+             :purpose purpose})))
 
-      (mapv
-       (fn [arg arg-def]
-         [::xt/put (process-arg arg arg-def)])
+        (let [new-docs
+              (mapv
+               (fn [arg arg-def]
+                 (process-arg arg arg-def))
+               action-args action-arg-defs)
 
-       action-args action-arg-defs))
+              new-docs
+              (conj
+               new-docs
+               {:xt/id
+                ;; Only not using base-uri because we don't know what it is here
+                (format "urn:site:action-log:%s" tx-id)
+                ::xt/tx-id tx-id
+                ::pass/subject subject
+                ::pass/action action
+                ::pass/purpose purpose
+                ::site/entities (map :xt/id new-docs)})]
 
-    (catch Exception e
-      (log/errorf e "Error when calling action: %s" action)
-      (throw e))))
+          (mapv (fn [doc] [::xt/put doc]) new-docs)))
+
+      (catch Exception e
+        (log/errorf e "Error when calling action: %s" action)
+        (throw e)))))
 
 (defn call-action! [xt-node pass-ctx subject action & args]
   (let [tx (xt/submit-tx
@@ -252,4 +268,4 @@
 (defn install-call-action-fn []
   {:xt/id "urn:site:tx-fns:call-action"
    :xt/fn '(fn [xt-ctx pass-ctx subject action args]
-             (juxt.pass.alpha.v3.authorization/call-action (xtdb.api/db xt-ctx) pass-ctx subject action args))})
+             (juxt.pass.alpha.v3.authorization/call-action xt-ctx pass-ctx subject action args))})

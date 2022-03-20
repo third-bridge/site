@@ -283,16 +283,23 @@ Actions are at the heart of Site:
 * Actions can be grouped into OAuth2 scopes
 * Actions can be exposed to the network, via OpenAPI and GraphQL.
 
-==== Register the call action function
+==== Install the call-action function
 
-Actions are executed in an XTDB transaction function. This guarantees
-consistency, eliminating potential race-conditions. For example, it's important
-that any revocations to authorization permissions are fully processed if they
-occur before a call to an action.
+Actions are executed in an XTDB transaction function.
 
-So, we must install the transaction function.
+This guarantees consistency, eliminating potential race-conditions. For example,
+it's important that any revocations to authorization permissions are fully
+processed if they occur before a call to an action.
+
+The transaction function also records every action call in an *audit-log*,
+detailing when the action was called, by whom, which entities were affected and,
+potentially, other details such as the 'business justification'.
+
+We have to first install the transaction function into the database, so that we
+can start to call the actions we will create.
 
 [source,clojure]
+.Install the call-action transaction function
 ----
 (install-call-action-fn!)
 ----
@@ -333,6 +340,7 @@ personal details.
 ====
 
 [source,clojure]
+.Put the create-person entity
 ----
 (put!
 {:xt/id "https://site.test/actions/create-person"
