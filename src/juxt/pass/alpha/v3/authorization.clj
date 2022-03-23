@@ -212,7 +212,7 @@
   (assert (vector? args))
   (log/infof "action is %s, args is %s" action args)
   (let [db (xt/db xt-ctx)
-        tx-id (::xt/tx-id (xt/indexing-tx xt-ctx))]
+        tx (xt/indexing-tx xt-ctx)]
     (try
       ;; Check that we /can/ call the action
       (let [check-permissions-result
@@ -250,26 +250,27 @@
           (conj
            processed-args
            [::xt/put
-            {:xt/id (format "urn:site:action-log:%s" tx-id)
-             ::xt/tx-id tx-id
-             ::pass/subject subject
-             ::pass/action action
-             ::pass/purpose purpose
-             ::pass/puts (vec
-                          (keep
-                           (fn [[tx-op {id :xt/id}]]
-                             (when (= tx-op ::xt/put) id))
-                           processed-args))
-             ::pass/deletes (vec
-                             (keep
-                              (fn [[tx-op {id :xt/id}]]
-                                (when (= tx-op ::xt/delete) id))
-                              processed-args))}])))
+            (into
+             {:xt/id (format "urn:site:action-log:%s" (::xt/tx-id tx))
+              ::pass/subject subject
+              ::pass/action action
+              ::pass/purpose purpose
+              ::pass/puts (vec
+                           (keep
+                            (fn [[tx-op {id :xt/id}]]
+                              (when (= tx-op ::xt/put) id))
+                            processed-args))
+              ::pass/deletes (vec
+                              (keep
+                               (fn [[tx-op {id :xt/id}]]
+                                 (when (= tx-op ::xt/delete) id))
+                               processed-args))}
+             tx)])))
 
       (catch Exception e
-        (log/errorf e "Error when doing action: %s %s" action (format "urn:site:action-log:%s" tx-id))
+        (log/errorf e "Error when doing action: %s %s" action (format "urn:site:action-log:%s" (::xt/tx-id tx)))
         [[::xt/put
-          {:xt/id (format "urn:site:action-log:%s" tx-id)
+          {:xt/id (format "urn:site:action-log:%s" (::xt/tx-id tx))
            ::site/error {:message (.getMessage e)
                          :ex-data (ex-data e)}}]]))))
 
