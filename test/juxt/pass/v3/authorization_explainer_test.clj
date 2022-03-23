@@ -15,6 +15,7 @@
 
 (alias 'pass (create-ns 'juxt.pass.alpha))
 (alias 'pass.malli (create-ns 'juxt.pass.alpha.malli))
+(alias 'pass.process (create-ns 'juxt.pass.alpha.process))
 (alias 'site (create-ns 'juxt.site.alpha))
 
 (use-fixtures :each with-xt)
@@ -951,24 +952,42 @@
   {:xt/id "https://example.org/actions/create-person"
    ::site/type "Action"
    ::pass/scope "write:admin"
-   ::pass/action-args
-   [{::pass.malli/schema
-     [:map
-      [::type [:= "Person"]]
-      [::username [:string]]]
 
-     ::pass/process
-     [
-      ;; Though we could use a Malli value transformer here, at this stage is
-      ;; doesn't feel beneficial to lean too heavily on Malli's extensive
-      ;; feature set.
-      [::pass/merge {::type "Person"}]
-      [::pass.malli/validate]]}]
+   ::pass.malli/args-schema
+   [:tuple
+    [:map
+     [::type [:= "Person"]]
+     [::username [:string]]]]
+
+   ::pass/process
+   [
+    [::pass.process/update-in [0] 'merge {::type "Person"}]
+    [::pass.malli/validate]
+    [::xt/put]]
+
    ::pass/rules
    '[[(allowed? permission subject action resource)
       [permission ::person person]
       [subject ::person person]
       [person ::type "Person"]]]})
+
+(let [f (fn [tx-id action args]
+          (reduce
+           (fn [args processor]
+             (try
+               (authz/apply-processor processor action args)
+               (catch clojure.lang.ExceptionInfo e
+                 [[::xt/put
+                   {:xt/id (format "urn:site:action-log:%s" tx-id)
+                    :error {:message (.getMessage e)
+                            :ex-data (ex-data e)}}]])))
+           args
+           (::pass/process action))
+          )]
+  (f 123 CREATE_PERSON_ACTION [{::username "alice"
+                                ;;::type "Person"
+                                }])
+  )
 
 (def CREATE_IDENTITY_ACTION
   {:xt/id "https://example.org/actions/create-identity"

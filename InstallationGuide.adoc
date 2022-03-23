@@ -328,6 +328,28 @@ themselves. Of course, REPL users have no restrictions to what they can do, so
 this is just for audit purposes among trusted users. Access to the REPL must be
 restricted to a very limited set of authorized users.
 
+=== Install the create-action action
+
+[source,clojure]
+.Install the create-action action
+----
+(install-create-action!)
+----
+
+=== Install the permission for the REPL subject to call create-action
+
+[source,clojure]
+----
+(put!
+{:xt/id "https://site.test/permissions/repl/create-action"
+ ::site/type "Permission"
+ ::pass/subject "urn:site:subjects:repl"
+ ::pass/action #{"https://site.test/actions/create-action"}
+ ::pass/purpose nil
+ }
+)
+----
+
 === Create 'Alice'
 
 For the purposes of this example, we'll create a person entity to represent the
@@ -340,9 +362,10 @@ personal details.
 ====
 
 [source,clojure]
-.Put the create-person entity
+.Install the create-person action
 ----
-(put!
+(call-action!
+"https://site.test/actions/create-action"
 {:xt/id "https://site.test/actions/create-person"
  :juxt.site.alpha/type "Action" <1>
  :juxt.pass.alpha/scope "write:admin" <2>

@@ -4,7 +4,8 @@
   (:require
    [xtdb.api :as xt]
    [clojure.tools.logging :as log]
-   [malli.core :as m]))
+   [malli.core :as m]
+   [malli.error :a me]))
 
 (alias 'pass (create-ns 'juxt.pass.alpha))
 (alias 'pass.malli (create-ns 'juxt.pass.alpha.malli))
@@ -171,23 +172,30 @@
          (map :resource)
          (xt/pull-many db pull-expr))))
 
-(defmulti apply-processor (fn [processor m arg-def] (first processor)))
+(defmulti apply-processor (fn [processor action args] (first processor)))
 
-(defmethod apply-processor :default [[kw] m _]
-  (log/warnf "No processor for %s" kw)
-  m)
+(defmethod apply-processor :default [[kw] action args]
+  (throw (ex-info (format "No processor for %s" kw) {:kw kw :action action})))
 
-(defmethod apply-processor ::pass/merge [[_ m-to-merge] val _]
-  (merge val m-to-merge))
+(resolve 'clojure.core/merge)
 
-(defmethod apply-processor ::pass.malli/validate [_ val {::pass.malli/keys [schema]}]
-  (assert schema)
-  (when-not (m/validate schema val)
+(defmethod apply-processor :juxt.pass.alpha.process/update-in [[kw ks f-sym & update-in-args] action args]
+  (assert (vector? args))
+  (let [f (case f-sym 'merge merge nil)]
+    (when-not f
+      (throw (ex-info "Unsupported update-in function" {:f f-sym})))
+    (apply update-in args ks f update-in-args)))
+
+(defmethod apply-processor ::xt/put [[kw ks] action args]
+  (mapv (fn [arg] [::xt/put arg]) args))
+
+(defmethod apply-processor ::pass.malli/validate [_ {::pass.malli/keys [args-schema] :as action} args]
+  (when-not (m/validate args-schema args)
     (throw
      (ex-info
       "Failed validation check"
-      (m/explain schema val))))
-  val)
+      (m/explain args-schema args))))
+  args)
 
 (defn process-arg [arg arg-def]
   (reduce
@@ -196,7 +204,21 @@
    arg
    (::pass/process arg-def)))
 
-(defn call-action [xt-ctx {:keys [resource purpose]} subject action action-args]
+(defn process-args [tx-id action args]
+  (reduce
+   (fn [args processor]
+     (try
+       (apply-processor processor action args)
+       (catch clojure.lang.ExceptionInfo e
+         (reduced
+          [[::xt/put
+            {:xt/id (format "urn:site:action-log:%s" tx-id)
+             :error {:message (.getMessage e)
+                     :ex-data (ex-data e)}}]]))))
+   args
+   (::pass/process action)))
+
+(defn call-action [xt-ctx {:keys [resource purpose]} subject action args]
   (let [db (xt/db xt-ctx)
         tx-id (::xt/tx-id (xt/indexing-tx xt-ctx))]
     (try
@@ -207,19 +229,21 @@
              subject
              #{action}
              {:resource resource :purpose purpose})
+
             action-doc (xt/entity db action)
             _ (when-not action-doc
                 (throw
                  (ex-info
                   (format "Action '%s' not found in db" action)
                   {:action action})))
-            action-arg-defs (::pass/action-args action-doc [])
-            _ (when-not (= (count action-arg-defs) (count action-args))
-                (throw
-                 (ex-info
-                  "Arguments given to call-action do not match the number of arguments defined on the action"
-                  {:count-action-arg-defs (count action-arg-defs)
-                   :count-action-args (count action-args)})))]
+
+            #_#_action-arg-defs (::pass/action-args action-doc [])
+            #_#__ (when-not (= (count action-arg-defs) (count action-args))
+                    (throw
+                     (ex-info
+                      "Arguments given to call-action do not match the number of arguments defined on the action"
+                      {:count-action-arg-defs (count action-arg-defs)
+                       :count-action-args (count action-args)})))]
 
         (when-not (seq check-permissions-result)
           (throw

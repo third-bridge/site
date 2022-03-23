@@ -536,6 +536,9 @@
 (defn check-permissions [subject actions options]
   (authz/check-permissions (db) subject actions options))
 
+(defn install-create-action! []
+  (init/install-create-action! (xt-node) (config)))
+
 (comment
   {:xt/id "https://site.test/actions/create-person"
    :juxt.site.alpha/type "Action"

@@ -216,6 +216,29 @@
      (json/write-value-as-string %))
    config))
 
+(defn install-create-action! [xt-node {::site/keys [base-uri] :as config}]
+  (put!
+   xt-node
+   {:xt/id (str base-uri "/actions/create-action")
+    :juxt.site.alpha/type "Action"
+    :juxt.pass.alpha/scope "write:admin"  ; make configurable?
+    :juxt.pass.alpha/action-args
+    [{:juxt.pass.alpha.malli/schema
+      [:map
+       [:xt/id [:re (str base-uri "/(.+)")]]
+       [:example/type [:= "Action"]]]
+
+      :juxt.pass.alpha/process
+      [
+       [:juxt.pass.alpha.malli/validate]]}]
+
+    ::pass/rules
+    '[
+      [(allowed? permission subject action resource)
+       [permission ::pass/subject subject]]]}
+   )
+  )
+
 #_(defn install-admin-app! [xt-node {::site/keys [base-uri] :as config}]
   (let [id (str base-uri "/_site/apps/admin")]
     (put!
