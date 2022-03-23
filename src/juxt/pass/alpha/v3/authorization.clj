@@ -197,30 +197,31 @@
       (m/explain args-schema args))))
   args)
 
-(defn process-arg [arg arg-def]
-  (reduce
-   (fn [acc processor]
-     (apply-processor processor acc arg-def))
-   arg
-   (::pass/process arg-def)))
+;;(into {:a :b} {:c :D :e :F})
 
-(defn process-args [tx-id action args]
-  (reduce
-   (fn [args processor]
-     (try
-       (apply-processor processor action args)
-       (catch clojure.lang.ExceptionInfo e
-         (reduced
-          [[::xt/put
-            {:xt/id (format "urn:site:action-log:%s" tx-id)
-             :error {:message (.getMessage e)
-                     :ex-data (ex-data e)}}]]))))
-   args
-   (::pass/process action)))
+(defn process-args [tx-id metadata action args]
+  (try
+    (let [tx-ops
+          (reduce
+           (fn [args processor]
+             (apply-processor processor action args))
+           args
+           (::pass/process action))]
+      (conj tx-ops [::xt/put
+                    (-> {:xt/id (format "urn:site:action-log:%s" tx-id)}
+                        ;; TODO: Add entities put and removed
+                        ;;::site/entities (map :xt/id new-docs)
+                        (into metadata))]))
+    (catch clojure.lang.ExceptionInfo e
+      [[::xt/put
+        (into
+         {:xt/id (format "urn:site:action-log:%s" tx-id)
+          :error {:message (.getMessage e)
+                  :ex-data (ex-data e)}}
+         metadata)]])))
 
 (defn call-action [xt-ctx {:keys [resource purpose]} subject action args]
-  (let [db (xt/db xt-ctx)
-        tx-id (::xt/tx-id (xt/indexing-tx xt-ctx))]
+  (let [db (xt/db xt-ctx)]
     (try
       ;; Check that we /can/ call the action
       (let [check-permissions-result
@@ -257,25 +258,13 @@
              :resource resource
              :purpose purpose})))
 
-        (let [new-docs
-              (mapv
-               (fn [arg arg-def]
-                 (process-arg arg arg-def))
-               action-args action-arg-defs)
-
-              new-docs
-              (conj
-               new-docs
-               {:xt/id
-                ;; Only not using base-uri because we don't know what it is here
-                (format "urn:site:action-log:%s" tx-id)
-                ::xt/tx-id tx-id
-                ::pass/subject subject
-                ::pass/action action
-                ::pass/purpose purpose
-                ::site/entities (map :xt/id new-docs)})]
-
-          (mapv (fn [doc] [::xt/put doc]) new-docs)))
+        (process-args
+         (::xt/tx-id (xt/indexing-tx xt-ctx))
+         {::pass/subject subject
+          ::pass/action action
+          ::pass/purpose purpose}
+         action-doc
+         args))
 
       (catch Exception e
         (log/errorf e "Error when calling action: %s" action)
