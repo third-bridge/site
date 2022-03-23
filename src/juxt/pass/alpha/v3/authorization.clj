@@ -172,22 +172,22 @@
          (map :resource)
          (xt/pull-many db pull-expr))))
 
-(defmulti apply-processor (fn [processor action args] (first processor)))
+(defmulti apply-processor (fn [processor pass-ctx action args] (first processor)))
 
-(defmethod apply-processor :default [[kw] action args]
+(defmethod apply-processor :default [[kw] pass-ctx action args]
   (throw (ex-info (format "No processor for %s" kw) {:kw kw :action action})))
 
-(defmethod apply-processor :juxt.pass.alpha.process/update-in [[kw ks f-sym & update-in-args] action args]
+(defmethod apply-processor :juxt.pass.alpha.process/update-in [[kw ks f-sym & update-in-args] pass-ctx action args]
   (assert (vector? args))
   (let [f (case f-sym 'merge merge nil)]
     (when-not f
       (throw (ex-info "Unsupported update-in function" {:f f-sym})))
     (apply update-in args ks f update-in-args)))
 
-(defmethod apply-processor ::xt/put [[kw ks] action args]
+(defmethod apply-processor ::xt/put [[kw ks] pass-ctx action args]
   (mapv (fn [arg] [::xt/put arg]) args))
 
-(defmethod apply-processor ::pass.malli/validate [_ {::pass.malli/keys [args-schema] :as action} args]
+(defmethod apply-processor ::pass.malli/validate [_ pass-ctx {::pass.malli/keys [args-schema] :as action} args]
   (when-not (m/validate args-schema args)
     (throw
      (ex-info
@@ -199,10 +199,10 @@
       (read-string (pr-str (m/explain args-schema args))))))
   args)
 
-(defn process-args [action args]
+(defn process-args [pass-ctx action args]
   (reduce
    (fn [args processor]
-     (apply-processor processor action args))
+     (apply-processor processor pass-ctx action args))
    args
    (::pass/process action)))
 
@@ -242,7 +242,7 @@
              :resource resource
              :purpose purpose})))
 
-        (let [processed-args (process-args action-doc args)]
+        (let [processed-args (process-args pass-ctx action-doc args)]
           (conj
            processed-args
            [::xt/put

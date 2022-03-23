@@ -970,7 +970,7 @@
       [subject ::person person]
       [person ::type "Person"]]]})
 
-(let [f (fn [tx-id action args]
+#_(let [f (fn [tx-id action args]
           (reduce
            (fn [args processor]
              (try
