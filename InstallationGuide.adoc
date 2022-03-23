@@ -328,15 +328,19 @@ themselves. Of course, REPL users have no restrictions to what they can do, so
 this is just for audit purposes among trusted users. Access to the REPL must be
 restricted to a very limited set of authorized users.
 
-=== Install the create-action action
+=== Define the create-action action
+
+We install the `create-action` action. This is the one action that has to be put
+directly into the database because we don't have a way of creating actions yet!
 
 [source,clojure]
-.Install the create-action action
+.Install (and permit) the create-action action
 ----
 (install-create-action!)
+(permit-create-action!)
 ----
 
-=== Install the grant-permission action
+=== Define the grant-permission action
 
 Now that we have our `create-action` function installed we can use it to create
 an action that will grant permissions.
@@ -345,12 +349,22 @@ an action that will grant permissions.
 (install-grant-permission-action!)
 ----
 
-Calling this ultimately calls the `do-action` function resulting in a
-*transaction metadata record* being created in the database. This allows us
-later to answer questions regarding the who, when, why and how for each document
-in the database.
+Note that this function will return a copy of the *transaction metadata record*
+for the transaction that created the grant-permission action.
 
-.The *transaction metadata record*
+.Transaction Metadata Records
+****
+
+Whenever an action is called, the `do-action` transaction function is executed
+which results in a *transaction metadata record* being created in the
+database. If the action is denied, or if errors occur when the action is
+executed, details will be recorded in the transaction metadata.
+
+This allows us later to answer questions as to whether an action was allowed or
+denied, with an explanation. We will also be able to answer questions regarding
+the who, when, why and how for each document in the database.
+
+.A *transaction metadata record*
 ====
 A copy of the transaction metadata record is returned as a result of the `do-action` function.
 
@@ -365,14 +379,46 @@ A copy of the transaction metadata record is returned as a result of the `do-act
  :juxt.pass.alpha/deletes []}
 ----
 ====
+****
 
-=== Create 'Alice'
+==== Permit access to the grant permission action
+
+We need to permit our REPL user to call this grant-permission action, and this permission too
+needs to be put directly into the database since we don't yet have a way of
+granting permissions!
+
+.Granting the REPL user the permission to grant permssions.
+----
+(permit-grant-permission-action!)
+----
+
+=== Create a user
+
+To remotely access the system, we'll first have to build a user.
+
+For this example, we'll model a user as a combination of:
+
+* a *person*,
+
+* a person's *identity*, as issued from a trusted entity such as an OAuth2
+  Authorization Server, Identity Provider or equivalent,
+
+* a *subject* which represents the person's current *session*, including details
+  of how they logged in.
+
+NOTE: We don't have to model a user this way, and for some applications this
+might be overly simplistic. Site allows you to model your own users as you see
+fit, as long as there is something to represent a *subject*.
 
 For the purposes of this example, we'll create a person entity to represent the
-person. We'll use the name `Alice` but feel free to replace this with your own
-personal details.
+person.
+
+We'll use the name `Alice` but feel free to replace this with your own personal
+details.
 
 ==== Create an action to create a person
+
+First, we'll need to create an action which will create our person entity.
 
 .Creating the create-person action
 ====
@@ -393,7 +439,7 @@ personal details.
 
  :juxt.pass.alpha/process <4>
    [
-    #_[:juxt.pass.alpha.process/update-in [0] 'merge {:example/type "Person"}]
+    [:juxt.pass.alpha.process/update-in [0] 'merge {:example/type "Person"}]
     [:juxt.pass.alpha.malli/validate]
     [:xtdb.api/put]]
 
@@ -419,7 +465,6 @@ personal details.
 ----
 (grant-permission!
 {:xt/id "https://site.test/permissions/repl/create-person"
- ::site/type "Permission"
  ::pass/subject (me)
  ::pass/action #{"https://site.test/actions/create-person"}
  ::pass/purpose nil

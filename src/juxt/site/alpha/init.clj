@@ -220,35 +220,39 @@
 (defn me [] "urn:site:subjects:repl")
 
 (defn install-create-action! [xt-node {::site/keys [base-uri] :as config}]
-  (let [create-action-id (str base-uri "/actions/create-action")]
-    (put!
-     xt-node
-     {:xt/id create-action-id
-      :juxt.site.alpha/type "Action"
-      :juxt.pass.alpha/scope "write:admin" ; make configurable?
-      :juxt.pass.alpha.malli/args-schema
-      [:tuple
-       [:map
-        [:xt/id [:re (str base-uri "/(.+)")]]
-        [::site/type [:= "Action"]]]]
+  (put!
+   xt-node
+   {:xt/id (str base-uri "/actions/create-action")
+    :juxt.site.alpha/type "Action"
+    :juxt.pass.alpha/scope "write:admin" ; make configurable?
+    :juxt.pass.alpha.malli/args-schema
+    [:tuple
+     [:map
+      [:xt/id [:re (str base-uri "/(.+)")]]
+      [::site/type [:= "Action"]]]]
 
-      ::pass/process
-      [
-       [:juxt.pass.alpha.malli/validate]
-       [::xt/put]]
+    ::pass/process
+    [
+     [:juxt.pass.alpha.malli/validate]
+     [::xt/put]]
 
-      ::pass/rules
-      '[
-        ;; The permission to create actions may be granted through role
-        ;; membership, so perhaps make this configurable.
-        [(allowed? permission subject action resource)
-         [permission ::pass/subject subject]]]}
+    ::pass/rules
+    '[
+      ;; The permission to create actions may be granted through role
+      ;; membership, so perhaps make this configurable.
+      [(allowed? permission subject action resource)
+       [permission ::pass/subject subject]]]}
 
-     {:xt/id (str base-uri "permissions/repl/create-action")
-      ::site/type "Permission"
-      ::pass/subject (me)
-      ::pass/action create-action-id
-      ::pass/purpose nil})))
+   ))
+
+(defn permit-create-action! [xt-node {::site/keys [base-uri] :as config}]
+  (put!
+   xt-node
+   {:xt/id (str base-uri "permissions/repl/create-action")
+    ::site/type "Permission"
+    ::pass/subject (me)
+    ::pass/action (str base-uri "/actions/create-action")
+    ::pass/purpose nil}))
 
 (defn do-action [xt-node action & args]
   (apply authz/do-action xt-node {} (me) action args))
@@ -282,10 +286,12 @@
     '[
       ;; See related comment above
       [(allowed? permission subject action resource)
-       [permission ::pass/subject subject]]]})
+       [permission ::pass/subject subject]]]}))
 
-  ;; As a boottrap, we need to grant the REPL permission to grant permissions!
-  ;; This should be the last time we need to explicitly put anything in XTDB.
+;; As a bootstrap, we need to grant the REPL permission to grant permissions!
+;; This should be the last time we need to explicitly put anything in XTDB.
+(defn permit-grant-permission-action!
+  [xt-node {::site/keys [base-uri] :as config}]
   (put!
    xt-node
    {:xt/id (str base-uri "permissions/repl/grant-permission")

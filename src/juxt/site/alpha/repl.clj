@@ -538,8 +538,14 @@
 (defn install-create-action! []
   (init/install-create-action! (xt-node) (config)))
 
+(defn permit-create-action! []
+  (init/permit-create-action! (xt-node) (config)))
+
 (defn install-grant-permission-action! []
   (init/install-grant-permission-action! (xt-node) (config)))
+
+(defn permit-grant-permission-action! []
+  (init/permit-grant-permission-action! (xt-node) (config)))
 
 (defn create-action! [action]
   (init/create-action! (xt-node) (config) action))
