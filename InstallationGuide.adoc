@@ -403,12 +403,12 @@ To remotely access the system, we'll first have to build a user.
 
 For this example, we'll model a user as a combination of:
 
-* a *person*,
+- [ ] A *person*,
 
-* a person's *identity*, as issued from a trusted entity such as an OAuth2
+- [ ] A person's *identity*, as issued from a trusted entity such as an OAuth2
   Authorization Server, Identity Provider or equivalent,
 
-* a *subject* which represents the person's current *session*, including details
+- [ ] A *subject* which represents the person's current *session*, including details
   of how they logged in.
 
 NOTE: We don't have to model a user this way, and for some applications this
@@ -438,6 +438,7 @@ First, we'll need to create an action which will create our person entity.
  :juxt.pass.alpha.malli/args-schema <3>
  [:tuple
    [:map
+     [:xt/id [:re "https://site.test/people/\\p{Alpha}{2,}"]]
      [:example/type [:= "Person"]]
      [:example/name [:string]]]]
 
@@ -490,38 +491,44 @@ First, we'll need to create an action which will create our person entity.
 ----
 ====
 
-// HERE
-
 === Create a subject entity to represent Alice's login
 
+Now we create the *subject* to represent Alice's login.
+
+We do this because we may want our rules to take into account other aspects of
+Alice's session rather than just the fact that it belongs to Alice. For example,
+we may want some actions to be denied if Alice is logging in from an insecure
+location or from a different country.
+
 ==== Create an action to create a subject
+
+We haven't yet created the ability to create subjects, so let's create another
+action for doing that.
 
 .Creating an action for creating the subject
 ====
 [source,clojure]
 ----
-(put!
+(create-action!
 {:xt/id "https://site.test/actions/create-subject"
- :juxt.site.alpha/type "Action"
  :juxt.pass.alpha/scope "write:admin"
- :juxt.pass.alpha/action-args
- [{:juxt.pass.alpha.malli/schema
+
+ :juxt.pass.alpha.malli/args-schema
+ [:tuple
    [:map
-    [:xt/id [:re "https://site.test/subjects(.+)"]]
-    [:example/type [:= "Subject"]]
-    [:example/person [:re "https://site.test/people/\\p{Alpha}{2,}"]]]
+     [:example/type [:= "Subject"]]
+     [:example/person [:re "https://site.test/people/\\p{Alpha}{2,}"]]]]
 
-   :juxt.pass.alpha/process
-   [
-    [:juxt.pass.alpha/merge {:example/type "Subject"}]
-    [:juxt.pass.alpha.malli/validate]]}]
+ :juxt.pass.alpha/process <4>
+ [
+  [:juxt.pass.alpha.process/update-in [0] 'merge {:example/type "Subject"}]
+  [:juxt.pass.alpha.malli/validate]
+  [:xtdb.api/put]]
 
- ::pass/rules
+ ::pass/rules <5>
  '[
    [(allowed? permission subject action resource)
-    ;; Permission granted to the subject
-    [permission ::pass/subject subject]
-    ]]})
+    [permission ::pass/subject subject]]]})
 ----
 ====
 
@@ -532,9 +539,8 @@ First, we'll need to create an action which will create our person entity.
 
 [source,clojure]
 ----
-(put!
+(grant-permission!
 {:xt/id "https://site.test/permissions/repl/create-subject"
- ::site/type "Permission"
  ::pass/subject "urn:site:subjects:repl"
  ::pass/action #{"https://site.test/actions/create-subject"}
  ::pass/purpose nil
