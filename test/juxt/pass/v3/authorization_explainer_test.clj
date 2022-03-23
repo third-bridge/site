@@ -1048,26 +1048,65 @@
    {}
    (:xt/id SUE_SUBJECT)
    (:xt/id CREATE_PERSON_ACTION)
-   {:xt/id ALICE ::username "alice"})
+   (assoc ALICE ::username "alice"))
 
-  (is (xt/entity (xt/db *xt-node*) ALICE))
+  (is (xt/entity (xt/db *xt-node*) (:xt/id ALICE)))
 
   ;; This fails because we haven't provided the ::username
-  (is
+  #_(is
    (thrown?
     AssertionError
     (let [db (xt/db *xt-node*)]
       (authz/call-action!
        *xt-node*
        {}
-       (:xt/id ALICE_SUBJECT)
+       (:xt/id SUE_SUBJECT)
        (:xt/id CREATE_PERSON_ACTION)
        {:xt/id ALICE})))))
 
-#_((t/join-fixtures [with-xt])
-   (fn []
-     :ok
-     ))
+((t/join-fixtures [with-xt])
+ (fn []
+   (submit-and-await!
+    [
+     ;; Applications
+     [::xt/put ADMIN_APP]
+
+     ;; Actors
+     [::xt/put SUE]
+     [::xt/put CARLOS]
+
+     ;; Subjects
+     [::xt/put SUE_SUBJECT]
+     [::xt/put CARLOS_SUBJECT]
+
+     ;; Actions
+     [::xt/put CREATE_PERSON_ACTION]
+     [::xt/put CREATE_IDENTITY_ACTION]
+
+     ;; Permissions
+     [::xt/put
+      {:xt/id "https://example.org/permissions/sue/create-person"
+       ::site/type "Permission"
+       ::person (:xt/id SUE)
+       ::pass/action (:xt/id CREATE_PERSON_ACTION)
+       ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
+
+     ;; Functions
+     [::xt/put (authz/install-call-action-fn)]])
+
+   (let [db (xt/db *xt-node*)]
+     (authz/call-action!
+      *xt-node*
+      {}
+      (:xt/id SUE_SUBJECT)
+      (:xt/id CREATE_PERSON_ACTION)
+      ALICE))
+   ))
+
+;; TODO: Test actions like this:
+;;(authz/process-args CREATE_PERSON_ACTION [{::username "alice"}])
+
+
 
 ;; TODO: Extend to GraphQL
 ;;

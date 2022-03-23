@@ -194,34 +194,25 @@
     (throw
      (ex-info
       "Failed validation check"
-      (m/explain args-schema args))))
+      ;; Not sure why Malli throws this error here: No implementation of
+      ;; method: :-form of protocol: #'malli.core/Schema found for class: clojure.lang.PersistentVector
+      ;;
+      ;; Workaround is to pr-str and read-string
+      (read-string (pr-str (m/explain args-schema args))))))
   args)
 
-;;(into {:a :b} {:c :D :e :F})
-
-(defn process-args [tx-id metadata action args]
-  (try
-    (let [tx-ops
-          (reduce
-           (fn [args processor]
-             (apply-processor processor action args))
-           args
-           (::pass/process action))]
-      (conj tx-ops [::xt/put
-                    (-> {:xt/id (format "urn:site:action-log:%s" tx-id)}
-                        ;; TODO: Add entities put and removed
-                        ;;::site/entities (map :xt/id new-docs)
-                        (into metadata))]))
-    (catch clojure.lang.ExceptionInfo e
-      [[::xt/put
-        (into
-         {:xt/id (format "urn:site:action-log:%s" tx-id)
-          :error {:message (.getMessage e)
-                  :ex-data (ex-data e)}}
-         metadata)]])))
+(defn process-args [action args]
+  (reduce
+   (fn [args processor]
+     (apply-processor processor action args))
+   args
+   (::pass/process action)))
 
 (defn call-action [xt-ctx {:keys [resource purpose]} subject action args]
-  (let [db (xt/db xt-ctx)]
+  (assert (vector? args))
+  (log/infof "action is %s, args is %s" action args)
+  (let [db (xt/db xt-ctx)
+        tx-id (::xt/tx-id (xt/indexing-tx xt-ctx))]
     (try
       ;; Check that we /can/ call the action
       (let [check-permissions-result
@@ -249,36 +240,52 @@
         (when-not (seq check-permissions-result)
           (throw
            (ex-info
-            (str "Don't have permission! " (pr-str {:subject subject
-                                                    :action action
-                                                    :resource resource
-                                                    :purpose purpose}))
+            "Don't have permission!"
             {:subject subject
              :action action
              :resource resource
              :purpose purpose})))
 
-        (process-args
-         (::xt/tx-id (xt/indexing-tx xt-ctx))
-         {::pass/subject subject
-          ::pass/action action
-          ::pass/purpose purpose}
-         action-doc
-         args))
+        (->
+         (process-args action-doc args)
+         (conj
+          [::xt/put
+           {:xt/id (format "urn:site:action-log:%s" tx-id)
+            ::xt/tx-id tx-id
+            ::pass/subject subject
+            ::pass/action action
+            ::pass/purpose purpose}
+           ;; TODO: Add entities put and removed
+           ;;::site/entities (map :xt/id new-docs)
+           ])))
 
       (catch Exception e
-        (log/errorf e "Error when calling action: %s" action)
-        (throw e)))))
+        (log/errorf e "Error when calling action: %s %s" action (format "urn:site:action-log:%s" tx-id))
+        [[::xt/put
+          {:xt/id (format "urn:site:action-log:%s" tx-id)
+           ::site/error {:message (.getMessage e)
+                         :ex-data (ex-data e)}}]]))))
 
 (defn call-action! [xt-node pass-ctx subject action & args]
   (let [tx (xt/submit-tx
             xt-node
-            [[::xt/fn "urn:site:tx-fns:call-action" pass-ctx subject action args]])]
+            [[::xt/fn "urn:site:tx-fns:call-action" pass-ctx subject action args]])
+        {::xt/keys [tx-id]} (xt/await-tx xt-node tx)]
 
-    (xt/await-tx xt-node tx)
-    (assert (xt/tx-committed? xt-node tx))))
+    ;; Throw a nicer error
+    (when-not (xt/tx-committed? xt-node tx)
+      (throw
+       (ex-info
+        "Transaction failed to be committed"
+        {::xt/tx-id tx-id
+         ::pass/action action})))
+
+    (xt/entity
+     (xt/db xt-node)
+     (format "urn:site:action-log:%s" tx-id))))
 
 (defn install-call-action-fn []
   {:xt/id "urn:site:tx-fns:call-action"
    :xt/fn '(fn [xt-ctx pass-ctx subject action args]
-             (juxt.pass.alpha.v3.authorization/call-action xt-ctx pass-ctx subject action args))})
+             (println "args is" args)
+             (juxt.pass.alpha.v3.authorization/call-action xt-ctx pass-ctx subject action (vec args)))})
