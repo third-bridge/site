@@ -4,6 +4,7 @@
   (:require
    [xtdb.api :as xt]
    [clojure.tools.logging :as log]
+   [clojure.walk :refer [postwalk]]
    [malli.core :as m]
    [malli.error :a me]))
 
@@ -188,15 +189,24 @@
   (mapv (fn [arg] [::xt/put arg]) args))
 
 (defmethod apply-processor ::pass.malli/validate [_ pass-ctx {::pass.malli/keys [args-schema] :as action} args]
-  (when-not (m/validate args-schema args)
-    (throw
-     (ex-info
-      "Failed validation check"
-      ;; Not sure why Malli throws this error here: No implementation of
-      ;; method: :-form of protocol: #'malli.core/Schema found for class: clojure.lang.PersistentVector
-      ;;
-      ;; Workaround is to pr-str and read-string
-      (read-string (pr-str (m/explain args-schema args))))))
+  (let [resolved-args-schema (postwalk
+                              (fn [x]
+                                (or
+                                 (when (and (vector? x) (= (first x) ::pass/resolve))
+                                   (pass-ctx (second x)))
+                                 x))
+                              args-schema)]
+
+    (when-not (m/validate resolved-args-schema args)
+      (throw
+       (ex-info
+        "Failed validation check"
+        ;; Not sure why Malli throws this error here: No implementation of
+        ;; method: :-form of protocol: #'malli.core/Schema found for class: clojure.lang.PersistentVector
+        ;;
+        ;; Workaround is to pr-str and read-string
+        (read-string (pr-str (m/explain args-schema args)))))))
+
   args)
 
 (defn process-args [pass-ctx action args]

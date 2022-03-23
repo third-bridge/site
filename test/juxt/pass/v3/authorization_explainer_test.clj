@@ -1108,25 +1108,24 @@
 
 ;; Create an access token
 
-#_((t/join-fixtures [with-xt])
+((t/join-fixtures [with-xt])
  (fn []
    (let [CREATE_ACCESS_TOKEN_ACTION
          {:xt/id "https://example.org/actions/create-access-token"
           ::site/type "Action"
 
           ::pass.malli/args-schema
-          '[:tuple
-            [:map
-             [:xt/id [:re "urn:site:access-token:(.*)"]]
-             [::site/type [:= "AccessToken"]]
-             [::pass/subject [:= subject]]
-             ]]
+          [:tuple
+           [:map
+            [:xt/id [:re "urn:site:access-token:(.*)"]]
+            [::site/type [:= "AccessToken"]]
+            [::pass/subject [:= [::pass/resolve ::pass/subject]]]]]
 
           ::pass/process
           '[
             [::pass.process/update-in [0]
              merge
-             ;; TODO: Generate this
+             ;; TODO: Generate this id
              {:xt/id "urn:site:access-token:123"}]
 
             [::pass.process/update-in [0] merge {::site/type "AccessToken"}]
@@ -1166,7 +1165,7 @@
       {}
       (:xt/id ALICE_SUBJECT)
       (:xt/id CREATE_ACCESS_TOKEN_ACTION)
-      {::pass/subject "foo"
+      {::pass/subject (:xt/id ALICE_SUBJECT)
        ::pass/client :client}
       ))
 
