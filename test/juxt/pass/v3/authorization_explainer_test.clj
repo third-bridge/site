@@ -994,7 +994,7 @@
    ::pass/scope "write:admin"
    ::pass/action-args [{}]})
 
-(deftest call-action-test
+(deftest do-action-test
   (submit-and-await!
    [
     ;; Applications
@@ -1021,7 +1021,7 @@
       ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
     ;; Functions
-    [::xt/put (authz/install-call-action-fn)]])
+    [::xt/put (authz/install-do-action-fn)]])
 
   ;; Sue creates the user Alice, with an identity
   (let [db (xt/db *xt-node*)]
@@ -1042,7 +1042,7 @@
         {}
         )))))
 
-  (authz/call-action!
+  (authz/do-action
    *xt-node*
    {}
    (:xt/id SUE_SUBJECT)
@@ -1053,7 +1053,7 @@
 
   ;; This fails because we haven't provided the ::username
 
-  (authz/call-action!
+  (authz/do-action
    *xt-node*
    {}
    (:xt/id ALICE_SUBJECT)
@@ -1065,43 +1065,42 @@
   ;; TODO: Test for validation errors
   )
 
-#_((t/join-fixtures [with-xt])
+((t/join-fixtures [with-xt])
  (fn []
    (submit-and-await!
-    [
-     ;; Applications
-     [::xt/put ADMIN_APP]
+   [
+    ;; Applications
+    [::xt/put ADMIN_APP]
 
-     ;; Actors
-     [::xt/put SUE]
-     [::xt/put CARLOS]
+    ;; Actors
+    [::xt/put SUE]
+    [::xt/put CARLOS]
 
-     ;; Subjects
-     [::xt/put SUE_SUBJECT]
-     [::xt/put CARLOS_SUBJECT]
+    ;; Subjects
+    [::xt/put SUE_SUBJECT]
+    [::xt/put CARLOS_SUBJECT]
 
-     ;; Actions
-     [::xt/put CREATE_PERSON_ACTION]
-     [::xt/put CREATE_IDENTITY_ACTION]
+    ;; Actions
+    [::xt/put CREATE_PERSON_ACTION]
+    [::xt/put CREATE_IDENTITY_ACTION]
 
-     ;; Permissions
-     [::xt/put
-      {:xt/id "https://example.org/permissions/sue/create-person"
-       ::site/type "Permission"
-       ::person (:xt/id SUE)
-       ::pass/action (:xt/id CREATE_PERSON_ACTION)
-       ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
+    ;; Permissions
+    [::xt/put
+     {:xt/id "https://example.org/permissions/sue/create-person"
+      ::site/type "Permission"
+      ::person (:xt/id SUE)
+      ::pass/action (:xt/id CREATE_PERSON_ACTION)
+      ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
 
-     ;; Functions
-     [::xt/put (authz/install-call-action-fn)]])
+    ;; Functions
+    [::xt/put (authz/install-do-action-fn)]])
 
-   (let [db (xt/db *xt-node*)]
-     (authz/call-action!
-      *xt-node*
-      {}
-      (:xt/id SUE_SUBJECT)
-      (:xt/id CREATE_PERSON_ACTION)
-      ALICE))
+   (authz/do-action
+   *xt-node*
+   {}
+   (:xt/id SUE_SUBJECT)
+   (:xt/id CREATE_PERSON_ACTION)
+   ALICE)
    ))
 
 ;; TODO: Test actions like this:

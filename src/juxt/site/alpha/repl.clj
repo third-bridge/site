@@ -524,12 +524,12 @@
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
 
-(defn call-action! [action & args]
+(defn do-action [action & args]
   (let [subject "urn:site:subjects:repl"]
-    (apply authz/call-action! (xt-node) {} subject action args)))
+    (apply authz/do-action (xt-node) {} subject action args)))
 
-(defn install-call-action-fn! []
-  (put! (authz/install-call-action-fn)))
+(defn install-do-action-fn! []
+  (put! (authz/install-do-action-fn)))
 
 (defn me [] "urn:site:subjects:repl")
 

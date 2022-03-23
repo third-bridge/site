@@ -6,26 +6,25 @@
    [clojure.java.io :as io]
    [clojure.tools.logging :as log]
    [clojure.walk :refer [postwalk]]
-   [xtdb.api :as x]
    [crypto.password.bcrypt :as password]
    [jsonista.core :as json]
+   [juxt.apex.alpha :as-alias apex]
+   [juxt.http.alpha :as-alias http]
+   [juxt.pass.alpha :as-alias pass]
    [juxt.pass.alpha.authentication :as authn]
    [juxt.pass.alpha.util :refer [make-nonce]]
+   [juxt.pass.alpha.v3.access-token :as at]
    [juxt.reap.alpha.combinators :as p]
-   [juxt.reap.alpha.regex :as re]
    [juxt.reap.alpha.decoders.rfc7230 :as rfc7230.decoders]
+   [juxt.reap.alpha.regex :as re]
+   [juxt.site.alpha :as-alias site]
    [juxt.site.alpha.graphql :as graphql]
    [juxt.site.alpha.util :as util]
    [selmer.parser :as selmer]
-   [juxt.pass.alpha.v3.access-token :as at]
+   [xtdb.api :as x]
    [xtdb.api :as xt])
   (:import
    (java.util Date)))
-
-(alias 'apex (create-ns 'juxt.apex.alpha))
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
-(alias 'site (create-ns 'juxt.site.alpha))
 
 (defn put! [xt-node & ms]
   (->>
@@ -221,32 +220,33 @@
    xt-node
    {:xt/id (str base-uri "/actions/create-action")
     :juxt.site.alpha/type "Action"
-    :juxt.pass.alpha/scope "write:admin"  ; make configurable?
-    :juxt.pass.alpha/action-args
-    [{:juxt.pass.alpha.malli/schema
-      [:map
-       [:xt/id [:re (str base-uri "/(.+)")]]
-       [:example/type [:= "Action"]]]
+    :juxt.pass.alpha/scope "write:admin" ; make configurable?
+    :juxt.pass.alpha.malli/args-schema
+    [:tuple
+     [:map
+      [:xt/id [:re (str base-uri "/(.+)")]]
+      [::site/type [:= "Action"]]]]
 
-      :juxt.pass.alpha/process
-      [
-       [:juxt.pass.alpha.malli/validate]]}]
+    ::pass/process
+    [
+     [:juxt.pass.alpha.malli/validate]
+     [::xt/put]]
 
     ::pass/rules
     '[
+      ;; The permission to create actions may be granted through role
+      ;; membership, so perhaps make this configurable.
       [(allowed? permission subject action resource)
-       [permission ::pass/subject subject]]]}
-   )
-  )
+       [permission ::pass/subject subject]]]}))
 
 #_(defn install-admin-app! [xt-node {::site/keys [base-uri] :as config}]
-  (let [id (str base-uri "/_site/apps/admin")]
-    (put!
-     xt-node
-     {:xt/id id
-      :name "Admin App" ; make this possible to configure somehow
-      ::pass/client-secret (make-nonce 16)
-      ::pass/scope #{"read:admin" "write:admin"}})))
+    (let [id (str base-uri "/_site/apps/admin")]
+      (put!
+       xt-node
+       {:xt/id id
+        :name "Admin App"              ; make this possible to configure somehow
+        ::pass/client-secret (make-nonce 16)
+        ::pass/scope #{"read:admin" "write:admin"}})))
 
 #_(defn create-admin-access-token! [xt-node subject-id {::site/keys [base-uri] :as config}]
   (put!

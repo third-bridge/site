@@ -249,7 +249,7 @@ There are a few useful Site REPL commands you should be familiar with:
 (apply evict! (ls)):: Start over. (Delete everything in the database!)
 --
 
-== Configure remote access to Site
+== Bootstrap remote access to Site
 
 A Site instance is a collection of documents, stored in XTDB.
 
@@ -283,7 +283,7 @@ Actions are at the heart of Site:
 * Actions can be grouped into OAuth2 scopes
 * Actions can be exposed to the network, via OpenAPI and GraphQL.
 
-==== Install the call-action function
+==== Install the `do-action` function
 
 Actions are executed in an XTDB transaction function.
 
@@ -299,9 +299,9 @@ We have to first install the transaction function into the database, so that we
 can start to call the actions we will create.
 
 [source,clojure]
-.Install the call-action transaction function
+.Install the do-action transaction function
 ----
-(install-call-action-fn!)
+(install-do-action-fn!)
 ----
 
 ==== Create a REPL subject
@@ -364,22 +364,23 @@ personal details.
 [source,clojure]
 .Install the create-person action
 ----
-(call-action!
+(do-action
 "https://site.test/actions/create-action"
 {:xt/id "https://site.test/actions/create-person"
  :juxt.site.alpha/type "Action" <1>
  :juxt.pass.alpha/scope "write:admin" <2>
- :juxt.pass.alpha/action-args <3>
- [{:juxt.pass.alpha.malli/schema <4>
-   [:map
-    [:xt/id [:re "https://site.test/(.+)"]]
-    [:example/type [:= "Person"]]
-    [:example/name [:re "[\\p{Alpha} ]{2,}"]]]
 
-   :juxt.pass.alpha/process
+ :juxt.pass.alpha.malli/args-schema <3>
+ [:tuple
+   [:map
+     [:example/type [:= "Person"]]
+     [:example/username [:string]]]]
+
+ :juxt.pass.alpha/process <4>
    [
-    [:juxt.pass.alpha/merge {:example/type "Person"}]
-    [:juxt.pass.alpha.malli/validate]]}]
+    [:juxt.pass.alpha.process/update-in [0] 'merge {:example/type "Person"}]
+    [:juxt.pass.alpha.malli/validate]
+    [:xtdb.api/put]]
 
  ::pass/rules <5>
  '[
@@ -389,9 +390,31 @@ personal details.
 ----
 <1> An action must have this exact entry
 <2> Actions are grouped into OAuth2 scopes
-<3> An action is called with zero-or-more arguments
-<4> An argument if often a document to put, and can be subject to validation
+<3> Arguments must conform to this schema
+<4> The processing pipeline which transforms arguments into XT transaction operations
 <5> An action declares the rules as to who is authorized to call it
+====
+
+Calling the `do-action` function results in a *transaction metadata record*
+being created in the database. This allows us later to answer questions
+regarding the who, when, why and how for each document in the database.
+
+.The *transaction metadata record*
+====
+A copy of the transaction metadata record is returned as a result of the `do-action` function.
+
+[source,clojure]
+----
+{:xt/id "urn:site:action-log:115"
+:xtdb.api/tx-id 115
+ :juxt.pass.alpha/subject "urn:site:subjects:repl"
+ :juxt.pass.alpha/action "https://site.test/actions/create-action"
+ :juxt.pass.alpha/purpose nil
+ :juxt.pass.alpha/puts ["https://site.test/actions/create-person"]
+ :juxt.pass.alpha/deletes []
+ }
+----
+
 ====
 
 ==== Permit the REPL to call the create-person action
@@ -419,7 +442,7 @@ personal details.
 
 [source,clojure]
 ----
-(call-action! "https://site.test/actions/create-person"
+(do-action "https://site.test/actions/create-person"
   {:xt/id "https://site.test/people/alice"
   :example/name "Alice"})
 ----
@@ -482,7 +505,7 @@ personal details.
 ====
 [source,clojure]
 ----
-(call-action! "https://site.test/actions/create-subject"
+(do-action "https://site.test/actions/create-subject"
   {:xt/id "https://site.test/subjects/alice"
    :example/person "https://site.test/people/alice"})
 ----
