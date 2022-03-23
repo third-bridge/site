@@ -11,8 +11,9 @@
    [juxt.apex.alpha :as-alias apex]
    [juxt.http.alpha :as-alias http]
    [juxt.pass.alpha :as-alias pass]
-   [juxt.pass.alpha.malli :as-alias pass.malli]
    [juxt.pass.alpha.authentication :as authn]
+   [juxt.pass.alpha.malli :as-alias pass.malli]
+   [juxt.pass.alpha.process :as-alias pass.process]
    [juxt.pass.alpha.util :refer [make-nonce]]
    [juxt.pass.alpha.v3.access-token :as at]
    [juxt.pass.alpha.v3.authorization :as authz]
@@ -233,6 +234,7 @@
 
     ::pass/process
     [
+     [::pass.process/update-in [0] 'merge {::site/type "Action"}]
      [:juxt.pass.alpha.malli/validate]
      [::xt/put]]
 
@@ -279,6 +281,7 @@
 
     :juxt.pass.alpha/process
     [
+     [::pass.process/update-in [0] 'merge {::site/type "Permission"}]
      [:juxt.pass.alpha.malli/validate]
      [:xtdb.api/put]]
 

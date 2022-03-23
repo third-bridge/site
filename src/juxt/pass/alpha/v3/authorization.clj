@@ -177,8 +177,6 @@
 (defmethod apply-processor :default [[kw] action args]
   (throw (ex-info (format "No processor for %s" kw) {:kw kw :action action})))
 
-(resolve 'clojure.core/merge)
-
 (defmethod apply-processor :juxt.pass.alpha.process/update-in [[kw ks f-sym & update-in-args] action args]
   (assert (vector? args))
   (let [f (case f-sym 'merge merge nil)]

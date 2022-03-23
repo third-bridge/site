@@ -334,9 +334,14 @@ We install the `create-action` action. This is the one action that has to be put
 directly into the database because we don't have a way of creating actions yet!
 
 [source,clojure]
-.Install (and permit) the create-action action
+.Install the create-action action
 ----
 (install-create-action!)
+----
+
+[source,clojure]
+.Permit the create-action action
+----
 (permit-create-action!)
 ----
 
@@ -427,21 +432,20 @@ First, we'll need to create an action which will create our person entity.
 .Install the create-person action
 ----
 (create-action!
-{:xt/id "https://site.test/actions/create-person"
- :juxt.site.alpha/type "Action" <1>
+{:xt/id "https://site.test/actions/create-person" <1>
  :juxt.pass.alpha/scope "write:admin" <2>
 
  :juxt.pass.alpha.malli/args-schema <3>
  [:tuple
    [:map
      [:example/type [:= "Person"]]
-     [:example/username [:string]]]]
+     [:example/name [:string]]]]
 
  :juxt.pass.alpha/process <4>
-   [
-    [:juxt.pass.alpha.process/update-in [0] 'merge {:example/type "Person"}]
-    [:juxt.pass.alpha.malli/validate]
-    [:xtdb.api/put]]
+ [
+  [:juxt.pass.alpha.process/update-in [0] 'merge {:example/type "Person"}]
+  [:juxt.pass.alpha.malli/validate]
+  [:xtdb.api/put]]
 
  ::pass/rules <5>
  '[
@@ -449,7 +453,7 @@ First, we'll need to create an action which will create our person entity.
     [permission ::pass/subject subject]]]}
 )
 ----
-<1> An action must have this exact entry
+<1> You can choose any id here but it's a good idea to keep to a convention
 <2> Actions are grouped into OAuth2 scopes
 <3> Arguments must conform to this schema
 <4> The processing pipeline which transforms arguments into XT transaction operations
@@ -485,6 +489,8 @@ First, we'll need to create an action which will create our person entity.
   :example/name "Alice"})
 ----
 ====
+
+// HERE
 
 === Create a subject entity to represent Alice's login
 
