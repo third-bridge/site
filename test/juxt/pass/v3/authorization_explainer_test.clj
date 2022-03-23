@@ -7,16 +7,15 @@
 
 (ns juxt.pass.v3.authorization-explainer-test
   (:require
-   [clojure.test :refer [deftest is are use-fixtures] :as t]
-   [juxt.pass.alpha.v3.authorization :as authz]
-   [juxt.test.util :refer [with-xt submit-and-await! *xt-node*]]
-   [xtdb.api :as xt]
    [clojure.set :as set]
-
+   [clojure.test :refer [deftest is are use-fixtures] :as t]
    [juxt.pass.alpha :as-alias pass]
    [juxt.pass.alpha.malli :as-alias pass.malli]
    [juxt.pass.alpha.process :as-alias pass.process]
-   [juxt.site.alpha :as-alias site]))
+   [juxt.pass.alpha.v3.authorization :as authz]
+   [juxt.site.alpha :as-alias site]
+   [juxt.test.util :refer [with-xt submit-and-await! *xt-node*]]
+   [xtdb.api :as xt]))
 
 (use-fixtures :each with-xt)
 

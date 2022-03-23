@@ -246,18 +246,25 @@
              :resource resource
              :purpose purpose})))
 
-        (->
-         (process-args action-doc args)
-         (conj
-          [::xt/put
-           {:xt/id (format "urn:site:action-log:%s" tx-id)
-            ::xt/tx-id tx-id
-            ::pass/subject subject
-            ::pass/action action
-            ::pass/purpose purpose}
-           ;; TODO: Add entities put and removed
-           ;;::site/entities (map :xt/id new-docs)
-           ])))
+        (let [processed-args (process-args action-doc args)]
+          (conj
+           processed-args
+           [::xt/put
+            {:xt/id (format "urn:site:action-log:%s" tx-id)
+             ::xt/tx-id tx-id
+             ::pass/subject subject
+             ::pass/action action
+             ::pass/purpose purpose
+             ::pass/puts (vec
+                          (keep
+                           (fn [[tx-op {id :xt/id}]]
+                             (when (= tx-op ::xt/put) id))
+                           processed-args))
+             ::pass/deletes (vec
+                             (keep
+                              (fn [[tx-op {id :xt/id}]]
+                                (when (= tx-op ::xt/delete) id))
+                              processed-args))}])))
 
       (catch Exception e
         (log/errorf e "Error when calling action: %s %s" action (format "urn:site:action-log:%s" tx-id))
