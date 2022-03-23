@@ -206,9 +206,15 @@
    args
    (::pass/process action)))
 
-(defn do-action* [xt-ctx {:keys [resource purpose]} subject action args]
+(defn do-action*
+  [xt-ctx
+   {resource ::site/resource
+    purpose ::pass/purpose
+    subject ::pass/subject
+    action ::pass/action
+    :as pass-ctx}
+    args]
   (assert (vector? args))
-  (log/infof "action is %s, args is %s" action args)
   (let [db (xt/db xt-ctx)
         tx (xt/indexing-tx xt-ctx)]
     (try
@@ -225,15 +231,7 @@
                 (throw
                  (ex-info
                   (format "Action '%s' not found in db" action)
-                  {:action action})))
-
-            #_#_action-arg-defs (::pass/action-args action-doc [])
-            #_#__ (when-not (= (count action-arg-defs) (count action-args))
-                    (throw
-                     (ex-info
-                      "Arguments given to do-action do not match the number of arguments defined on the action"
-                      {:count-action-arg-defs (count action-arg-defs)
-                       :count-action-args (count action-args)})))]
+                  {:action action})))]
 
         (when-not (seq check-permissions-result)
           (throw
@@ -272,11 +270,16 @@
            ::site/error {:message (.getMessage e)
                          :ex-data (ex-data e)}}]]))))
 
+(defn install-do-action-fn []
+  {:xt/id "urn:site:tx-fns:do-action"
+   :xt/fn '(fn [xt-ctx pass-ctx args]
+             (juxt.pass.alpha.v3.authorization/do-action* xt-ctx pass-ctx (vec args)))})
+
 (defn do-action [xt-node pass-ctx subject action & args]
   (let [
         tx (xt/submit-tx
             xt-node
-            [[::xt/fn "urn:site:tx-fns:do-action" pass-ctx subject action args]])
+            [[::xt/fn "urn:site:tx-fns:do-action" (assoc pass-ctx ::pass/subject subject ::pass/action action) args]])
         {::xt/keys [tx-id]} (xt/await-tx xt-node tx)]
 
     ;; Throw a nicer error
@@ -290,8 +293,3 @@
     (xt/entity
      (xt/db xt-node)
      (format "urn:site:action-log:%s" tx-id))))
-
-(defn install-do-action-fn []
-  {:xt/id "urn:site:tx-fns:do-action"
-   :xt/fn '(fn [xt-ctx pass-ctx subject action args]
-             (juxt.pass.alpha.v3.authorization/do-action* xt-ctx pass-ctx subject action (vec args)))})

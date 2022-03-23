@@ -561,6 +561,9 @@ action for doing that.
 ----
 ====
 
+////
+might not be necessary
+
 === Register an application
 
 TODO
@@ -576,6 +579,8 @@ TODO
 ==== Call the register-application action
 
 TODO
+
+////
 
 === Create an access token
 

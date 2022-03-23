@@ -935,7 +935,7 @@
    ::type "Person"
    ::username "sue"})
 
-(def ADMIN_APP
+#_(def ADMIN_APP
   {:xt/id "https://example.org/_site/apps/admin"
    ::name "Admin App"
    ::pass/client-id "101"
@@ -997,9 +997,6 @@
 (deftest do-action-test
   (submit-and-await!
    [
-    ;; Applications
-    [::xt/put ADMIN_APP]
-
     ;; Actors
     [::xt/put SUE]
     [::xt/put CARLOS]
@@ -1065,43 +1062,7 @@
   ;; TODO: Test for validation errors
   )
 
-((t/join-fixtures [with-xt])
- (fn []
-   (submit-and-await!
-   [
-    ;; Applications
-    [::xt/put ADMIN_APP]
 
-    ;; Actors
-    [::xt/put SUE]
-    [::xt/put CARLOS]
-
-    ;; Subjects
-    [::xt/put SUE_SUBJECT]
-    [::xt/put CARLOS_SUBJECT]
-
-    ;; Actions
-    [::xt/put CREATE_PERSON_ACTION]
-    [::xt/put CREATE_IDENTITY_ACTION]
-
-    ;; Permissions
-    [::xt/put
-     {:xt/id "https://example.org/permissions/sue/create-person"
-      ::site/type "Permission"
-      ::person (:xt/id SUE)
-      ::pass/action (:xt/id CREATE_PERSON_ACTION)
-      ::pass/purpose nil #_"https://example.org/purposes/bootsrapping-system"}]
-
-    ;; Functions
-    [::xt/put (authz/install-do-action-fn)]])
-
-   (authz/do-action
-   *xt-node*
-   {}
-   (:xt/id SUE_SUBJECT)
-   (:xt/id CREATE_PERSON_ACTION)
-   ALICE)
-   ))
 
 ;; TODO: Test actions like this:
 ;;(authz/process-args CREATE_PERSON_ACTION [{::username "alice"}])
@@ -1132,7 +1093,7 @@
 ;; * A OAuth2 registered application representing the 'admin app' (client-id and client-secret) that a caller will use when acquiring a token against the token endpoint
 ;; * Actions which belong to one or more scopes that permit authorized access to the database
 ;; * Permissions on the user
-;; * Rules that reference permissions, access-tokens, actions and resources
+;; * Rules that reference permissions, subjects, actions and resources
 ;;
 ;; Adding an authorization-provider
 ;;
@@ -1143,3 +1104,70 @@
 ;; * OpenID Connect client application details that have been registered with the OpenID Authorization Server
 ;; * A callback endpoint for the application (this will update the session and set the cookie)
 ;; * A token endpoint that can be used to acquire tokens
+
+
+;; Create an access token
+
+#_((t/join-fixtures [with-xt])
+ (fn []
+   (let [CREATE_ACCESS_TOKEN_ACTION
+         {:xt/id "https://example.org/actions/create-access-token"
+          ::site/type "Action"
+
+          ::pass.malli/args-schema
+          '[:tuple
+            [:map
+             [:xt/id [:re "urn:site:access-token:(.*)"]]
+             [::site/type [:= "AccessToken"]]
+             [::pass/subject [:= subject]]
+             ]]
+
+          ::pass/process
+          '[
+            [::pass.process/update-in [0]
+             merge
+             ;; TODO: Generate this
+             {:xt/id "urn:site:access-token:123"}]
+
+            [::pass.process/update-in [0] merge {::site/type "AccessToken"}]
+            [::pass.malli/validate]
+            [::xt/put]]
+
+          ::pass/rules
+          '[[(allowed? permission subject action resource)
+             [permission ::person person]
+             [subject ::person person]
+             [person ::type "Person"]]]}]
+
+     (submit-and-await!
+      [
+       ;; Actors
+       [::xt/put ALICE]
+
+       ;; Subjects
+       [::xt/put ALICE_SUBJECT]
+
+       ;; Actions
+       [::xt/put CREATE_ACCESS_TOKEN_ACTION]
+
+       ;; Permissions
+       [::xt/put
+        {:xt/id "https://example.org/permissions/alice/create-access-token"
+         ::site/type "Permission"
+         ::person (:xt/id ALICE)
+         ::pass/action (:xt/id CREATE_ACCESS_TOKEN_ACTION)
+         ::pass/purpose nil}]
+
+       ;; Functions
+       [::xt/put (authz/install-do-action-fn)]])
+
+     (authz/do-action
+      *xt-node*
+      {}
+      (:xt/id ALICE_SUBJECT)
+      (:xt/id CREATE_ACCESS_TOKEN_ACTION)
+      {::pass/subject "foo"
+       ::pass/client :client}
+      ))
+
+   ))
