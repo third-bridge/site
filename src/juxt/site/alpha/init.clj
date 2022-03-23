@@ -11,9 +11,11 @@
    [juxt.apex.alpha :as-alias apex]
    [juxt.http.alpha :as-alias http]
    [juxt.pass.alpha :as-alias pass]
+   [juxt.pass.alpha.malli :as-alias pass.malli]
    [juxt.pass.alpha.authentication :as authn]
    [juxt.pass.alpha.util :refer [make-nonce]]
    [juxt.pass.alpha.v3.access-token :as at]
+   [juxt.pass.alpha.v3.authorization :as authz]
    [juxt.reap.alpha.combinators :as p]
    [juxt.reap.alpha.decoders.rfc7230 :as rfc7230.decoders]
    [juxt.reap.alpha.regex :as re]
@@ -216,28 +218,64 @@
    config))
 
 (defn install-create-action! [xt-node {::site/keys [base-uri] :as config}]
-  (put!
+  (let [create-action-id (str base-uri "/actions/create-action")]
+    (put!
+     xt-node
+     {:xt/id create-action-id
+      :juxt.site.alpha/type "Action"
+      :juxt.pass.alpha/scope "write:admin" ; make configurable?
+      :juxt.pass.alpha.malli/args-schema
+      [:tuple
+       [:map
+        [:xt/id [:re (str base-uri "/(.+)")]]
+        [::site/type [:= "Action"]]]]
+
+      ::pass/process
+      [
+       [:juxt.pass.alpha.malli/validate]
+       [::xt/put]]
+
+      ::pass/rules
+      '[
+        ;; The permission to create actions may be granted through role
+        ;; membership, so perhaps make this configurable.
+        [(allowed? permission subject action resource)
+         [permission ::pass/subject subject]]]}
+
+     {:xt/id (str base-uri "permissions/repl/create-action")
+      ::site/type "Permission"
+      ;; TODO: DRY this
+      ::pass/subject "urn:site:subjects:repl"
+      ::pass/action create-action-id
+      ::pass/purpose nil})))
+
+(defn install-grant-permission-action! [xt-node {::site/keys [base-uri] :as config}]
+  (authz/do-action
    xt-node
-   {:xt/id (str base-uri "/actions/create-action")
-    :juxt.site.alpha/type "Action"
-    :juxt.pass.alpha/scope "write:admin" ; make configurable?
-    :juxt.pass.alpha.malli/args-schema
+   {}
+   "urn:site:subjects:repl"
+   (str base-uri "/actions/create-action")
+   {:xt/id (str base-uri "/actions/grant-permission")
+    ::site/type "Action"
+    ::pass/scope "write:admin" ; make configurable?
+
+    ::pass.malli/args-schema
     [:tuple
      [:map
-      [:xt/id [:re (str base-uri "/(.+)")]]
-      [::site/type [:= "Action"]]]]
+      [::site/type [:= "Permission"]]
+      ]]
 
-    ::pass/process
+    :juxt.pass.alpha/process
     [
      [:juxt.pass.alpha.malli/validate]
-     [::xt/put]]
+     [:xtdb.api/put]]
 
     ::pass/rules
     '[
-      ;; The permission to create actions may be granted through role
-      ;; membership, so perhaps make this configurable.
+      ;; See related comment above
       [(allowed? permission subject action resource)
-       [permission ::pass/subject subject]]]}))
+       [permission ::pass/subject subject]]]}
+   ))
 
 #_(defn install-admin-app! [xt-node {::site/keys [base-uri] :as config}]
     (let [id (str base-uri "/_site/apps/admin")]

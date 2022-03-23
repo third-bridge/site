@@ -336,6 +336,18 @@ restricted to a very limited set of authorized users.
 (install-create-action!)
 ----
 
+=== Install the grant-permission action
+
+Now that we have our `create-action` function installed we can use it to create
+an action that will grant permissions.
+
+----
+(install-grant-permission-action!)
+----
+
+// TODO: Create a grant-permission action
+
+////
 === Install the permission for the REPL subject to call create-action
 
 [source,clojure]
@@ -349,6 +361,9 @@ restricted to a very limited set of authorized users.
  }
 )
 ----
+////
+
+// HERE
 
 === Create 'Alice'
 
