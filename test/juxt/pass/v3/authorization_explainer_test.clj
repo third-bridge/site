@@ -1053,13 +1053,12 @@
 
   ;; This fails because we haven't provided the ::username
 
-  (let [db (xt/db *xt-node*)]
-    (authz/call-action!
-     *xt-node*
-     {}
-     (:xt/id ALICE_SUBJECT)
-     (:xt/id CREATE_PERSON_ACTION)
-     BOB))
+  (authz/call-action!
+   *xt-node*
+   {}
+   (:xt/id ALICE_SUBJECT)
+   (:xt/id CREATE_PERSON_ACTION)
+   BOB)
 
   (is (not (xt/entity (xt/db *xt-node*) (:xt/id BOB))))
 
