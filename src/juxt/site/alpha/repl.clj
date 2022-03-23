@@ -524,10 +524,10 @@
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
 
-(defn me [] "urn:site:subjects:repl")
+(defn me [] (init/me))
 
 (defn do-action [action & args]
-  (apply authz/do-action (xt-node) {} (me) action args))
+  (apply init/do-action (xt-node) action args))
 
 (defn install-do-action-fn! []
   (put! (authz/install-do-action-fn)))
@@ -541,9 +541,11 @@
 (defn install-grant-permission-action! []
   (init/install-grant-permission-action! (xt-node) (config)))
 
-#_(defn grant-permssion [m]
-  (do-action )
-  )
+(defn create-action! [action]
+  (init/create-action! (xt-node) (config) action))
+
+(defn grant-permission! [permission]
+  (init/grant-permission! (xt-node) (config) permission))
 
 (comment
   {:xt/id "https://site.test/actions/create-person"

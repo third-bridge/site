@@ -240,7 +240,7 @@
         (when-not (seq check-permissions-result)
           (throw
            (ex-info
-            "Don't have permission!"
+            "Action denied"
             {:subject subject
              :action action
              :resource resource

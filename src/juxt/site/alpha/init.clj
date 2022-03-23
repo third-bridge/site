@@ -217,6 +217,8 @@
      (json/write-value-as-string %))
    config))
 
+(defn me [] "urn:site:subjects:repl")
+
 (defn install-create-action! [xt-node {::site/keys [base-uri] :as config}]
   (let [create-action-id (str base-uri "/actions/create-action")]
     (put!
@@ -244,20 +246,26 @@
 
      {:xt/id (str base-uri "permissions/repl/create-action")
       ::site/type "Permission"
-      ;; TODO: DRY this
-      ::pass/subject "urn:site:subjects:repl"
+      ::pass/subject (me)
       ::pass/action create-action-id
       ::pass/purpose nil})))
 
-(defn install-grant-permission-action! [xt-node {::site/keys [base-uri] :as config}]
-  (authz/do-action
+(defn do-action [xt-node action & args]
+  (apply authz/do-action xt-node {} (me) action args))
+
+(defn create-action! [xt-node {::site/keys [base-uri] :as config} action]
+  (do-action
    xt-node
-   {}
-   "urn:site:subjects:repl"
    (str base-uri "/actions/create-action")
+   action))
+
+(defn install-grant-permission-action! [xt-node {::site/keys [base-uri] :as config}]
+  (create-action!
+   xt-node
+   config
    {:xt/id (str base-uri "/actions/grant-permission")
     ::site/type "Action"
-    ::pass/scope "write:admin" ; make configurable?
+    ::pass/scope "write:admin"          ; make configurable?
 
     ::pass.malli/args-schema
     [:tuple
@@ -274,8 +282,23 @@
     '[
       ;; See related comment above
       [(allowed? permission subject action resource)
-       [permission ::pass/subject subject]]]}
-   ))
+       [permission ::pass/subject subject]]]})
+
+  ;; As a boottrap, we need to grant the REPL permission to grant permissions!
+  ;; This should be the last time we need to explicitly put anything in XTDB.
+  (put!
+   xt-node
+   {:xt/id (str base-uri "permissions/repl/grant-permission")
+    ::site/type "Permission"
+    ::pass/subject (me)
+    ::pass/action (str base-uri "/actions/grant-permission")
+    ::pass/purpose nil}))
+
+(defn grant-permission! [xt-node {::site/keys [base-uri]} permission]
+  (do-action
+   xt-node
+   (str base-uri "/actions/grant-permission")
+   permission))
 
 #_(defn install-admin-app! [xt-node {::site/keys [base-uri] :as config}]
     (let [id (str base-uri "/_site/apps/admin")]

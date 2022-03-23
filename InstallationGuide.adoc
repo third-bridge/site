@@ -345,25 +345,26 @@ an action that will grant permissions.
 (install-grant-permission-action!)
 ----
 
-// TODO: Create a grant-permission action
+Calling this ultimately calls the `do-action` function resulting in a
+*transaction metadata record* being created in the database. This allows us
+later to answer questions regarding the who, when, why and how for each document
+in the database.
 
-////
-=== Install the permission for the REPL subject to call create-action
+.The *transaction metadata record*
+====
+A copy of the transaction metadata record is returned as a result of the `do-action` function.
 
 [source,clojure]
 ----
-(put!
-{:xt/id "https://site.test/permissions/repl/create-action"
- ::site/type "Permission"
- ::pass/subject "urn:site:subjects:repl"
- ::pass/action #{"https://site.test/actions/create-action"}
- ::pass/purpose nil
- }
-)
+{:xt/id "urn:site:action-log:134"
+ :xtdb.api/tx-id 134
+ :juxt.pass.alpha/subject "urn:site:subjects:repl"
+ :juxt.pass.alpha/action "https://site.test/actions/create-action"
+ :juxt.pass.alpha/purpose nil
+ :juxt.pass.alpha/puts ["https://site.test/actions/grant-permission"]
+ :juxt.pass.alpha/deletes []}
 ----
-////
-
-// HERE
+====
 
 === Create 'Alice'
 
@@ -379,8 +380,7 @@ personal details.
 [source,clojure]
 .Install the create-person action
 ----
-(do-action
-"https://site.test/actions/create-action"
+(create-action!
 {:xt/id "https://site.test/actions/create-person"
  :juxt.site.alpha/type "Action" <1>
  :juxt.pass.alpha/scope "write:admin" <2>
@@ -393,7 +393,7 @@ personal details.
 
  :juxt.pass.alpha/process <4>
    [
-    [:juxt.pass.alpha.process/update-in [0] 'merge {:example/type "Person"}]
+    #_[:juxt.pass.alpha.process/update-in [0] 'merge {:example/type "Person"}]
     [:juxt.pass.alpha.malli/validate]
     [:xtdb.api/put]]
 
@@ -410,28 +410,6 @@ personal details.
 <5> An action declares the rules as to who is authorized to call it
 ====
 
-Calling the `do-action` function results in a *transaction metadata record*
-being created in the database. This allows us later to answer questions
-regarding the who, when, why and how for each document in the database.
-
-.The *transaction metadata record*
-====
-A copy of the transaction metadata record is returned as a result of the `do-action` function.
-
-[source,clojure]
-----
-{:xt/id "urn:site:action-log:115"
-:xtdb.api/tx-id 115
- :juxt.pass.alpha/subject "urn:site:subjects:repl"
- :juxt.pass.alpha/action "https://site.test/actions/create-action"
- :juxt.pass.alpha/purpose nil
- :juxt.pass.alpha/puts ["https://site.test/actions/create-person"]
- :juxt.pass.alpha/deletes []
- }
-----
-
-====
-
 ==== Permit the REPL to call the create-person action
 
 .Adding the permission for the REPL to create a person
@@ -439,10 +417,10 @@ A copy of the transaction metadata record is returned as a result of the `do-act
 
 [source,clojure]
 ----
-(put!
+(grant-permission!
 {:xt/id "https://site.test/permissions/repl/create-person"
  ::site/type "Permission"
- ::pass/subject "urn:site:subjects:repl"
+ ::pass/subject (me)
  ::pass/action #{"https://site.test/actions/create-person"}
  ::pass/purpose nil
  }
