@@ -1047,23 +1047,26 @@
    {}
    (:xt/id SUE_SUBJECT)
    (:xt/id CREATE_PERSON_ACTION)
-   (assoc ALICE ::username "alice"))
+   ALICE)
 
   (is (xt/entity (xt/db *xt-node*) (:xt/id ALICE)))
 
   ;; This fails because we haven't provided the ::username
-  #_(is
-   (thrown?
-    AssertionError
-    (let [db (xt/db *xt-node*)]
-      (authz/call-action!
-       *xt-node*
-       {}
-       (:xt/id SUE_SUBJECT)
-       (:xt/id CREATE_PERSON_ACTION)
-       {:xt/id ALICE})))))
 
-((t/join-fixtures [with-xt])
+  (let [db (xt/db *xt-node*)]
+    (authz/call-action!
+     *xt-node*
+     {}
+     (:xt/id ALICE_SUBJECT)
+     (:xt/id CREATE_PERSON_ACTION)
+     BOB))
+
+  (is (not (xt/entity (xt/db *xt-node*) (:xt/id BOB))))
+
+  ;; TODO: Test for validation errors
+  )
+
+#_((t/join-fixtures [with-xt])
  (fn []
    (submit-and-await!
     [
