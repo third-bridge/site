@@ -11,12 +11,12 @@
    [juxt.pass.alpha.v3.authorization :as authz]
    [juxt.test.util :refer [with-xt submit-and-await! *xt-node*]]
    [xtdb.api :as xt]
-   [clojure.set :as set]))
+   [clojure.set :as set]
 
-(alias 'pass (create-ns 'juxt.pass.alpha))
-(alias 'pass.malli (create-ns 'juxt.pass.alpha.malli))
-(alias 'pass.process (create-ns 'juxt.pass.alpha.process))
-(alias 'site (create-ns 'juxt.site.alpha))
+   [juxt.pass.alpha :as-alias pass]
+   [juxt.pass.alpha.malli :as-alias pass.malli]
+   [juxt.pass.alpha.process :as-alias pass.process]
+   [juxt.site.alpha :as-alias site]))
 
 (use-fixtures :each with-xt)
 

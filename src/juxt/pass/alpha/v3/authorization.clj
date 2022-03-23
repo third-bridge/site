@@ -287,5 +287,4 @@
 (defn install-call-action-fn []
   {:xt/id "urn:site:tx-fns:call-action"
    :xt/fn '(fn [xt-ctx pass-ctx subject action args]
-             (println "args is" args)
              (juxt.pass.alpha.v3.authorization/call-action xt-ctx pass-ctx subject action (vec args)))})
