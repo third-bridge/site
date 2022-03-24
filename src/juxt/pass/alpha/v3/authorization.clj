@@ -192,7 +192,7 @@
   (let [f (case f-sym 'merge merge nil)]
     (when-not f
       (throw (ex-info "Unsupported update-in function" {:f f-sym})))
-    (apply update acc :args update-in ks f update-in-args)))
+    (apply update acc :args update-in ks f (resolve-with-ctx update-in-args pass-ctx))))
 
 (defmethod apply-processor ::xt/put [[kw ks] pass-ctx action acc]
   (update acc :args (fn [args] (mapv (fn [arg] [::xt/put arg]) args))))
