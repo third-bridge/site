@@ -173,22 +173,22 @@
          (map :resource)
          (xt/pull-many db pull-expr))))
 
-(defmulti apply-processor (fn [processor pass-ctx action args] (first processor)))
+(defmulti apply-processor (fn [processor pass-ctx action acc] (first processor)))
 
-(defmethod apply-processor :default [[kw] pass-ctx action args]
+(defmethod apply-processor :default [[kw] pass-ctx action acc]
   (throw (ex-info (format "No processor for %s" kw) {:kw kw :action action})))
 
-(defmethod apply-processor :juxt.pass.alpha.process/update-in [[kw ks f-sym & update-in-args] pass-ctx action args]
-  (assert (vector? args))
+(defmethod apply-processor :juxt.pass.alpha.process/update-in [[kw ks f-sym & update-in-args] pass-ctx action acc]
+  (assert (vector? (:args acc)))
   (let [f (case f-sym 'merge merge nil)]
     (when-not f
       (throw (ex-info "Unsupported update-in function" {:f f-sym})))
-    (apply update-in args ks f update-in-args)))
+    (apply update acc :args update-in ks f update-in-args)))
 
-(defmethod apply-processor ::xt/put [[kw ks] pass-ctx action args]
-  (mapv (fn [arg] [::xt/put arg]) args))
+(defmethod apply-processor ::xt/put [[kw ks] pass-ctx action acc]
+  (update acc :args (fn [args] (mapv (fn [arg] [::xt/put arg]) args))))
 
-(defmethod apply-processor ::pass.malli/validate [_ pass-ctx {::pass.malli/keys [args-schema] :as action} args]
+(defmethod apply-processor ::pass.malli/validate [_ pass-ctx {::pass.malli/keys [args-schema] :as action} acc]
   (let [resolved-args-schema
         (postwalk
          (fn [x]
@@ -198,7 +198,7 @@
             x))
          args-schema)]
 
-    (when-not (m/validate resolved-args-schema args)
+    (when-not (m/validate resolved-args-schema (:args acc))
       (throw
        (ex-info
         "Failed validation check"
@@ -206,16 +206,16 @@
         ;; method: :-form of protocol: #'malli.core/Schema found for class: clojure.lang.PersistentVector
         ;;
         ;; Workaround is to pr-str and read-string
-        (read-string (pr-str (m/explain args-schema args)))))))
-
-  args)
+        (read-string (pr-str (m/explain args-schema (:args acc))))))))
+  acc)
 
 (defn process-args [pass-ctx action args]
-  (reduce
-   (fn [args processor]
-     (apply-processor processor pass-ctx action args))
-   args
-   (::pass/process action)))
+  (:args
+   (reduce
+    (fn [acc processor]
+      (apply-processor processor pass-ctx action acc))
+    {:args args}
+    (::pass/process action))))
 
 (defn do-action*
   [xt-ctx
