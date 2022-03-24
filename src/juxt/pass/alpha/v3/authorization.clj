@@ -189,13 +189,14 @@
   (mapv (fn [arg] [::xt/put arg]) args))
 
 (defmethod apply-processor ::pass.malli/validate [_ pass-ctx {::pass.malli/keys [args-schema] :as action} args]
-  (let [resolved-args-schema (postwalk
-                              (fn [x]
-                                (or
-                                 (when (and (vector? x) (= (first x) ::pass/resolve))
-                                   (pass-ctx (second x)))
-                                 x))
-                              args-schema)]
+  (let [resolved-args-schema
+        (postwalk
+         (fn [x]
+           (or
+            (when (and (vector? x) (= (first x) ::pass/resolve))
+              (pass-ctx (second x)))
+            x))
+         args-schema)]
 
     (when-not (m/validate resolved-args-schema args)
       (throw
