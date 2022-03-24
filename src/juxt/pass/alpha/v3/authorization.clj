@@ -5,6 +5,7 @@
    [xtdb.api :as xt]
    [clojure.tools.logging :as log]
    [clojure.walk :refer [postwalk]]
+   [juxt.site.alpha.util :refer [random-bytes as-hex-str]]
    [malli.core :as m]
    [malli.error :a me]))
 
@@ -176,10 +177,9 @@
 (defn resolve-with-ctx [form ctx]
   (postwalk
    (fn [x]
-     (or
-      (when (and (vector? x) (= (first x) ::pass/resolve))
-        (ctx (second x)))
-      x))
+     (if (and (vector? x) (= (first x) ::pass/resolve))
+       (ctx (second x))
+       x))
    form))
 
 (defmulti apply-processor (fn [processor action acc] (first processor)))
@@ -209,6 +209,12 @@
         ;; Workaround is to pr-str and read-string
         (read-string (pr-str (m/explain resolved-args-schema (:args acc))))))))
   acc)
+
+(defmethod apply-processor :gen-hex-string [[_ k size] action acc]
+  (update acc :ctx assoc k (as-hex-str (random-bytes size))))
+
+(defmethod apply-processor :add-prefix [[_ k prefix] action acc]
+  (update acc :ctx update k (fn [old] (str prefix old))))
 
 (defn process-args [pass-ctx action args]
   (:args
