@@ -1,4 +1,4 @@
-= Installation Guide
+= Site Administration: Installation Guide
 :toc: preamble
 :toclevels: 5
 
