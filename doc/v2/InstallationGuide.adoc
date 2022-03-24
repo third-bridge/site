@@ -249,6 +249,29 @@ There are a few useful Site REPL commands you should be familiar with:
 (apply evict! (ls)):: Start over. (Delete everything in the database!)
 --
 
+== Configure an authorization server
+
+Site is a Resource Server, responsible for serving resources such as:
+
+- Static web pages and media
+- API responses
+- GraphQL responses
+
+As a Resource Server, Site is responsible for protecting the resources owned by
+users from unauthorized access.
+
+Rather than sending credentials, clients (applications) obtain and use
+access-tokens to access Site's resources.
+
+Site hosts the authorization server by which clients can obtain access tokens.
+
+----
+(install-authorization-server! {:name "Authorization Server"})
+(install-token-endpoint! {:xt/id "https://site.test/token"})
+(register-application! {:name "My Application"})
+----
+
+
 == Bootstrap remote access to Site
 
 A Site instance is a collection of documents, stored in XTDB.
