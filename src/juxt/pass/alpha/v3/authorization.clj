@@ -182,23 +182,23 @@
       x))
    form))
 
-(defmulti apply-processor (fn [processor pass-ctx action acc] (first processor)))
+(defmulti apply-processor (fn [processor action acc] (first processor)))
 
-(defmethod apply-processor :default [[kw] pass-ctx action acc]
+(defmethod apply-processor :default [[kw] action acc]
   (throw (ex-info (format "No processor for %s" kw) {:kw kw :action action})))
 
-(defmethod apply-processor :juxt.pass.alpha.process/update-in [[kw ks f-sym & update-in-args] pass-ctx action acc]
+(defmethod apply-processor :juxt.pass.alpha.process/update-in [[kw ks f-sym & update-in-args] action acc]
   (assert (vector? (:args acc)))
   (let [f (case f-sym 'merge merge nil)]
     (when-not f
       (throw (ex-info "Unsupported update-in function" {:f f-sym})))
-    (apply update acc :args update-in ks f (resolve-with-ctx update-in-args pass-ctx))))
+    (apply update acc :args update-in ks f (resolve-with-ctx update-in-args (:ctx acc)))))
 
-(defmethod apply-processor ::xt/put [[kw ks] pass-ctx action acc]
+(defmethod apply-processor ::xt/put [[kw ks] action acc]
   (update acc :args (fn [args] (mapv (fn [arg] [::xt/put arg]) args))))
 
-(defmethod apply-processor ::pass.malli/validate [_ pass-ctx {::pass.malli/keys [args-schema] :as action} acc]
-  (let [resolved-args-schema (resolve-with-ctx args-schema pass-ctx)]
+(defmethod apply-processor ::pass.malli/validate [_ {::pass.malli/keys [args-schema]} acc]
+  (let [resolved-args-schema (resolve-with-ctx args-schema (:ctx acc))]
     (when-not (m/validate resolved-args-schema (:args acc))
       (throw
        (ex-info
@@ -214,8 +214,9 @@
   (:args
    (reduce
     (fn [acc processor]
-      (apply-processor processor pass-ctx action acc))
-    {:args args}
+      (apply-processor processor action acc))
+    {:args args
+     :ctx pass-ctx}
     (::pass/process action))))
 
 (defn do-action*
