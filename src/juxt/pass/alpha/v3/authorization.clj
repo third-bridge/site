@@ -198,10 +198,7 @@
   (update acc :args (fn [args] (mapv (fn [arg] [::xt/put arg]) args))))
 
 (defmethod apply-processor ::pass.malli/validate [_ pass-ctx {::pass.malli/keys [args-schema] :as action} acc]
-  (let [resolved-args-schema
-        (resolve-with-ctx args-schema pass-ctx)
-        ]
-
+  (let [resolved-args-schema (resolve-with-ctx args-schema pass-ctx)]
     (when-not (m/validate resolved-args-schema (:args acc))
       (throw
        (ex-info
@@ -210,7 +207,7 @@
         ;; method: :-form of protocol: #'malli.core/Schema found for class: clojure.lang.PersistentVector
         ;;
         ;; Workaround is to pr-str and read-string
-        (read-string (pr-str (m/explain args-schema (:args acc))))))))
+        (read-string (pr-str (m/explain resolved-args-schema (:args acc))))))))
   acc)
 
 (defn process-args [pass-ctx action args]
