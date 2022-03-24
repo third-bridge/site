@@ -1129,6 +1129,7 @@
              {:xt/id "urn:site:access-token:123"}]
 
             [::pass.process/update-in [0] merge {::site/type "AccessToken"}]
+            [::pass.process/update-in [0] merge {:foo [::pass/resolve ::pass/subject]}]
             [::pass.malli/validate]
             [::xt/put]]
 
@@ -1167,6 +1168,12 @@
       (:xt/id CREATE_ACCESS_TOKEN_ACTION)
       {::pass/subject (:xt/id ALICE_SUBJECT)
        ::pass/client :client}
-      ))
+      )
+
+     (xt/entity (xt/db *xt-node*) "urn:site:access-token:123")
+
+
+
+     )
 
    ))

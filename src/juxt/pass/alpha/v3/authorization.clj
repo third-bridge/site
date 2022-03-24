@@ -173,6 +173,15 @@
          (map :resource)
          (xt/pull-many db pull-expr))))
 
+(defn resolve-with-ctx [form ctx]
+  (postwalk
+   (fn [x]
+     (or
+      (when (and (vector? x) (= (first x) ::pass/resolve))
+        (ctx (second x)))
+      x))
+   form))
+
 (defmulti apply-processor (fn [processor pass-ctx action acc] (first processor)))
 
 (defmethod apply-processor :default [[kw] pass-ctx action acc]
@@ -190,13 +199,8 @@
 
 (defmethod apply-processor ::pass.malli/validate [_ pass-ctx {::pass.malli/keys [args-schema] :as action} acc]
   (let [resolved-args-schema
-        (postwalk
-         (fn [x]
-           (or
-            (when (and (vector? x) (= (first x) ::pass/resolve))
-              (pass-ctx (second x)))
-            x))
-         args-schema)]
+        (resolve-with-ctx args-schema pass-ctx)
+        ]
 
     (when-not (m/validate resolved-args-schema (:args acc))
       (throw
