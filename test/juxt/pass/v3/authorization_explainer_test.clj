@@ -9,6 +9,7 @@
   (:require
    [clojure.set :as set]
    [clojure.test :refer [deftest is are use-fixtures] :as t]
+   [clojure.walk :refer [postwalk]]
    [juxt.pass.alpha :as-alias pass]
    [juxt.pass.alpha.malli :as-alias pass.malli]
    [juxt.pass.alpha.process :as-alias pass.process]
@@ -1108,6 +1109,18 @@
 
 ;; Create an access token
 
+(postwalk
+ (fn [x]
+   (if (not (vector? x))
+     x
+     (let [[k & args] x]
+       (case k
+         :random-bytes (apply juxt.site.alpha.util/random-bytes args)
+         :gen-hex-string (apply juxt.site.alpha.util/as-hex-str args)
+         x))))
+ [:let :token-id [:gen-hex-string [:random-bytes 20]]])
+
+
 ((t/join-fixtures [with-xt])
  (fn []
    (let [CREATE_ACCESS_TOKEN_ACTION
@@ -1123,6 +1136,8 @@
 
           ::pass/process
           '[
+            ;; postwalk would be a very useful way of creating a lisp-like
+            ;; evaluator here
             [:gen-hex-string :token-id 20]
             [:add-prefix :token-id "urn:site:access-token:"]
             [::pass.process/update-in
