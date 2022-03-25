@@ -540,16 +540,16 @@ action for doing that.
  :juxt.pass.alpha.malli/args-schema
  [:tuple
    [:map
-     [:example/type [:= "Subject"]]
+     [:juxt.site.alpha/type [:= "Subject"]]
      [:example/person [:re "https://site.test/people/\\p{Alpha}{2,}"]]]]
 
- :juxt.pass.alpha/process <4>
+ :juxt.pass.alpha/process
  [
-  [:juxt.pass.alpha.process/update-in [0] 'merge {:example/type "Subject"}]
+  [:juxt.pass.alpha.process/update-in [0] 'merge {:juxt.site.alpha/type "Subject"}]
   [:juxt.pass.alpha.malli/validate]
   [:xtdb.api/put]]
 
- ::pass/rules <5>
+ ::pass/rules
  '[
    [(allowed? permission subject action resource)
     [permission ::pass/subject subject]]]})
@@ -612,7 +612,7 @@ TODO
 
 == Run the site tool
 
-The site tool is a command-line utility that allows you to remotely administer site.
+The site tool is a command-line utility that allows you to remotely administer Site.
 
 ****
 If you're on MacOS, you will need to install the GNU version of `readlink`. You can do so with brew:

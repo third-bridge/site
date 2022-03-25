@@ -553,6 +553,83 @@
 (defn grant-permission! [permission]
   (init/grant-permission! (xt-node) (config) permission))
 
+(defn example-bootstrap! []
+  (install-do-action-fn!)
+  (put! {:xt/id (me)})
+  (install-create-action!)
+  (permit-create-action!)
+  (install-grant-permission-action!)
+  (permit-grant-permission-action!)
+
+  ;; Create create-person action
+  (create-action!
+   {:xt/id (str (base-uri) "/actions/create-person")
+    :juxt.pass.alpha/scope "write:admin"
+
+    :juxt.pass.alpha.malli/args-schema
+    [:tuple
+     [:map
+      [:xt/id [:re (str (base-uri) "/people/\\p{Alpha}{2,}")]]
+      [:example/type [:= "Person"]]
+      [:example/name [:string]]]]
+
+    :juxt.pass.alpha/process
+    [
+     [:juxt.pass.alpha.process/update-in [0] 'merge {:example/type "Person"}]
+     [:juxt.pass.alpha.malli/validate]
+     [:xtdb.api/put]]
+
+    ::pass/rules
+    '[
+      [(allowed? permission subject action resource)
+       [permission ::pass/subject subject]]]})
+
+  (grant-permission!
+   {:xt/id (str (base-uri) "/permissions/repl/create-person")
+    ::pass/subject (me)
+    ::pass/action #{(str (base-uri) "/actions/create-person")}
+    ::pass/purpose nil})
+
+  (do-action
+   (str (base-uri) "/actions/create-person")
+   {:xt/id (str (base-uri) "/people/alice")
+    :example/name "Alice"})
+
+  ;; Create the create-subject action
+  (create-action!
+   {:xt/id (str (base-uri) "/actions/create-subject")
+    :juxt.pass.alpha/scope "write:admin"
+
+    :juxt.pass.alpha.malli/args-schema
+    [:tuple
+     [:map
+      [:juxt.site.alpha/type [:= "Subject"]]
+      [:example/person [:re (str (base-uri) "/people/\\p{Alpha}{2,}")]]]]
+
+    :juxt.pass.alpha/process
+    [
+     [:juxt.pass.alpha.process/update-in [0] 'merge {:juxt.site.alpha/type "Subject"}]
+     [:juxt.pass.alpha.malli/validate]
+     [:xtdb.api/put]]
+
+    ::pass/rules
+    '[
+      [(allowed? permission subject action resource)
+       [permission ::pass/subject subject]]]})
+
+  (grant-permission!
+   {:xt/id (str base-uri "/permissions/repl/create-subject")
+    ::pass/subject "urn:site:subjects:repl"
+    ::pass/action #{(str (base-uri) "/actions/create-subject")}
+    ::pass/purpose nil})
+
+  (do-action
+   (str (base-uri) "/actions/create-subject")
+   {:xt/id (str (base-uri) "/subjects/alice")
+    :example/person "https://site.test/people/alice"})
+
+  )
+
 (comment
   {:xt/id "https://site.test/actions/create-person"
    :juxt.site.alpha/type "Action"

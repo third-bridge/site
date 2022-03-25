@@ -250,7 +250,7 @@
 (defn permit-create-action! [xt-node {::site/keys [base-uri] :as config}]
   (put!
    xt-node
-   {:xt/id (str base-uri "permissions/repl/create-action")
+   {:xt/id (str base-uri "/permissions/repl/create-action")
     ::site/type "Permission"
     ::pass/subject (me)
     ::pass/action (str base-uri "/actions/create-action")
@@ -297,7 +297,7 @@
   [xt-node {::site/keys [base-uri] :as config}]
   (put!
    xt-node
-   {:xt/id (str base-uri "permissions/repl/grant-permission")
+   {:xt/id (str base-uri "/permissions/repl/grant-permission")
     ::site/type "Permission"
     ::pass/subject (me)
     ::pass/action (str base-uri "/actions/grant-permission")
