@@ -1,4 +1,5 @@
 = Installation
+:toc: left
 
 == Introduction
 
@@ -20,12 +21,12 @@ Before you start, you'll need to have the following installed:
 
 === Before you start
 
-All these instructions are for Arch Linux, please amend accordingly for your own
+* All these instructions are for Arch Linux, please amend accordingly for your own
 platform, if different.
 
-Run each command under your user account (i.e. not as root).
+* Run each command under your user account (i.e. not as root).
 
-For documentation purposes, we'll assume your Site server will be set up to run
+* For documentation purposes, we'll assume your Site server will be set up to run
 on the host `site.test`. If you choose another hostname, or are setting up for
 production, please amend these instructions accordingly.
 
@@ -400,6 +401,10 @@ granting permissions!
 ----
 (permit-grant-permission-action!)
 ----
+
+== Add a trusted identity provider
+
+
 
 == Create users
 
