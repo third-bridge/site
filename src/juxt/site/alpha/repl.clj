@@ -553,13 +553,16 @@
 (defn grant-permission! [permission]
   (init/grant-permission! (xt-node) (config) permission))
 
-(defn example-bootstrap! []
+(defn bootstrap-actions! []
   (install-do-action-fn!)
   (put! {:xt/id (me)})
   (install-create-action!)
   (permit-create-action!)
   (install-grant-permission-action!)
-  (permit-grant-permission-action!)
+  (permit-grant-permission-action!))
+
+(defn example-bootstrap! []
+  (bootstrap-actions!)
 
   ;; Create create-person action
   (create-action!
