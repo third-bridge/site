@@ -597,18 +597,18 @@
 
   ;; Create the create-subject action
   (create-action!
-   {:xt/id (str (base-uri) "/actions/create-subject")
+   {:xt/id (str (base-uri) "/actions/create-identity")
     :juxt.pass.alpha/scope "write:admin"
 
     :juxt.pass.alpha.malli/args-schema
     [:tuple
      [:map
-      [:juxt.site.alpha/type [:= "Subject"]]
+      [:juxt.site.alpha/type [:= "Identity"]]
       [:example/person [:re (str (base-uri) "/people/\\p{Alpha}{2,}")]]]]
 
     :juxt.pass.alpha/process
     [
-     [:juxt.pass.alpha.process/update-in [0] 'merge {:juxt.site.alpha/type "Subject"}]
+     [:juxt.pass.alpha.process/update-in [0] 'merge {:juxt.site.alpha/type "Identity"}]
      [:juxt.pass.alpha.malli/validate]
      [:xtdb.api/put]]
 
@@ -618,17 +618,17 @@
        [permission ::pass/subject subject]]]})
 
   (grant-permission!
-   {:xt/id (str base-uri "/permissions/repl/create-subject")
+   {:xt/id (str (base-uri) "/permissions/repl/create-identity")
     ::pass/subject "urn:site:subjects:repl"
-    ::pass/action #{(str (base-uri) "/actions/create-subject")}
+    ::pass/action #{(str (base-uri) "/actions/create-identity")}
     ::pass/purpose nil})
 
   (do-action
-   (str (base-uri) "/actions/create-subject")
-   {:xt/id (str (base-uri) "/subjects/alice")
-    :example/person "https://site.test/people/alice"})
-
-  )
+   (str (base-uri) "/actions/create-identity")
+   {:xt/id (str (base-uri) "/identities/alice")
+    :example/person "https://site.test/people/alice"
+    :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
+    :juxt.pass.jwt/sub "github|123456"}))
 
 (comment
   {:xt/id "https://site.test/actions/create-person"
