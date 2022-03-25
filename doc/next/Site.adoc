@@ -1,0 +1,7 @@
+= Site
+Malcolm Sparks <mal@juxt.pro>
+:doctype: book
+:toc: left
+:toclevels: 5
+
+include::Installation.adoc[leveloffset=+1]

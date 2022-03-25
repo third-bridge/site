@@ -1,7 +1,6 @@
-= Site Administration: Installation Guide
-Malcolm Sparks <mal@juxt.pro>
-:toc: preamble
-:toclevels: 5
+= Installation
+
+== Introduction
 
 This is the long-winded installation guide to explain how to bootstrap a Site
 instance.
@@ -11,7 +10,7 @@ Site's builds up its secure foundation. But if you are in a hurry, there are (or
 quicker 'install packs' and Docker images that provide shortcuts to setting up a
 Site instance.
 
-== Requirements
+=== Requirements
 
 Before you start, you'll need to have the following installed:
 
@@ -19,7 +18,7 @@ Before you start, you'll need to have the following installed:
 * https://clojure.org/guides/getting_started[Clojure]
 * https://github.com/babashka/babashka[Babashka]
 
-== Before you start
+=== Before you start
 
 All these instructions are for Arch Linux, please amend accordingly for your own
 platform, if different.
@@ -30,7 +29,7 @@ For documentation purposes, we'll assume your Site server will be set up to run
 on the host `site.test`. If you choose another hostname, or are setting up for
 production, please amend these instructions accordingly.
 
-== Preparing your development environment for Site
+== Preparation
 
 === Decide on a fully qualified hostname
 
@@ -250,30 +249,10 @@ There are a few useful Site REPL commands you should be familiar with:
 (apply evict! (ls)):: Start over. (Delete everything in the database!)
 --
 
-== Configure an authorization server
+== Setup actions
 
-Site is a Resource Server, responsible for serving resources such as:
-
-- Static web pages and media
-- API responses
-- GraphQL responses
-
-As a Resource Server, Site is responsible for protecting the resources owned by
-users from unauthorized access.
-
-Rather than sending credentials, clients (applications) obtain and use
-access-tokens to access Site's resources.
-
-Site hosts the authorization server by which clients can obtain access tokens.
-
-----
-(install-authorization-server! {:name "Authorization Server"})
-(install-token-endpoint! {:xt/id "https://site.test/token"})
-(register-application! {:name "My Application"})
-----
-
-
-== Bootstrap remote access to Site
+////
+(old text)
 
 A Site instance is a collection of documents, stored in XTDB.
 
@@ -295,32 +274,33 @@ An access token is granted for a *subject* and an *application*, so we'll need
 to create those too.
 
 But first, we need to install some preliminary resources into our REPL.
+////
 
-=== Install the capability to call actions
+Site adds the concept of *actions* to XTDB.
 
-Actions are at the heart of Site:
+Actions make up the layer which mediates, authorizes and records read and write
+access to the database.
 
-* Actions allow you to read and write to the database.
-* Actions are composeable.
-* Actions can call external functions, such as lambdas.
 * Actions are restricted to authorized users and applications.
-* Actions can be grouped into OAuth2 scopes
-* Actions can be exposed to the network, via OpenAPI and GraphQL.
+* Actions run in transaction functions to ensure atomicity and consistency.
+* Actions can provide involve input validation.
+* Actions leave an audit trail and may trigger alerts.
+* Actions can be grouped into OAuth2 scopes.
+* Actions are used to build higher-level services, such as OpenAPI and GraphQL operations.
 
-==== Install the `do-action` function
+=== Install the `do-action` function
 
-Actions are executed in an XTDB transaction function.
-
-This guarantees consistency, eliminating potential race-conditions. For example,
-it's important that any revocations to authorization permissions are fully
-processed if they occur before a call to an action.
+Executing actions in an XTDB transaction function guarantees consistency,
+eliminating potential race-conditions. For example, it's important that any
+revocation of a permission is applied if it is submitted before a request that
+requires the permission.
 
 The transaction function also records every action call in an *audit-log*,
 detailing when the action was called, by whom, which entities were affected and,
 potentially, other details such as the 'business justification'.
 
-We have to first install the transaction function into the database, so that we
-can start to call the actions we will create.
+We must first install the transaction function into the database, so that we can
+call actions we create.
 
 [source,clojure]
 .Install the do-action transaction function
@@ -328,18 +308,18 @@ can start to call the actions we will create.
 (install-do-action-fn!)
 ----
 
-==== Create a REPL subject
+=== Create a subject representing the REPL user
 
-Actions are performed by subjects.
+Actions are performed by **subject**s.
 
-A *subject* represents an authenticated person, which will include personal data
+A subject represents an authenticated person, which will include personal data
 as well as details about their login session (e.g. the device they are using,
 whether their email address has been verified, whether their login required use
 of a second factor, etc.).
 
 To call actions from the REPL, we'll install a subject that can only be used
 from the REPL. The `(me)` function returns a special built-in identifier for the
-REPL subject. It can't be used remotely.
+REPL subject.
 
 [source,clojure]
 .Add the REPL subject
@@ -410,7 +390,7 @@ A copy of the transaction metadata record is returned as a result of the `do-act
 ====
 ****
 
-==== Permit access to the grant permission action
+=== Permit REPL access to the grant permission action
 
 We need to permit our REPL user to call this grant-permission action, and this permission too
 needs to be put directly into the database since we don't yet have a way of
@@ -420,6 +400,8 @@ granting permissions!
 ----
 (permit-grant-permission-action!)
 ----
+
+== Create users
 
 === Create a user
 
@@ -515,73 +497,76 @@ First, we'll need to create an action which will create our person entity.
 ----
 ====
 
-=== Create a subject entity to represent Alice's login
+=== Create an identity to identify Alice
 
-Now we create the *subject* to represent Alice's login.
+Now we need to register an *identity* for Alice so that we can trust her.
 
+////
+.Keep this for when we need to create a subject for Alice
+****
 We do this because we may want our rules to take into account other aspects of
 Alice's session rather than just the fact that it belongs to Alice. For example,
 we may want some actions to be denied if Alice is logging in from an insecure
 location or from a different country.
+****
+////
 
-==== Create an action to create a subject
+==== Create an action to create a identity
 
-We haven't yet created the ability to create subjects, so let's create another
-action for doing that.
-
-.Creating an action for creating the subject
+.Creating an action for creating the identity
 ====
 [source,clojure]
 ----
 (create-action!
-{:xt/id "https://site.test/actions/create-subject"
- :juxt.pass.alpha/scope "write:admin"
+ {:xt/id "https://site.test/actions/create-identity"
+  :juxt.pass.alpha/scope "write:admin"
 
- :juxt.pass.alpha.malli/args-schema
- [:tuple
+  :juxt.pass.alpha.malli/args-schema
+  [:tuple
    [:map
-     [:juxt.site.alpha/type [:= "Subject"]]
-     [:example/person [:re "https://site.test/people/\\p{Alpha}{2,}"]]]]
+    [:juxt.site.alpha/type [:= "Identity"]]
+    [:example/person [:re "https://site.test/people/\\p{Alpha}{2,}"]]]]
 
- :juxt.pass.alpha/process
- [
-  [:juxt.pass.alpha.process/update-in [0] 'merge {:juxt.site.alpha/type "Subject"}]
-  [:juxt.pass.alpha.malli/validate]
-  [:xtdb.api/put]]
+  :juxt.pass.alpha/process
+  [
+   [:juxt.pass.alpha.process/update-in [0] 'merge {:juxt.site.alpha/type "Identity"}]
+   [:juxt.pass.alpha.malli/validate]
+   [:xtdb.api/put]]
 
- ::pass/rules
- '[
-   [(allowed? permission subject action resource)
-    [permission ::pass/subject subject]]]})
+  :juxt.pass.alpha/rules
+  '[
+    [(allowed? permission subject action resource)
+     [permission :juxt.pass.alpha/subject subject]]]})
 ----
 ====
 
-==== Permit the REPL to call the create-subject action
+==== Permit the REPL to call the create-identity action
 
-.Adding a permission on the create-subject action
+.Adding a permission on the create-identity action
 ====
 
 [source,clojure]
 ----
 (grant-permission!
-{:xt/id "https://site.test/permissions/repl/create-subject"
- ::pass/subject "urn:site:subjects:repl"
- ::pass/action #{"https://site.test/actions/create-subject"}
- ::pass/purpose nil
- }
-)
+ {:xt/id "https://site.test/permissions/repl/create-identity"
+  :juxt.pass.alpha/subject "urn:site:subjects:repl"
+  :juxt.pass.alpha/action #{"https://site.test/actions/create-identity"}
+  :juxt.pass.alpha/purpose nil})
 ----
 ====
 
-==== Call the create-subject action
+==== Call the create-identity action
 
-.Calling the create-subject action
+.Calling the create-identity action
 ====
 [source,clojure]
 ----
-(do-action "https://site.test/actions/create-subject"
-  {:xt/id "https://site.test/subjects/alice"
-   :example/person "https://site.test/people/alice"})
+(do-action
+ "https://site.test/actions/create-identity"
+ {:xt/id "https://site.test/identities/alice"
+  :example/person "https://site.test/people/alice"
+  :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
+  :juxt.pass.jwt/sub "github|123456"})
 ----
 ====
 
@@ -633,6 +618,28 @@ Now we can use the site tool for remote administration. Try the following:
 
 ----
 $ site/bin/site list-users
+----
+
+== Configure an authorization server
+
+Site is a Resource Server, responsible for serving resources such as:
+
+- Static web pages and media
+- API responses
+- GraphQL responses
+
+As a Resource Server, Site is responsible for protecting the resources owned by
+users from unauthorized access.
+
+Rather than sending credentials, clients (applications) obtain and use
+access-tokens to access Site's resources.
+
+Site hosts the authorization server by which clients can obtain access tokens.
+
+----
+(install-authorization-server! {:name "Authorization Server"})
+(install-token-endpoint! {:xt/id "https://site.test/token"})
+(register-application! {:name "My Application"})
 ----
 
 == Post installation steps

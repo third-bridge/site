@@ -1,6 +1,4 @@
-= Site Development: App Development Guide
-:toc: preamble
-:toclevels: 5
+= App Development
 
 == Understanding the authorization flow
 

@@ -595,7 +595,7 @@
    {:xt/id (str (base-uri) "/people/alice")
     :example/name "Alice"})
 
-  ;; Create the create-subject action
+  ;; Create the create-identity action
   (create-action!
    {:xt/id (str (base-uri) "/actions/create-identity")
     :juxt.pass.alpha/scope "write:admin"
@@ -612,16 +612,16 @@
      [:juxt.pass.alpha.malli/validate]
      [:xtdb.api/put]]
 
-    ::pass/rules
+    :juxt.pass.alpha/rules
     '[
       [(allowed? permission subject action resource)
-       [permission ::pass/subject subject]]]})
+       [permission :juxt.pass.alpha/subject subject]]]})
 
   (grant-permission!
    {:xt/id (str (base-uri) "/permissions/repl/create-identity")
-    ::pass/subject "urn:site:subjects:repl"
-    ::pass/action #{(str (base-uri) "/actions/create-identity")}
-    ::pass/purpose nil})
+    :juxt.pass.alpha/subject "urn:site:subjects:repl"
+    :juxt.pass.alpha/action #{(str (base-uri) "/actions/create-identity")}
+    :juxt.pass.alpha/purpose nil})
 
   (do-action
    (str (base-uri) "/actions/create-identity")
@@ -629,57 +629,3 @@
     :example/person "https://site.test/people/alice"
     :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
     :juxt.pass.jwt/sub "github|123456"}))
-
-(comment
-  {:xt/id "https://site.test/actions/create-person"
-   :juxt.site.alpha/type "Action"
-   :juxt.pass.alpha/scope "write:admin"
-   :juxt.pass.alpha/action-args
-   [{:juxt.pass.alpha.malli/schema
-     [:map
-      [:xt/id [:re "https://site.test/persons/\\p{alpha}{2,}"]]
-      [:example/type [:= "Person"]]
-      [:example/name [:re "[\\p{alpha} ]{2,}"]]]
-
-     :juxt.pass.alpha/process
-     [
-      [:juxt.pass.alpha/merge {:example/type "Person"}]
-      [:juxt.pass.alpha.malli/validate]]}]
-
-   ::pass/rules
-   '[
-     [(allowed? permission subject action resource)
-      ;; Permission granted to the subject
-      [permission ::pass/subject subject]
-      ]]}
-
-  {:xt/id (me)}
-
-  {:xt/id "https://site.test/permissions/repl"
-   ::site/type "Permission"
-   ::pass/subject "urn:site:subjects:repl"
-   ::pass/action #{"https://site.test/actions/create-person"}
-   ::pass/purpose nil
-   }
-
-  {:xt/id "https://site.test/actions/create-subject"
-   :juxt.site.alpha/type "Action"
-   :juxt.pass.alpha/scope "write:admin"
-   :juxt.pass.alpha/action-args
-   [{:juxt.pass.alpha.malli/schema
-     [:map
-      [:xt/id [:re "https://site.test/(.+)"]]
-      [:example/type [:= "Subject"]]
-      [:example/person [:re "https://site.test/persons/\\p{alpha}{2,}"]]]
-
-     :juxt.pass.alpha/process
-     [
-      [:juxt.pass.alpha/merge {:example/type "Subject"}]
-      [:juxt.pass.alpha.malli/validate]]}]
-
-   ::pass/rules
-   '[
-     [(allowed? permission subject action resource)
-      ;; Permission granted to the subject
-      [permission ::pass/subject subject]
-      ]]})
