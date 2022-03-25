@@ -561,6 +561,18 @@
   (install-grant-permission-action!)
   (permit-grant-permission-action!))
 
+(defn add-openid-provider! [provider]
+  (let [uri (str provider "/.well-known/openid-configuration")
+        _ (printf "Loading OpenID configuration from %s\n" uri)
+        config (json/read-value (slurp uri))
+        ]
+    (printf "Issuer added: %s\n" (get config "issuer"))
+    (put!
+     {:xt/id uri
+      :juxt.pass.alpha/openid-configuration config})))
+
+;; (add-openid-provider! "https://juxt.eu.auth0.com")
+
 (defn example-bootstrap! []
   (bootstrap-actions!)
 
