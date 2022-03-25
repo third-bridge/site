@@ -1187,14 +1187,4 @@
 
        tmr
 
-       (xt/entity db (get-in tmr [::pass/puts 0]))
-
-       )
-
-
-
-
-
-     )
-
-   ))
+       (xt/entity db (get-in tmr [::pass/puts 0]))))))

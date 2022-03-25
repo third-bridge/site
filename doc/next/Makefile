@@ -1,4 +1,4 @@
-all:	InstallationGuide.pdf
+all:	InstallationGuide.pdf AppDevelopmentGuide.pdf
 
 %.pdf:	%.adoc
 	asciidoctor-pdf \
