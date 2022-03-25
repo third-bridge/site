@@ -52,7 +52,7 @@ base:
   line-height-length: 16
   #font-size: 11.25
   #line-height-length: 18
-  line-height: $base-line-height-length / $base-font-size
+  line-height: $base-line-height-length / $base-font-size - 0.75
   font-size-large: round($base-font-size * 1.25)
   font-size-small: round($base-font-size * 0.85)
   font-size-min: $base-font-size * 0.75

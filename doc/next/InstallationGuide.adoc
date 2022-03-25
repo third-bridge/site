@@ -1,4 +1,5 @@
 = Site Administration: Installation Guide
+Malcolm Sparks <mal@juxt.pro>
 :toc: preamble
 :toclevels: 5
 
@@ -426,12 +427,12 @@ To remotely access the system, we'll first have to build a user.
 
 For this example, we'll model a user as a combination of:
 
-- [ ] A *person*,
+- A *person*,
 
-- [ ] A person's *identity*, as issued from a trusted entity such as an OAuth2
+- A person's *identity*, as issued from a trusted entity such as an OAuth2
   Authorization Server, Identity Provider or equivalent,
 
-- [ ] A *subject* which represents the person's current *session*, including details
+- A *subject* which represents the person's current *session*, including details
   of how they logged in.
 
 NOTE: We don't have to model a user this way, and for some applications this
