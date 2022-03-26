@@ -1236,7 +1236,7 @@
 
    ;; Authenticate
    session/wrap-associate-session
-   wrap-authenticate
+   #_wrap-authenticate
 
    ;; Locate resources
    wrap-locate-resource
@@ -1249,7 +1249,7 @@
    ;; Authorize
    ;; Not ready yet, being rewritten
    #_wrap-authorize-with-acls
-   wrap-authorize-with-pdp
+   #_wrap-authorize-with-pdp
 
    ;; 405
    wrap-method-not-allowed?
