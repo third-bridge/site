@@ -1,3 +1,4 @@
 .asciidoctor/
 *.pdf
 authorization-flow.png
+authentication-flow.png

@@ -5,3 +5,6 @@ Malcolm Sparks <mal@juxt.pro>
 :toclevels: 5
 
 include::Installation.adoc[leveloffset=+1]
+include::Authentication.adoc[leveloffset=+1]
+include::Authorization.adoc[leveloffset=+1]
+include::AppDevelopment.adoc[leveloffset=+1]

@@ -1,5 +1,7 @@
 all:	Site.pdf
 
+Site.pdf:	Installation.adoc Authentication.adoc Authorization.adoc AppDevelopment.adoc
+
 %.pdf:	%.adoc
 	asciidoctor-pdf \
 	-r asciidoctor-diagram \

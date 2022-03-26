@@ -1,0 +1,64 @@
+= Authentication
+:toc: left
+
+== Introduction
+
+== Understanding the authentication flow
+
+Site must acquire an ID_TOKEN in order to identify a subject.
+
+The way it does this is by communicate with an identity provider.
+
+In the language of OAuth2, Site takes on the role of a Client and the Identity
+Provider takes on the role of the Authorization Server.
+
+Once Site has established confidence in the subject's claims, it can then
+proceed to authorize access to its resources.
+
+.How Site gets an ID_TOKEN
+[plantuml,authentication-flow,png]
+....
+skinparam monochrome true
+autonumber
+
+actor Alice as user
+participant browser
+
+box Site
+participant Client as site
+database XT
+end box
+
+box Identity Provider
+participant "/authorize" as auth
+participant "/login" as login
+participant "/token" as token
+end box
+
+browser -> site: GET /login
+site <- XT: Look up config of\nIdentity Provider
+site -> XT: Create session cookie,\nwith state value
+site -> browser: Set session cookie,\nredirect to /authorize
+browser -> auth: GET /authorize, no session cookie
+note over site: We are asking Alice to authorize Site's access to her details
+note over auth: Who is this?
+auth -> browser: Redirect to /login
+browser -> login: GET /login
+login -> browser: login page HTML
+user -> browser: Enter password
+browser -> login: POST
+note over login: OK, it's Alice
+login -> browser: Set session cookie, redirect to /authorize
+browser -> auth: GET /authorize, this time with cookie
+auth -> browser: Do you want to authorize Site?
+user -> browser: Yes please!
+browser -> auth: Yes
+auth -> browser: Redirect to Site with this code
+browser -> site: Here is the code and state
+site <- XT: Check state value
+site -> token: POST code
+token -> site: ID_TOKEN containing\nAlice's details
+site -> XT: Add ID_TOKEN to session
+site -> browser: Upgrade session cookie
+
+....
