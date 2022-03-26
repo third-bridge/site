@@ -126,9 +126,6 @@
 (def UNCLASSIFIED_PAGE
   {:xt/id "https://example.org/sales-report.csv"})
 
-(def ANONYMOUS_SUBJECT
-  {:xt/id "https://example.org/subjects/anonymous"})
-
 ;; Alice is an employee
 ;; Carlos isn't an employee, but can access the login page
 
@@ -141,20 +138,27 @@
    ::pass/scope "read:resource"
    ::pass/rules
    '[
-     ;; Anyone can read PUBLIC resources
+     ;; Unidentified visitors can read of PUBLIC resources
      [(allowed? permission subject action resource)
       [resource ::pass/classification "PUBLIC"]
       [permission :xt/id]
-      [subject :xt/id]
+      [(nil? subject)]
       ]
+
+     ;; Identified visitors can also read PUBLIC resource
+     [(allowed? permission subject action resource)
+      [resource ::pass/classification "PUBLIC"]
+      [permission :xt/id]
+      [subject :xt/id]]
 
      ;; Only persons granted permission to read INTERNAL resources
      [(allowed? permission subject action resource)
       [resource ::pass/classification "INTERNAL"]
       [permission :xt/id]
       [permission ::person person]
-      [subject ::person person]
-      ]]})
+      [subject ::person person]]
+
+     ]})
 
 (def ANYONE_CAN_READ_PUBLIC_RESOURCES
   {:xt/id "https://example.org/permissions/anyone-can-read-public-resources"
@@ -169,6 +173,10 @@
    ::pass/purpose nil
    ::person (:xt/id ALICE)})
 
+#_((t/join-fixtures [with-xt])
+ (fn []
+   ))
+
 (deftest classified-resource-test
   (submit-and-await!
    [
@@ -182,7 +190,6 @@
     ;; Subjects
     [::xt/put ALICE_SUBJECT]
     [::xt/put CARLOS_SUBJECT]
-    [::xt/put ANONYMOUS_SUBJECT]
 
     ;; Resources
     [::xt/put LOGIN_PAGE]
@@ -204,19 +211,14 @@
             (is (seq permissions))
             (is (not (seq permissions)))))
 
-      ALICE_SUBJECT LOGIN_PAGE true
-      ALICE_SUBJECT EMPLOYEE_LIST true
+        ALICE_SUBJECT LOGIN_PAGE true
+        ALICE_SUBJECT EMPLOYEE_LIST true
 
-      CARLOS_SUBJECT LOGIN_PAGE true
-      CARLOS_SUBJECT EMPLOYEE_LIST false
+        CARLOS_SUBJECT LOGIN_PAGE true
+        CARLOS_SUBJECT EMPLOYEE_LIST false
 
-      ANONYMOUS_SUBJECT LOGIN_PAGE true
-      ANONYMOUS_SUBJECT EMPLOYEE_LIST false)))
-
-
-#_((t/join-fixtures [with-xt])
-   (fn []
-     ))
+        nil LOGIN_PAGE true
+        nil EMPLOYEE_LIST false)))
 
 ;; User directories
 
