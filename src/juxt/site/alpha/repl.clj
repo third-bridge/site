@@ -571,7 +571,37 @@
      {:xt/id uri
       :juxt.pass.alpha/openid-configuration config})))
 
-;; (add-openid-provider! "https://juxt.eu.auth0.com")
+(comment
+  (add-openid-provider! "https://juxt.eu.auth0.com"))
+
+(defn add-openid-login! [& {:keys [name provider client-id client-secret]}]
+  (let [login (format "%s/_site/openid/%s/login" (base-uri) name)
+        callback (format "%s/_site/openid/%s/callback" (base-uri) name)]
+    (put!
+     {:xt/id login
+      :juxt.http.alpha/methods #{:head :get :options}
+      :juxt.http.alpha/content-type "text/plain"
+      :juxt.site.alpha/get-fn 'juxt.pass.alpha.openid-connect/login
+      :juxt.pass.alpha/openid-provider provider
+      :juxt.pass.alpha/oauth2-client-id client-id
+      :juxt.pass.alpha/oauth2-client-secret client-secret
+      :juxt.pass.alpha/redirect-uri callback}
+
+     {:xt/id callback
+      :juxt.http.alpha/methods #{:head :get :options}
+      :juxt.http.alpha/content-type "text/plain"
+      :juxt.site.alpha/get-fn 'juxt.pass.alpha.openid-connect/login
+      :juxt.pass.alpha/openid-provider provider
+      :juxt.pass.alpha/oauth2-client-id client-id
+      :juxt.pass.alpha/oauth2-client-secret client-secret
+      :juxt.pass.alpha/redirect-uri callback})))
+
+(comment
+  (add-openid-login!
+   :name "auth0"
+   :provider "https://juxt.eu.auth0.com/.well-known/openid-configuration"
+   :client-id "0oZyhjgTHukF2q0RgYHYVzFe9U5HTLpJ"
+   :client-secret "qAw2kuD88fjApaY7Tbv1H_l7knSIleCzpyHpwMOVeDROPH0TojNvoPTo8P8i6hGH"))
 
 (defn example-bootstrap! []
   (bootstrap-actions!)

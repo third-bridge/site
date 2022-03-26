@@ -406,11 +406,24 @@ granting permissions!
 
 Site does not store user credentials but requires that you provide one or more trusted identity providers that are compatible with OpenID Connect Discovery. Examples include https://www.keycloak.org/[Keycloak], https://auth0.com/[Auth0], Okta, Google, https://aws.amazon.com/cognito/[AWS Cognito] and many more.
 
-.Adding an Auth0 domain
+.Adding Auth0 as an OpenID Connect provider
 ====
+Create an account with Auth0 and note the Auth0 tenant (domain).
+
 [source,clojure]
 ----
 (add-openid-provider! "https://juxt.eu.auth0.com")
+----
+
+Create an app client and take a note of the client-id and client-secret.
+
+[source,clojure]
+----
+(add-openid-login!
+:name "auth0"
+:provider "https://juxt.eu.auth0.com/.well-known/openid-configuration"
+:client-id "<client-id>"
+:client-secret "<client-secret>")
 ----
 ====
 
