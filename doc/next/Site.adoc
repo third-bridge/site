@@ -4,7 +4,12 @@ Malcolm Sparks <mal@juxt.pro>
 :toc: left
 :toclevels: 5
 
+include::Introduction.adoc[leveloffset=+1]
+include::Values.adoc[leveloffset=+2]
+
+// Split out the topic on Actions into its own chapter?
 include::Installation.adoc[leveloffset=+1]
+
 include::Authentication.adoc[leveloffset=+1]
 include::Authorization.adoc[leveloffset=+1]
 include::AppDevelopment.adoc[leveloffset=+1]
