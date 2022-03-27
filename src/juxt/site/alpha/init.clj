@@ -259,6 +259,9 @@
 (defn do-action [xt-node action & args]
   (apply authz/do-action xt-node {} (me) action args))
 
+(defn do-action-with-purpose [xt-node action purpose & args]
+  (apply authz/do-action xt-node {::pass/purpose purpose} (me) action args))
+
 (defn create-action! [xt-node {::site/keys [base-uri] :as config} action]
   (do-action
    xt-node

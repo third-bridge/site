@@ -7,7 +7,7 @@
 
 [note]
 --
-* [ ] create the create-resource action
+* [ ] create the create-public-resource action
 * [ ] grant the REPL user permission to call create-public-resource
 * [ ] create the "Hello World!" text/plain resource
 * [ ] create the get-resource action with a rule to allow PUBLIC resource

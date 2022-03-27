@@ -529,6 +529,9 @@
 (defn do-action [action & args]
   (apply init/do-action (xt-node) action args))
 
+(defn do-action-with-purpose [action purpose & args]
+  (apply init/do-action-with-purpose (xt-node) action purpose args))
+
 (defn install-do-action-fn! []
   (put! (authz/install-do-action-fn)))
 
@@ -604,8 +607,40 @@
    :client-secret "qAw2kuD88fjApaY7Tbv1H_l7knSIleCzpyHpwMOVeDROPH0TojNvoPTo8P8i6hGH"))
 
 (defn example-hello-world []
+  (create-action!
+   {:xt/id (str (base-uri) "/actions/create-public-resource")
+    :juxt.pass.alpha/scope "write:resource"
 
-  )
+    :juxt.pass.alpha.malli/args-schema
+    [:tuple
+     [:map
+      [:xt/id [:re (str (base-uri) "/.*")]]
+      #_[::http/methods #{:post}]]]
+
+    :juxt.pass.alpha/process
+    [
+     [:juxt.pass.alpha.process/update-in [0] 'merge {::pass/classification "PUBLIC"}]
+     [:juxt.pass.alpha.malli/validate]
+     [:xtdb.api/put]]
+
+    ::pass/rules
+    '[
+      [(allowed? permission subject action resource)
+       [permission ::pass/subject subject]]]})
+
+  (grant-permission!
+   {:xt/id (str (base-uri) "/permissions/repl/create-public-resource")
+    :juxt.pass.alpha/subject "urn:site:subjects:repl"
+    :juxt.pass.alpha/action #{(str (base-uri) "/actions/create-public-resource")}
+    :juxt.pass.alpha/purpose ::demonstration})
+
+  (do-action-with-purpose
+   (str (base-uri) "/actions/create-public-resource")
+   ::demonstration
+   {:xt/id (str (base-uri) "/hello")
+    ::http/methods #{:get :head :options}
+    ::http/content-type "text/plain"
+    ::http/content "Hello World!\r\n"}))
 
 (defn example-bootstrap! []
   (bootstrap-actions!)
@@ -678,3 +713,9 @@
     :example/person "https://site.test/people/alice"
     :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
     :juxt.pass.jwt/sub "github|123456"}))
+
+(defn start-over! []
+  (apply evict! (->> (q '{:find [(pull e [:xt/id ::site/type])]
+                          :where [[e :xt/id]]})
+                     (map first)
+                     (map :xt/id))))

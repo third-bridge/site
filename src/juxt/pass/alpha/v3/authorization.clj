@@ -296,10 +296,12 @@
              (juxt.pass.alpha.v3.authorization/do-action* xt-ctx pass-ctx (vec args)))})
 
 (defn do-action [xt-node pass-ctx subject action & args]
-  (let [
-        tx (xt/submit-tx
+  (let [tx (xt/submit-tx
             xt-node
-            [[::xt/fn "urn:site:tx-fns:do-action" (assoc pass-ctx ::pass/subject subject ::pass/action action) args]])
+            [[::xt/fn
+              "urn:site:tx-fns:do-action"
+              (assoc pass-ctx ::pass/subject subject ::pass/action action) args]])
+
         {::xt/keys [tx-id]} (xt/await-tx xt-node tx)]
 
     ;; Throw a nicer error
