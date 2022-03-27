@@ -2,7 +2,7 @@
 
 all:	Site.pdf
 
-Site.pdf:	Introduction.adoc Values.adoc Installation.adoc Authentication.adoc Authorization.adoc AppDevelopment.adoc NextSteps.adoc
+Site.pdf:	Introduction.adoc Values.adoc Installation.adoc Actions.adoc Resources.adoc Authentication.adoc Authorization.adoc AppDevelopment.adoc NextSteps.adoc
 
 %.pdf:	%.adoc
 	asciidoctor-pdf \
