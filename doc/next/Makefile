@@ -1,8 +1,6 @@
-.PHONY: all watch
+.PHONY: watch
 
-all:	Site.pdf
-
-Site.pdf:	Introduction.adoc Values.adoc Installation.adoc Actions.adoc Resources.adoc Authentication.adoc Authorization.adoc AppDevelopment.adoc NextSteps.adoc
+Site.pdf:	$(wildcard *.adoc)
 
 %.pdf:	%.adoc
 	asciidoctor-pdf \

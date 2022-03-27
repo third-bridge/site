@@ -6,6 +6,7 @@ Malcolm Sparks <mal@juxt.pro>
 
 include::Introduction.adoc[leveloffset=+1]
 include::Values.adoc[leveloffset=+2]
+include::Principles.adoc[leveloffset=+2]
 
 include::Installation.adoc[leveloffset=+1]
 include::Actions.adoc[leveloffset=+1]

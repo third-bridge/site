@@ -3,6 +3,7 @@
 
 Here are Site's values.
 
+[[vision]]
 == Vision
 
 Site is a long-term project with a long-term vision to become a standards-based
@@ -41,6 +42,7 @@ You can re-use and re-configure solutions for new problems.
 Because it's built on standards, Site is a good citizen in a healthy web
 ecosystem of endless possibilities.
 
+[[understanding]]
 == Understanding
 
 By using and working with Site, you will gain a deeper understanding of not just
