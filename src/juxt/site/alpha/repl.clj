@@ -535,8 +535,8 @@
 (defn install-do-action-fn! []
   (put! (authz/install-do-action-fn)))
 
-(defn check-permissions [subject actions options]
-  (authz/check-permissions (db) subject actions options))
+(defn check-permissions [actions options]
+  (authz/check-permissions (db) actions options))
 
 (defn install-create-action! []
   (init/install-create-action! (xt-node) (config)))

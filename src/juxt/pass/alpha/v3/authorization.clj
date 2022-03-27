@@ -27,7 +27,7 @@
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
   ;; TODO: since subject is strictly optional too, only actions is required, so
   ;; put subject in options.
-  [db subject actions {:keys [resource purpose]}]
+  [db actions {:keys [subject resource purpose]}]
 
   (let [rules (actions->rules db actions)]
     (when (seq rules)
@@ -125,9 +125,9 @@
   (let [check-result
         (check-permissions
          db
-         subject
          actions
-         {:purpose purpose
+         {:subject subject
+          :purpose purpose
           :resource resource})
 
         pull-expr (vec (mapcat
@@ -243,9 +243,10 @@
       (let [check-permissions-result
             (check-permissions
              db
-             subject
              #{action}
-             {:resource resource :purpose purpose})
+             {:subject subject
+              :resource resource
+              :purpose purpose})
 
             action-doc (xt/entity db action)
             _ (when-not action-doc
