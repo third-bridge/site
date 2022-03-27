@@ -25,6 +25,8 @@
 
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
+  ;; TODO: since subject is strictly optional too, only actions is required, so
+  ;; put subject in options.
   [db subject actions {:keys [resource purpose]}]
 
   (let [rules (actions->rules db actions)]

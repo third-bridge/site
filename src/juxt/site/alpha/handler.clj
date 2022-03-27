@@ -13,7 +13,8 @@
    [juxt.dave.alpha.methods :as dave.methods]
    [juxt.jinx.alpha.vocabularies.transformation :refer [transform-value]]
    [juxt.pass.alpha.authentication :as authn]
-   [juxt.pass.alpha.authorization :as authz]
+   #_[juxt.pass.alpha.authorization :as authz]
+   [juxt.pass.alpha.v3.authorization :as authz]
    [juxt.pass.alpha.pdp :as pdp]
    [juxt.pass.alpha.session :as session]
    [juxt.pick.alpha.core :refer [rate-representation]]
@@ -476,7 +477,7 @@
     (let [sub (when-not (= method :options) (authn/authenticate req))]
       (h (cond-> req sub (assoc ::pass/subject sub))))))
 
-(defn wrap-authorize-with-acls [h]
+#_(defn wrap-authorize-with-acls [h]
   (fn [{::pass/keys [session] ::site/keys [resource] :as req}]
     (when (::pass/authorization resource)
       (log/trace "Already authorized")
@@ -486,7 +487,7 @@
          (not (::pass/authorization resource))
          authz/authorize-resource))))
 
-(defn wrap-authorize-with-pdp
+#_(defn wrap-authorize-with-pdp
   ;; Do authorization as late as possible (in order to have as much data
   ;; as possible to base the authorization decision on. However, note
   ;; Section 8.5, RFC 4918 states "the server MUST do authorization checks
@@ -541,6 +542,23 @@
               (case status 401  "Unauthorized" 403 "Forbidden")
               {::site/request-context (assoc req :ring.response/status status)}))))
         (h req)))))
+
+(defn wrap-authorize-with-actions [h]
+  (fn [{::pass/keys [session] ::site/keys [db resource] :as req}]
+    (let [subject nil                   ; placeholder for now
+          permissions
+          (authz/check-permissions
+           db
+           subject
+           #{}                          ; actions
+           {})]
+      (if (seq permissions)
+        (h (assoc req ::pass/permissions permissions))
+        (let [status (if subject 403 401)]
+          (throw
+           (ex-info
+            (case status 401  "Unauthorized" 403 "Forbidden")
+            {::site/request-context (assoc req :ring.response/status status)})))))))
 
 (defn wrap-method-not-allowed? [h]
   (fn [{::site/keys [resource] :ring.request/keys [method] :as req}]
@@ -1250,6 +1268,7 @@
    ;; Not ready yet, being rewritten
    #_wrap-authorize-with-acls
    #_wrap-authorize-with-pdp
+   wrap-authorize-with-actions
 
    ;; 405
    wrap-method-not-allowed?
