@@ -498,7 +498,7 @@
     (put!
      {:xt/id (str user "/password")
       ::site/type "Password"
-      ::http/methods #{:post}
+      ::http/methods {:post {}}
       ::pass/user user
       ::pass/password-hash (password/encrypt password)
       ::pass/classification "RESTRICTED"})))
@@ -582,7 +582,7 @@
         callback (format "%s/_site/openid/%s/callback" (base-uri) name)]
     (put!
      {:xt/id login
-      :juxt.http.alpha/methods #{:head :get :options}
+      :juxt.http.alpha/methods {:head {} :get {} :options {}}
       :juxt.http.alpha/content-type "text/plain"
       :juxt.site.alpha/get-fn 'juxt.pass.alpha.openid-connect/login
       :juxt.pass.alpha/openid-provider provider
@@ -591,7 +591,7 @@
       :juxt.pass.alpha/redirect-uri callback}
 
      {:xt/id callback
-      :juxt.http.alpha/methods #{:head :get :options}
+      :juxt.http.alpha/methods {:head {} :get {} :options {}}
       :juxt.http.alpha/content-type "text/plain"
       :juxt.site.alpha/get-fn 'juxt.pass.alpha.openid-connect/login
       :juxt.pass.alpha/openid-provider provider
@@ -615,7 +615,7 @@
     [:tuple
      [:map
       [:xt/id [:re (str (base-uri) "/.*")]]
-      #_[::http/methods #{:post}]]]
+      #_[::http/methods {:post {}}]]]
 
     :juxt.pass.alpha/process
     [
@@ -638,7 +638,7 @@
    (str (base-uri) "/actions/create-public-resource")
    ::demonstration
    {:xt/id (str (base-uri) "/hello")
-    ::http/methods #{:get :head :options}
+    ::http/methods {:get {} :head {} :options {}}
     ::http/content-type "text/plain"
     ::http/content "Hello World!\r\n"}))
 

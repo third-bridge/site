@@ -250,7 +250,12 @@
 
       ;; This is special argument that adds Site specific attributes
       (get site-args "methods")
-      (assoc ::http/methods (set (map (comp keyword str/lower-case) (get site-args "methods"))))
+      (assoc
+       ::http/methods
+       (into
+        {}
+        (for [mth (set (map (comp keyword str/lower-case) (get site-args "methods")))]
+          [mth {}])))
 
       )))
 

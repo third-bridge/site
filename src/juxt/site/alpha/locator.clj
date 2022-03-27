@@ -72,7 +72,7 @@
     ::site/type "AppRoutes"
     ::site/pattern (re-pattern "http://localhost:2021/ui/.*")
     ::pass/classification "PUBLIC"
-    ::http/methods #{:get :head :options}
+    ::http/methods {:get {} :head {} :options {}}
     ::http/content-type "text/html;charset=utf-8"
     ::http/content "<h1>App</h1>"}))
 
@@ -107,12 +107,12 @@
                                  :in [uri]}
                             uri))]
      {::site/uri uri
-      ::http/methods #{:get :head :options}
+      ::http/methods {:get {} :head {} :options {}}
       ::site/resource-provider r
       ::http/redirect (cond-> loc (.startsWith loc base-uri)
                               (subs (count base-uri)))})
 
    ;; Return a back-stop resource
    {::site/resource-provider ::default-empty-resource
-    ::http/methods #{:get :head :options :put :post}
+    ::http/methods {:get {} :head {} :options {} :put {} :post {}}
     ::site/put-fn static/put-static-resource}))

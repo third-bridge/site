@@ -143,7 +143,7 @@
      xt-node
      (into
       {:xt/id (str base-uri "/_site/graphql/requests/operations.graphql")
-       ::http/methods #{:get :head :post :options}
+       ::http/methods {:get {} :head {} :post {} :options {}}
        ::http/acceptable-on-post {"accept" "application/x-www-form-urlencoded"}
        ::site/graphql-schema schema-id
        ::site/post-fn 'juxt.site.alpha.graphql/stored-document-post-handler}
@@ -154,7 +154,7 @@
    xt-node
    {:xt/id (str base-uri "/_site/graphql/requests/operations.graphql.txt")
     :juxt.site.alpha/variant-of (str base-uri "/_site/graphql/requests/operations.graphql")
-    :juxt.http.alpha/methods #{:get :head :options}
+    :juxt.http.alpha/methods {:get {} :head {} :options {}}
     :juxt.http.alpha/content-type "text/plain;charset=utf-8"
     :juxt.site.alpha/body-fn 'juxt.site.alpha.graphql/text-plain-representation-body}))
 
@@ -170,7 +170,7 @@
      xt-node
      {:xt/id (str base-uri "/_site/templates/request.html")
       ::site/type "StaticRepresentation"
-      ::http/methods #{:get :head :options :put}
+      ::http/methods {:get {} :head {} :options {} :put {}}
       ::http/content-type "text/html;charset=utf-8"
       ::http/content-length (count body)
       ::http/body body})))
@@ -185,7 +185,7 @@
      xt-node
      {:xt/id (str base-uri "/_site/apis/site/openapi.json")
       ::site/type "OpenAPI"
-      ::http/methods #{:get :head :options :put}
+      ::http/methods {:get {} :head {} :options {} :put {}}
       ::http/content-type "application/vnd.oai.openapi+json;version=3.0.2"
       ;; TODO: Get last modified from resource - check JDK javadocs
       ;;::http/last-modified (Date. (.lastModified f))
@@ -334,7 +334,7 @@
       (put!
        xt-node
        {:xt/id token-endpoint
-        ::http/methods #{:post :options}
+        ::http/methods {:post {} :options {}}
         ::http/acceptable "application/x-www-form-urlencoded"
         ::site/post-fn `authn/token-response
         ::site/access-control-allow-origins
@@ -365,7 +365,7 @@
          {:xt/id (str base-uri "/.well-known/openid-configuration")
           ;; OpenID Connect Discovery documents are publically available
           ::pass/classification "PUBLIC"
-          ::http/methods #{:get :head :options}
+          ::http/methods {:get {} :head {} :options {}}
           ::http/content-type "application/json"
           ::http/last-modified (Date.)
           ::http/etag (subs (util/hexdigest (.getBytes content)) 0 32)
@@ -377,7 +377,7 @@
   (put!
    xt-node
    {:xt/id (str base-uri "/_site/login")
-    ::http/methods #{:post}
+    ::http/methods {:post {}}
     ::http/acceptable "application/x-www-form-urlencoded"
     ::site/post-fn `authn/login-response
     ::pass/expires-in (* 3600 24 30)}
@@ -395,7 +395,7 @@
   (put!
    xt-node
    {:xt/id (str base-uri "/_site/logout")
-    ::http/methods #{:post}
+    ::http/methods {:post {}}
     ::http/acceptable "application/x-www-form-urlencoded"
     ::site/post-fn `authn/logout-response}
 

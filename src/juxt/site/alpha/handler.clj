@@ -13,39 +13,28 @@
    [juxt.dave.alpha.methods :as dave.methods]
    [juxt.jinx.alpha.vocabularies.transformation :refer [transform-value]]
    [juxt.pass.alpha.authentication :as authn]
-   #_[juxt.pass.alpha.authorization :as authz]
    [juxt.pass.alpha.v3.authorization :as authz]
-   [juxt.pass.alpha.pdp :as pdp]
    [juxt.pass.alpha.session :as session]
    [juxt.pick.alpha.core :refer [rate-representation]]
    [juxt.pick.alpha.ring :refer [decode-maybe]]
-   [juxt.reap.alpha.decoders :as reap]
    [juxt.reap.alpha.decoders.rfc7230 :as rfc7230.decoders]
    [juxt.reap.alpha.encoders :refer [format-http-date]]
    [juxt.reap.alpha.regex :as re]
-   [juxt.reap.alpha.rfc7231 :as rfc7231]
-   [juxt.reap.alpha.rfc7232 :as rfc7232]
    [juxt.reap.alpha.ring :refer [headers->decoded-preferences]]
    [juxt.site.alpha.cache :as cache]
    [juxt.site.alpha.conditional :as conditional]
    [juxt.site.alpha.content-negotiation :as conneg]
-   [juxt.site.alpha.debug :as debug]
    [juxt.site.alpha.locator :as locator]
    [juxt.site.alpha.util :as util]
    [juxt.site.alpha.response :as response]
    [juxt.site.alpha.triggers :as triggers]
    [juxt.site.alpha.rules :as rules]
-   [ring.middleware.session :as ring-session]
-   [ring.middleware.cookies :as ring-cookies]
-   [juxt.pass.alpha.session :as session])
+   [juxt.apex.alpha :as-alias apex]
+   [juxt.http.alpha :as-alias http]
+   [juxt.pass.alpha :as-alias pass]
+   [juxt.site.alpha :as-alias site]
+   [juxt.reap.alpha.rfc7230 :as-alias rfc7230])
   (:import (java.net URI)))
-
-(alias 'apex (create-ns 'juxt.apex.alpha))
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'pick (create-ns 'juxt.pick.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
-(alias 'site (create-ns 'juxt.site.alpha))
-(alias 'rfc7230 (create-ns 'juxt.reap.alpha.rfc7230))
 
 (defn join-keywords
   "Join method keywords into a single comma-separated string. Used for the Allow
@@ -403,7 +392,7 @@
             [[:xtdb.api/put
               {:xt/id uri
                ::dave/resource-type :collection
-               ::http/methods #{:get :head :options :propfind}
+               ::http/methods {:get {} :head {} :options {} :propfind {}}
                ::http/content-type "text/html;charset=utf-8"
                ::http/content "<h1>Index</h1>\r\n"
                ::http/options {"DAV" "1"}}]])]
@@ -562,8 +551,11 @@
 
 (defn wrap-method-not-allowed? [h]
   (fn [{::site/keys [resource] :ring.request/keys [method] :as req}]
+    (when-not (map? (::http/methods resource))
+      (throw (ex-info "resource methods not map" {:resource resource
+                                                  ::site/request-context req})))
     (if resource
-      (let [allowed-methods (set (::http/methods resource))]
+      (let [allowed-methods (set (keys (::http/methods resource)))]
         (when-not (contains? allowed-methods method)
           (throw
            (ex-info

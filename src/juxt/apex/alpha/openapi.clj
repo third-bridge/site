@@ -16,13 +16,12 @@
    [juxt.site.alpha.perf :refer [fast-get-in]]
    [juxt.site.alpha.return :refer [return]]
    [juxt.site.alpha.util :as util]
-   [ring.util.codec :refer [form-decode url-decode]])
+   [juxt.http.alpha :as-alias http]
+   [juxt.apex.alpha :as-alias apex]
+   [juxt.pass.alpha :as-alias pass]
+   [juxt.site.alpha :as-alias site]
+   [ring.util.codec :refer [form-decode]])
   (:import (java.net URLDecoder)))
-
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'apex (create-ns 'juxt.apex.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
-(alias 'site (create-ns 'juxt.site.alpha))
 
 (defn put-openapi
   [{::site/keys [xt-node uri resource received-representation start-date] :as req}]
@@ -44,7 +43,7 @@
       [[:xtdb.api/put
         (merge
          {:xt/id uri
-          ::http/methods #{:get :head :options :put}
+          ::http/methods {:get {} :head {} :options {} :put {}}
           ::http/etag etag
           ::http/last-modified start-date
           ::site/type "OpenAPI"
@@ -341,14 +340,13 @@
 
             acceptable (str/join ", " (map first (get-in operation-object ["requestBody" "content"])))
 
-            methods (set
-                     (keep
-                      #{:get :head :post :put :delete :options :trace :connect}
-                      (let [methods (set
-                                     (conj (map keyword (keys path-item-object)) :options))]
-                        (cond-> methods
-                          (contains? methods :get)
-                          (conj :head)))))
+            methods (let [methods (into
+                                   {}
+                                   (for [mth (conj (map keyword (keys path-item-object)) :options)]
+                                     [mth {}]))]
+                      (cond-> methods
+                        (contains? methods :get)
+                        (conj [:head {}])))
 
             post-fn (when (= method :post)
                       (let [post-fn-sym (some-> (get operation-object "juxt.site.alpha/post-fn") symbol)
@@ -482,7 +480,7 @@
       {::site/resource-provider ::openapi-empty-document-resource
        ::site/description
        "Resource with no representations accepting a PUT of an OpenAPI JSON document."
-       ::http/methods #{:get :head :options :put}
+       ::http/methods {:get {} :head {} :options {} :put {}}
        ::http/acceptable {"accept" "application/vnd.oai.openapi+json;version=3.1.0"}
        ::site/put-fn put-openapi}))
 

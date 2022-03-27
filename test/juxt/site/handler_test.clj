@@ -174,7 +174,7 @@
      {:xt/id "https://example.org/test.png"
       ::http/last-modified #inst "2020-03-01"
       ::http/content-type "image/png"
-      ::http/methods #{:get}}]])
+      ::http/methods {:get {}}}]])
   (are [if-modified-since status]
       (= status
          (:ring.response/status
@@ -198,7 +198,7 @@
      {:xt/id "https://example.org/test.png"
       ::http/etag "\"abc\""
       ::http/content-type "image/png"
-      ::http/methods #{:get :head :options}}]])
+      ::http/methods {:get {} :head {} :options {}}}]])
   (are [if-none-match status]
       (= status
          (:ring.response/status
@@ -239,7 +239,7 @@
       ::site/type "StaticRepresentation"
       ::http/etag "\"abc\""
       ::http/content-type "image/png"
-      ::http/methods #{:put}
+      ::http/methods {:put {}}
       }]])
   (:ring.response/status
    (let [body "Hello"]
@@ -280,7 +280,7 @@
 
     [:xtdb.api/put
      {:xt/id "https://example.org/report"
-      ::http/methods #{:get :head :options}
+      ::http/methods {:get {} :head {} :options {}}
       ::http/representations
       #{{::http/content-type "text/html;charset=utf-8"
          ::http/content "<h1>Latest sales figures</h1>"}
@@ -318,7 +318,7 @@
 
     [:xtdb.api/put
      {:xt/id "https://example.org/report"
-      ::http/methods #{:get :head :options}}]
+      ::http/methods {:get {} :head {} :options {}}}]
 
     [:xtdb.api/put
      {:xt/id "https://example.org/report.html"
@@ -364,7 +364,7 @@
       {:xt/id "https://example.org/sensitive-report.html"
        ::http/content-type "text/html;charset=utf-8"
        ::http/content "Latest sales figures"
-       ::http/methods #{:get :head :options}}]
+       ::http/methods {:get {} :head {} :options {}}}]
 
      [:xtdb.api/put
       {:xt/id "https://example.org/401.html"
@@ -386,7 +386,7 @@
        ::http/status #{406}
        ::http/content-type "text/html;charset=utf-8"
        ::http/content "<h1>Unacceptable</h1>"
-       ::http/methods #{:get :head :options}}]])
+       ::http/methods {:get {} :head {} :options {}}}]])
 
    (let [db (x/db *xt-node*)]
      (x/q db '{:find [er]
@@ -406,7 +406,7 @@
       {:xt/id "https://example.org/report.html"
        ::http/content-type "text/html;charset=utf-8"
        ::http/content "Latest figures"
-       ::http/methods #{:get :head :options}
+       ::http/methods {:get {} :head {} :options {}}
        ::http/cache-directives #{:no-store}
        }]])
 
@@ -431,7 +431,7 @@
 
     [:xtdb.api/put
      {:xt/id "https://example.org/view/index.html"
-      ::http/methods #{:get}
+      ::http/methods {:get {}}
       ::http/content-type "text/html;charset=utf-8"
       ::http/content "<h1>Hello!</h1>"}]])
 
