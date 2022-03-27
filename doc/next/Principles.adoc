@@ -2,6 +2,8 @@
 
 == Open Source
 
+Always use open-source dependencies.
+
 Linked value:: <<understanding>>
 
 == Standards

@@ -130,7 +130,7 @@
    (->> (q '{:find [(pull e [:xt/id ::site/type])]
              :where [[e :xt/id]]})
         (map first)
-        (filter #(not= (::site/type %) "Request"))
+        (filter (fn [e] (not (#{"Request" "ActionLogEntry"} (::site/type e)))))
         (map :xt/id)
         (sort-by str)))
   ([pat]
@@ -602,6 +602,10 @@
    :provider "https://juxt.eu.auth0.com/.well-known/openid-configuration"
    :client-id "0oZyhjgTHukF2q0RgYHYVzFe9U5HTLpJ"
    :client-secret "qAw2kuD88fjApaY7Tbv1H_l7knSIleCzpyHpwMOVeDROPH0TojNvoPTo8P8i6hGH"))
+
+(defn example-hello-world []
+
+  )
 
 (defn example-bootstrap! []
   (bootstrap-actions!)

@@ -267,6 +267,7 @@
            [::xt/put
             (into
              {:xt/id (format "urn:site:action-log:%s" (::xt/tx-id tx))
+              ::site/type "ActionLogEntry"
               ::pass/subject subject
               ::pass/action action
               ::pass/purpose purpose
