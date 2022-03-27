@@ -11,5 +11,9 @@ include::Values.adoc[leveloffset=+2]
 include::Installation.adoc[leveloffset=+1]
 
 include::Authentication.adoc[leveloffset=+1]
+
 include::Authorization.adoc[leveloffset=+1]
+
+include::NextSteps.adoc[leveloffset=+1]
+
 include::AppDevelopment.adoc[leveloffset=+1]

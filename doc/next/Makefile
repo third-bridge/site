@@ -1,6 +1,8 @@
+.PHONY: all watch
+
 all:	Site.pdf
 
-Site.pdf:	Installation.adoc Authentication.adoc Authorization.adoc AppDevelopment.adoc
+Site.pdf:	Introduction.adoc Values.adoc Installation.adoc Authentication.adoc Authorization.adoc AppDevelopment.adoc NextSteps.adoc
 
 %.pdf:	%.adoc
 	asciidoctor-pdf \
@@ -16,3 +18,6 @@ Site.pdf:	Installation.adoc Authentication.adoc Authorization.adoc AppDevelopmen
 	-a title-page=true \
 	-a xrefstyle=short \
 	-o $@ $<
+
+watch:
+	find . -name "*.adoc" | entr -n make
