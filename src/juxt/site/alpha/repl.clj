@@ -632,13 +632,14 @@
    {:xt/id (str (base-uri) "/permissions/repl/create-public-resource")
     :juxt.pass.alpha/subject "urn:site:subjects:repl"
     :juxt.pass.alpha/action #{(str (base-uri) "/actions/create-public-resource")}
-    :juxt.pass.alpha/purpose ::demonstration})
+    :juxt.pass.alpha/purpose nil})
 
-  (do-action-with-purpose
+  (do-action
    (str (base-uri) "/actions/create-public-resource")
-   ::demonstration
    {:xt/id (str (base-uri) "/hello")
-    ::http/methods {:get {} :head {} :options {}}
+    ::http/methods {:get {::pass/actions #{(str (base-uri) "/actions/get-public-resource")}}
+                    :head {}
+                    :options {}}
     ::http/content-type "text/plain"
     ::http/content "Hello World!\r\n"}))
 
