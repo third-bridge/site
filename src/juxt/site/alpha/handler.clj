@@ -1268,7 +1268,7 @@
    ;; Not ready yet, being rewritten
    #_wrap-authorize-with-acls
    #_wrap-authorize-with-pdp
-   wrap-authorize-with-actions
+   #_wrap-authorize-with-actions
 
    ;; 405
    wrap-method-not-allowed?
