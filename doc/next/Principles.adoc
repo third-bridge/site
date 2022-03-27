@@ -4,11 +4,11 @@
 
 Always use open-source dependencies.
 
-Linked value:: <<understanding>>
+Linked value:: <<understanding,Understanding>>
 
 == Standards
 
 Try not to invent anything. Instead, use standards. When choosing standards, opt
 for the most established and widely adopted ones.
 
-Linked value:: <<vision>>
+Linked value:: <<vision,Vision>>
