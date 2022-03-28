@@ -3,6 +3,8 @@ Malcolm Sparks <mal@juxt.pro>
 :doctype: book
 :toc: left
 :toclevels: 5
+:sectnums:
+:sectnumlevels: 4
 
 include::Introduction.adoc[leveloffset=+1]
 include::Values.adoc[leveloffset=+2]
