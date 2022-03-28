@@ -16,7 +16,11 @@
    [ring.util.codec :as codec]
    [juxt.site.alpha.response :refer [redirect]]
    [jsonista.core :as json]
-   [clojure.tools.logging :as log])
+   [clojure.tools.logging :as log]
+   [juxt.http.alpha :as-alias http]
+   [juxt.pass.alpha :as-alias pass]
+   [juxt.pass.jwt :as-alias jwt]
+   [juxt.site.alpha :as-alias site])
   (:import
    (com.auth0.jwt.exceptions JWTVerificationException)
    (com.auth0.jwt JWT)
@@ -24,18 +28,14 @@
    (com.auth0.jwk Jwk)
    (java.util Date)))
 
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
-(alias 'jwt (create-ns 'juxt.pass.jwt))
-(alias 'site (create-ns 'juxt.site.alpha))
-
 (defn lookup [id db]
   (xt/entity db id))
 
 (defn login
   "Redirect to an authorization endpoint"
   [{::site/keys [resource xt-node db] :as req}]
-  (let [{::pass/keys [oauth2-client-id redirect-uri openid-provider]} resource
+  (let [{::pass/keys [oauth2-client]} resource
+        {::pass/keys [oauth2-client-id redirect-uri openid-provider]} (xt/entity db oauth2-client)
 
         _ (when-not oauth2-client-id
             (return req 500 "No oauth2 client id found" {}))
@@ -206,11 +206,15 @@
     (return req 500 "No session found" {}))
 
   ;; Exchange code for JWT
-  (let [{::pass/keys [oauth2-client-id oauth2-client-secret redirect-uri] :as oauth2-client} (some-> resource ::pass/oauth2-client (lookup db))
+  (let [{::pass/keys [oauth2-client]} resource
 
-        openid-configuration (some-> oauth2-client ::pass/openid-configuration-id (lookup db) ::pass/openid-configuration)
+        {::pass/keys [oauth2-client-id oauth2-client-secret redirect-uri openid-provider]}
+        (xt/entity db oauth2-client)
+
+        openid-configuration (some-> openid-provider (lookup db) ::pass/openid-configuration)
+
         _ (when-not openid-configuration
-            (return req 500 "No openid configuration found" {:openid-configuration-id (some-> resource ::pass/openid-configuration-id)}))
+            (return req 500 "No openid configuration found" {:openid-provider openid-provider}))
 
         token-endpoint (get openid-configuration "token_endpoint")
 

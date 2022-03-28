@@ -446,3 +446,81 @@
     (p/sequence-group
      (p/pattern-parser #"(?<scheme>https?)://" {:group {:juxt.reap.alpha.rfc7230/scheme "scheme"}})
      host-parser))))
+
+(defn create-immutable-public-resource-action! [xt-node {::site/keys [base-uri] :as config}]
+  (create-action!
+   xt-node
+   config
+   {:xt/id (str (base-uri) "/actions/create-immutable-public-resource")
+    :juxt.pass.alpha/scope "write:resource"
+
+    :juxt.pass.alpha.malli/args-schema
+    [:tuple
+     [:map
+      [:xt/id [:re (str (base-uri) "/.*")]]]]
+
+    :juxt.pass.alpha/process
+    [
+     [:juxt.pass.alpha.process/update-in
+      [0] 'merge
+      {::http/methods
+       {:get {::pass/actions #{(str (base-uri) "/actions/get-public-resource")}}
+        :head {::pass/actions #{(str (base-uri) "/actions/get-public-resource")}}
+        :options {::pass/actions #{(str (base-uri) "/actions/get-options")}}}}]
+
+     [:juxt.pass.alpha.malli/validate]
+     [:xtdb.api/put]]
+
+    :juxt.pass.alpha/rules
+    '[
+      [(allowed? permission subject action resource)
+       [permission :juxt.pass.alpha/subject subject]]]})
+
+  (grant-permission!
+   xt-node
+   config
+   {:xt/id (str (base-uri) "/permissions/repl/create-immutable-public-resource")
+    :juxt.pass.alpha/subject "urn:site:subjects:repl"
+    :juxt.pass.alpha/action #{(str (base-uri) "/actions/create-immutable-public-resource")}
+    :juxt.pass.alpha/purpose nil}))
+
+(defn add-openid-provider! [config-uri]
+  (let [_ (printf "Loading OpenID configuration from %s\n" config-uri)
+        config (json/read-value (slurp config-uri))]
+    (printf "Issuer added: %s\n" (get config "issuer"))
+    (put!
+     {:xt/id config-uri
+      :juxt.pass.alpha/openid-configuration config})))
+
+(defn add-openid-login!
+  [xt-node {::site/keys [base-uri] :as config}
+   & {:keys [name provider client-id client-secret]}]
+  (create-immutable-public-resource-action! xt-node config)
+
+  (let [client (format "%s/_site/openid/%s/client" (base-uri) name)
+        login (format "%s/_site/openid/%s/login" (base-uri) name)
+        callback (format "%s/_site/openid/%s/callback" (base-uri) name)
+        create-immutable-public-resource
+        (fn [doc]
+          (do-action
+           (str (base-uri) "/actions/create-immutable-public-resource")
+           doc))]
+
+    (put!
+     {:xt/id client
+      :juxt.pass.alpha/openid-provider provider
+      :juxt.pass.alpha/oauth2-client-id client-id
+      :juxt.pass.alpha/oauth2-client-secret client-secret
+      :juxt.pass.alpha/redirect-uri callback})
+
+    (create-immutable-public-resource
+     {:xt/id login
+      :juxt.http.alpha/content-type "text/plain"
+      :juxt.site.alpha/get-fn 'juxt.pass.alpha.openid-connect/login
+      :juxt.pass.alpha/oauth2-client client})
+
+    (create-immutable-public-resource
+     {:xt/id callback
+      :juxt.http.alpha/content-type "text/plain"
+      :juxt.site.alpha/get-fn 'juxt.pass.alpha.openid-connect/callback
+      :juxt.pass.alpha/oauth2-client client})))
