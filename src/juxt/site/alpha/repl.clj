@@ -606,7 +606,7 @@
    :client-id "0oZyhjgTHukF2q0RgYHYVzFe9U5HTLpJ"
    :client-secret "qAw2kuD88fjApaY7Tbv1H_l7knSIleCzpyHpwMOVeDROPH0TojNvoPTo8P8i6hGH"))
 
-(defn example-hello-world []
+(defn create-immutable-public-resource-action! []
   (create-action!
    {:xt/id (str (base-uri) "/actions/create-immutable-public-resource")
     :juxt.pass.alpha/scope "write:resource"
@@ -637,7 +637,10 @@
    {:xt/id (str (base-uri) "/permissions/repl/create-immutable-public-resource")
     :juxt.pass.alpha/subject "urn:site:subjects:repl"
     :juxt.pass.alpha/action #{(str (base-uri) "/actions/create-immutable-public-resource")}
-    :juxt.pass.alpha/purpose nil})
+    :juxt.pass.alpha/purpose nil}))
+
+(defn example-hello-world []
+  (create-immutable-public-resource-action!) ; or make sure these resources exist
 
   (do-action
    (str (base-uri) "/actions/create-immutable-public-resource")

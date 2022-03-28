@@ -127,9 +127,11 @@ This allows us later to answer questions as to whether an action was allowed or
 denied, with an explanation. We will also be able to answer questions regarding
 the who, when, why and how for each document in the database.
 
+A copy of the transaction metadata record is returned as a result of the `do-action` function, as shown in <<transaction-metadata-record-example>>.
+
+[[transaction-metadata-record-example]]
 .A *transaction metadata record*
 ====
-A copy of the transaction metadata record is returned as a result of the `do-action` function.
 
 [source,clojure]
 ----

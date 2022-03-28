@@ -5,6 +5,7 @@ Malcolm Sparks <mal@juxt.pro>
 :toclevels: 5
 :sectnums:
 :sectnumlevels: 4
+:xrefstyle: short
 
 include::Introduction.adoc[leveloffset=+1]
 include::Values.adoc[leveloffset=+2]

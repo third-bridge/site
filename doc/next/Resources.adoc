@@ -20,9 +20,10 @@ resource.
 
 == Hello World!
 
-Following the example below.
+Following the example <<hello-world-example>> below.
 
 .Creating a simple public 'Hello World' resource
+[[hello-world-example]]
 ====
 
 Before we can create the resource, we need to define an action that lets us do so.
@@ -138,6 +139,5 @@ permissions-policy: interest-cohort=()
 
 Hello World!
 ----
-
 
 ====
