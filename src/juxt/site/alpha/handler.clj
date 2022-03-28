@@ -533,20 +533,30 @@
         (h req)))))
 
 (defn wrap-authorize-with-actions [h]
-  (fn [{::pass/keys [session] ::site/keys [db resource] :as req}]
+  (fn [{::pass/keys [session]
+        ::site/keys [db resource]
+        :ring.request/keys [method]
+        :as req}]
     (let [subject nil                   ; placeholder for now
+          actions (get-in resource [::http/methods method ::pass/actions])
           permissions
           (authz/check-permissions
            db
-           subject
-           #{}                          ; actions
-           {})]
+           actions
+           (cond-> {:subject subject}
+             ;; When the resource is in the database, we can add it to the
+             ;; permission checking in case there's a specific permission for
+             ;; this resource.
+             (:xt/id resource) (assoc :resource (:xt/id resource))))]
+
       (if (seq permissions)
         (h (assoc req ::pass/permissions permissions))
         (let [status (if subject 403 401)]
           (throw
            (ex-info
-            (case status 401  "Unauthorized" 403 "Forbidden")
+            (case status
+              401 (format "No permission for actions: %s" (pr-str actions))
+              403 "No permission")
             {::site/request-context (assoc req :ring.response/status status)})))))))
 
 (defn wrap-method-not-allowed? [h]
@@ -1260,7 +1270,7 @@
    ;; Not ready yet, being rewritten
    #_wrap-authorize-with-acls
    #_wrap-authorize-with-pdp
-   #_wrap-authorize-with-actions
+   wrap-authorize-with-actions
 
    ;; 405
    wrap-method-not-allowed?

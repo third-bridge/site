@@ -3,13 +3,141 @@
 
 == Introduction
 
+Resources in Site are web resources, as per https://httpwg.org/specs/rfc7231.html#resources[RFC 7231].
+
+Resourse are identified by a URI. When resources are stored in XT, the
+resource's URI is the `:xt/id` attribute.
+
+A web resource is a series of states across time, just like an XT entity.
+
+In this section we'll create a basic plain-text public resource containing the
+classic greeting.
+
+== Anatomy of a Site resource
+
+NOTE: TODO: Describe the key entries of the XT document that represents a Site
+resource.
+
 == Hello World!
 
-[note]
---
-* [ ] create the create-public-resource action
-* [ ] grant the REPL user permission to call create-public-resource
-* [ ] create the "Hello World!" text/plain resource
-* [ ] create the get-resource action with a rule to allow PUBLIC resource
-* [ ] access Hello World! over the web
---
+Following the example below.
+
+.Creating a simple public 'Hello World' resource
+====
+
+Before we can create the resource, we need to define an action that lets us do so.
+
+In many organisations, publishing information to the public web may well be a restricted operation so we'll model it as such, and define an action called `https://site.test/actions/create-immutable-public-resource`.
+
+[source,clojure]
+----
+(create-action!
+ {:xt/id "https://site.test/actions/create-immutable-public-resource"
+  :juxt.pass.alpha/scope "write:resource" <1>
+
+  :juxt.pass.alpha.malli/args-schema
+  [:tuple
+   [:map
+    [:xt/id [:re "https://site.test/.*"]]]]
+
+  :juxt.pass.alpha/process
+  [
+   [:juxt.pass.alpha.process/update-in
+    [0] 'merge
+    {::http/methods <2>
+     {:get {::pass/actions #{"https://site.test/actions/get-public-resource"}}
+      :head {::pass/actions #{"https://site.test/actions/get-public-resource"}}
+      :options {::pass/actions #{"https://site.test/actions/get-options"}}}}]
+
+   [:juxt.pass.alpha.malli/validate]
+   [:xtdb.api/put]]
+
+  :juxt.pass.alpha/rules
+  '[
+    [(allowed? permission subject action resource) <3>
+     [permission :juxt.pass.alpha/subject subject]]]})
+----
+<1> We'll put this action in the `write:resource` scope
+<2> We add (or override) the HTTP methods allowed on this resource. Each entry is a mapping from an allowed method to a set of actions. This restricts the search for permissions to a set of actions. The fact that we don't specify any methods such as PUT, POST or DELETE that will change the resource is the reason we've named this action as creating an immutable public resource.
+<3> This rule ensures this action must be specifically granted to someone.
+
+Now we must grant permission for our REPL user to use this action:
+
+[source,clojure]
+----
+(grant-permission!
+ {:xt/id "https://site.test/permissions/repl/create-immutable-public-resource"
+  :juxt.pass.alpha/subject "urn:site:subjects:repl"
+  :juxt.pass.alpha/action #{"https://site.test/actions/create-immutable-public-resource"}
+  :juxt.pass.alpha/purpose nil})
+----
+
+Now we can go ahead and create our resource:
+
+[source,clojure]
+----
+(do-action
+ "https://site.test/actions/create-immutable-public-resource"
+ {:xt/id "https://site.test/hello"
+  :juxt.http.alpha/content-type "text/plain"
+  :juxt.http.alpha/content "Hello World!\r\n"})
+----
+
+When Site receives a web request for a resource it will look for a `juxt.site.alpha/methods`
+entry which indicates which action or actions should be used when seeking
+permission. In effect, this allows the resource to indicate which rules are to
+be used in determining whether a user can access the resource.
+
+A `GET` request on our Hello World resource implies will correspond to the
+`https://site.test/actions/get-public-resource` action, so we'll need to create
+that now.
+
+[source,clojure]
+----
+(create-action!
+ {:xt/id "http://site.test/actions/get-public-resource"
+  :juxt.pass.alpha/scope "read:resource" <1>
+
+  :juxt.pass.alpha/rules
+  '[
+    [(allowed? permission subject action resource)
+     [permission :xt/id "http://site.test/permissions/public-resources-to-all"] <2>
+     ]]})
+----
+<1> We use a more appropriate scope that better reflects this action.
+<2> This is a very weak rule that matches a particular permission.
+
+A permission document _must_ exist for every case.
+The rule of the `http://site.test/actions/get-public-resource` requires a specific permission to exist, so we need to create that now.
+
+[source,clojure]
+----
+(grant-permission!
+ {:xt/id "https://site.test/permissions/public-resources-to-all"
+  :juxt.pass.alpha/action #{"https://site.test/actions/get-public-resource"}
+  :juxt.pass.alpha/purpose nil})
+----
+
+Now we can test access with `curl`:
+
+----
+curl -i https://site.test/hello
+----
+
+You should get a `200` response similar to this:
+
+----
+HTTP/1.1 200 OK
+Server: nginx/1.20.2
+Date: Mon, 28 Mar 2022 00:15:15 GMT
+Content-Type: text/plain
+Transfer-Encoding: chunked
+Connection: keep-alive
+site-request-id: https://site.test/_site/requests/f8a1a799c72e28ec2409c1d5
+permissions-policy: interest-cohort=()
+
+Hello World!
+----
+
+
+====

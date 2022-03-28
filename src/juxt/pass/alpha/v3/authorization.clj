@@ -7,11 +7,10 @@
    [clojure.walk :refer [postwalk]]
    [juxt.site.alpha.util :refer [random-bytes as-hex-str]]
    [malli.core :as m]
-   [malli.error :a me]))
-
-(alias 'pass (create-ns 'juxt.pass.alpha))
-(alias 'pass.malli (create-ns 'juxt.pass.alpha.malli))
-(alias 'site (create-ns 'juxt.site.alpha))
+   [malli.error :a me]
+   [juxt.pass.alpha :as-alias pass]
+   [juxt.pass.alpha.malli :as-alias pass.malli]
+   [juxt.site.alpha :as-alias site]))
 
 (defn actions->rules
   "Determine rules for the given action ids. Each rule is bound to the given

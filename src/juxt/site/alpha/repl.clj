@@ -608,40 +608,59 @@
 
 (defn example-hello-world []
   (create-action!
-   {:xt/id (str (base-uri) "/actions/create-public-resource")
+   {:xt/id (str (base-uri) "/actions/create-immutable-public-resource")
     :juxt.pass.alpha/scope "write:resource"
 
     :juxt.pass.alpha.malli/args-schema
     [:tuple
      [:map
-      [:xt/id [:re (str (base-uri) "/.*")]]
-      #_[::http/methods {:post {}}]]]
+      [:xt/id [:re (str (base-uri) "/.*")]]]]
 
     :juxt.pass.alpha/process
     [
-     [:juxt.pass.alpha.process/update-in [0] 'merge {::pass/classification "PUBLIC"}]
+     [:juxt.pass.alpha.process/update-in
+      [0] 'merge
+      {::http/methods
+       {:get {::pass/actions #{(str (base-uri) "/actions/get-public-resource")}}
+        :head {::pass/actions #{(str (base-uri) "/actions/get-public-resource")}}
+        :options {::pass/actions #{(str (base-uri) "/actions/get-options")}}}}]
+
      [:juxt.pass.alpha.malli/validate]
      [:xtdb.api/put]]
 
-    ::pass/rules
+    :juxt.pass.alpha/rules
     '[
       [(allowed? permission subject action resource)
-       [permission ::pass/subject subject]]]})
+       [permission :juxt.pass.alpha/subject subject]]]})
 
   (grant-permission!
-   {:xt/id (str (base-uri) "/permissions/repl/create-public-resource")
+   {:xt/id (str (base-uri) "/permissions/repl/create-immutable-public-resource")
     :juxt.pass.alpha/subject "urn:site:subjects:repl"
-    :juxt.pass.alpha/action #{(str (base-uri) "/actions/create-public-resource")}
+    :juxt.pass.alpha/action #{(str (base-uri) "/actions/create-immutable-public-resource")}
     :juxt.pass.alpha/purpose nil})
 
   (do-action
-   (str (base-uri) "/actions/create-public-resource")
+   (str (base-uri) "/actions/create-immutable-public-resource")
    {:xt/id (str (base-uri) "/hello")
-    ::http/methods {:get {::pass/actions #{(str (base-uri) "/actions/get-public-resource")}}
-                    :head {}
-                    :options {}}
-    ::http/content-type "text/plain"
-    ::http/content "Hello World!\r\n"}))
+    :juxt.http.alpha/content-type "text/plain"
+    :juxt.http.alpha/content "Hello World!\r\n"})
+
+  ;; Create the action in order to read the resource
+  (create-action!
+   {:xt/id (str (base-uri) "/actions/get-public-resource")
+    :juxt.pass.alpha/scope "read:resource"
+
+    :juxt.pass.alpha/rules
+    [
+     ['(allowed? permission subject action resource)
+      ['permission :xt/id (str (base-uri) "/permissions/public-resources-to-all")]]]})
+
+  ;; All actions must be granted a permission. This permission allows anyone to
+  ;; call get-public-resource
+  (grant-permission!
+   {:xt/id (str (base-uri) "/permissions/public-resources-to-all")
+    :juxt.pass.alpha/action #{(str (base-uri) "/actions/get-public-resource")}
+    :juxt.pass.alpha/purpose nil}))
 
 (defn example-bootstrap! []
   (bootstrap-actions!)
