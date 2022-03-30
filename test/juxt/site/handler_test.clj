@@ -56,9 +56,28 @@
             (x/entity db "https://example.org/things/foo")
             (dissoc ::site/request))))))
 
-#_((t/join-fixtures [with-xt with-handler])
+((t/join-fixtures [with-xt with-handler])
  (fn []
    (install-test-resources!)
+
+   (submit-and-await!
+    [
+     [::xt/put
+      {:xt/id "https://example.org/_site/actions/put-things"
+       ::site/type "Action"
+       ::pass/rules
+       '[
+         [(allowed? permission subject action resource)
+          [permission ::pass/subject subject]
+          [(nil? resource)]]]}]
+
+     [::xt/put
+      {:xt/id "https://example.org/_site/permissions/put-things"
+       ::site/type "Permission"
+       ::pass/subject :tester
+       ::pass/action "https://example.org/_site/actions/put-things"
+       ::pass/purpose nil}]])
+
    (submit-and-await!
     [
      [:xtdb.api/put
@@ -78,7 +97,10 @@
                "properties"
                {"name" {"type" "string"
                         "minLength" 2}}}}}}
-           "juxt.site.alpha/actions" ["https://example.org/_site/actions/put-things"]}}}}}]])
+           "juxt.site.alpha/actions" ["https://example.org/_site/actions/put-things"]}}}}}]
+
+     ;; We need the action to put-things, and a permission on a nil subject
+     ])
 
    (let [body (json/write-value-as-string {"name" "foo"})
          req {::site/xt-node *xt-node*
@@ -86,6 +108,7 @@
               ::site/base-uri "https://example.org"
               ::site/uri-prefix "https://example.org"
               ::site/uri "https://example.org/things/foo"
+              ::pass/subject :tester
               :ring.request/method :put
               :ring.request/body (ByteArrayInputStream. (.getBytes body))
               :ring.request/headers
@@ -94,18 +117,32 @@
               }]
      (locator/locate-resource req))
 
+   (authz/check-permissions
+    (xt/db *xt-node*)
+    #{"https://example.org/_site/actions/put-things"}
+    (cond-> {:subject :tester}
+      ;; When the resource is in the database, we can add it to the
+      ;; permission checking in case there's a specific permission for
+      ;; this resource.
+      ;;(:xt/id resource) (assoc :resource (:xt/id resource))
+      ))
+
+   #_(xt/entity (xt/db *xt-node*) "https://example.org/_site/actions/put-things")
+
    (let [body (json/write-value-as-string {"name" "foo"})
          response
          (*handler*
-          {:ring.request/method :put
+          {::pass/subject :tester
+           :ring.request/method :put
            :ring.request/path "/things/foo"
            :ring.request/body (ByteArrayInputStream. (.getBytes body))
            :ring.request/headers
            {"content-length" (str (count body))
-            "content-type" "application/json"}})
-         db (x/db *xt-node*)]
+            "content-type" "application/json"}})]
 
      response
+
+     ;;(x/entity (xt/db *xt-node*) "https://example.org/things/foo")
 
      #_(is (= {:a/name "foo", :xt/id "https://example.org/things/foo"}
               (->

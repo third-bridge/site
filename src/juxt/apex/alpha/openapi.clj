@@ -6,12 +6,11 @@
    [clojure.tools.logging :as log]
    [xtdb.api :as xt]
    [jsonista.core :as json]
-   [juxt.apex.alpha.authorization :refer [authorize]]
    [juxt.jinx.alpha :as jinx]
    [juxt.jinx.alpha.api :as jinx.api]
    [juxt.jinx.alpha.vocabularies.keyword-mapping :refer [process-keyword-mappings]]
    [juxt.jinx.alpha.vocabularies.transformation :refer [process-transformations]]
-   [juxt.pass.alpha.pdp :as pdp]
+   [juxt.pass.alpha.v3.authorization :as authz]
    [juxt.reap.alpha.decoders :as reap.decoders]
    [juxt.site.alpha.perf :refer [fast-get-in]]
    [juxt.site.alpha.return :refer [return]]
@@ -187,8 +186,12 @@
 
     (assoc req ::apex/request-payload instance)))
 
-;; TODO: Should have some way of passing it 'raw' to some processing function
-;; that is able to turn it into resource state (a XT resource)?
+(condp (fn [pred els] (pred (count els))) []
+  zero? :zero
+  #(= 1 %) :one
+  #(< 1 %) :many)
+
+
 (defn put-resource-state
   "Put some new resource state into XT, if authorization checks pass. The new
   resource state should be a valid XT entity, with a :xt/id"
@@ -201,28 +204,31 @@
 
   (let [id (:xt/id new-resource-state)
         _ (assert id)
-        authorization
-        (pdp/authorization
-         db
-         {'subject subject
-          'resource resource
-          ;; might change to 'action' at
-          ;; this point
-          'request (select-keys req [:ring.request/method :ring.request/path])
-          'environment {}
-          'new-state new-resource-state})
 
-        _ (when-not (= (::pass/access authorization) ::pass/approved)
-            (log/debug "Unauthorized OpenAPI JSON instance"
-                       new-resource-state authorization)
-            (let [status (if-not (::pass/user subject) 401 403)
-                  message (case status
-                            401 "Unauthorized"
-                            403 "Forbidden")]
-              (throw
-               (ex-info
-                message
-                {::site/request-context (assoc req :ring.response/status status)}))))
+        ;; Here's where we call the action
+
+        #_authorization
+        #_(pdp/authorization
+           db
+           {'subject subject
+            'resource resource
+            ;; might change to 'action' at
+            ;; this point
+            'request (select-keys req [:ring.request/method :ring.request/path])
+            'environment {}
+            'new-state new-resource-state})
+
+        #_#__ (when-not (= (::pass/access authorization) ::pass/approved)
+                (log/debug "Unauthorized OpenAPI JSON instance"
+                           new-resource-state authorization)
+                (let [status (if-not (::pass/user subject) 401 403)
+                      message (case status
+                                401 "Unauthorized"
+                                403 "Forbidden")]
+                  (throw
+                   (ex-info
+                    message
+                    {::site/request-context (assoc req :ring.response/status status)}))))
 
         already-exists? (xt/entity db id)
 
@@ -242,10 +248,31 @@
     ;; representation into the db anyway, if only to store the last-modified and
     ;; etag validators?
 
-    (->> (xt/submit-tx
-          xt-node
-          [[:xtdb.api/put new-resource-state]])
-         (xt/await-tx xt-node))
+    ;;(def permissions (::pass/permissions req))
+
+    (let [pass-ctx (select-keys req [::pass/subject ::pass/purpose
+                                     ;; Wait, won't this be the resource xt/id? i.e. not the whole resource?
+                                     ::pass/resource
+                                     ])
+          permissions (::pass/permissions req)
+          actions (distinct (map (comp :xt/id :action) permissions))]
+      ;; Where do we get the action from?
+      (condp (fn [pred actions] (pred (count actions))) actions
+        zero? (throw (ex-info "Action not permitted" {}))
+
+        #(= 1 %)
+        (let [action (first actions)
+              _ (log/debugf "Calling action '%s' with arg '%s'" action new-resource-state)
+              action-result (authz/do-action xt-node pass-ctx (::pass/subject req) action new-resource-state)]
+
+          ;; TODO: What to do with action-result?
+          (log/infof "action result is %s" action-result)
+          action-result
+          ;; if there is a ::site/error? - validation - could be a 400
+
+          )
+
+        #(< 1 %) (throw (ex-info "Multiple actions permitted, ambgiuous which one to execute" {:permissions permissions}))))
 
     (-> req
         (assoc :ring.response/status (if-not already-exists? 201 204)
@@ -271,7 +298,7 @@
 (defn path-entry->resource
   "From an OpenAPI path-to-path-object entry, return the corresponding resource if
   it matches the path. Path matching also considers path-parameters."
-  [{:ring.request/keys [method] :as req}
+  [{:ring.request/keys [method] ::site/keys [base-uri] :as req}
    [path path-item-object] openapi openapi-uri rel-request-path]
 
   (let [path-param-defs
@@ -346,11 +373,21 @@
             (let [methods
                   (into
                    {}
-                   (for [mth (conj (map keyword (keys path-item-object)) :options)]
-                     [mth {}]))]
+                   (for [[mth operation-object] path-item-object]
+                     [(keyword mth)
+                      {::pass/actions (set (get operation-object "juxt.site.alpha/actions"))}]))]
               (cond-> methods
                 (contains? methods :get)
-                (conj [:head {}])))
+                (conj [:head (get methods :get)])
+                (not (contains? methods :options))
+                (conj [:options
+                       {::pass/actions
+                        ;; The ability to request OPTIONS is required
+                        ;; for a number of use-cases (CORS pre-flight
+                        ;; requests) and should be separately
+                        ;; authorized. Here, we use a well-known
+                        ;; action.
+                        #{(format "%s/_site/actions/http-options" base-uri)}}])))
 
             post-fn (when (= method :post)
                       (let [post-fn-sym (some-> (get operation-object "juxt.site.alpha/post-fn") symbol)
@@ -364,10 +401,9 @@
                           (return req 500 "The post-fn for the operation is nil" {:operation-object operation-object}))
                         post-fn))
 
-            ;; The 'oauth' key is merely an Apex convention (possibly temporary).
             ;; TODO: Replace this convention with something more robust.
-            required-scope
-            (or
+            #_required-scope
+            #_(or
              (some-> (get-in operation-object ["security" "oauth"]) set)
              ;; If the security entry is an empty map, it means 'no scopes'
              (when (= {} (get-in operation-object ["security"])) #{})
@@ -416,8 +452,9 @@
                      ;; of collection is it? Some properties that can be used in
                      ;; the PDP.
                      }
-              required-scope (assoc ::apex/required-scope required-scope)
-              true (authorize req))]
+              ;;required-scope (assoc ::apex/required-scope required-scope)
+              ;;true (authorize req)
+              )]
 
         ;; Add conditional entries to the resource
         (cond-> resource

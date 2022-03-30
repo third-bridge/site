@@ -26,34 +26,37 @@
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
   ;; TODO: since subject is strictly optional too, only actions is required, so
   ;; put subject in options.
-  [db actions {:keys [subject resource purpose]}]
+  [db actions {:keys [subject resource purpose] :as pass-ctx}]
 
   (let [rules (actions->rules db actions)]
     (when (seq rules)
-      (xt/q
-       db
-       {:find '[(pull permission [*]) (pull action [*])]
-        :keys '[permission action]
-        :where
-        '[
-          [action ::site/type "Action"]
+      (let [permissions
+            (xt/q
+             db
+             {:find '[(pull permission [*]) (pull action [*])]
+              :keys '[permission action]
+              :where
+              '[
+                [action ::site/type "Action"]
 
-          ;; Only consider given actions
-          [(contains? actions action)]
+                ;; Only consider given actions
+                [(contains? actions action)]
 
-          ;; Only consider a permitted action
-          [permission ::site/type "Permission"]
-          [permission ::pass/action action]
-          (allowed? permission subject action resource)
+                ;; Only consider a permitted action
+                [permission ::site/type "Permission"]
+                [permission ::pass/action action]
+                (allowed? permission subject action resource)
 
-          ;; Only permissions that match our purpose
-          [permission ::pass/purpose purpose]]
+                ;; Only permissions that match our purpose
+                [permission ::pass/purpose purpose]]
 
-        :rules rules
+              :rules rules
 
-        :in '[subject actions resource purpose]}
+              :in '[subject actions resource purpose]}
 
-       subject actions resource purpose))))
+             subject actions resource purpose)]
+        (log/debugf "Returning %d permissions" (count permissions))
+        permissions))))
 
 (defn allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed?"
@@ -228,7 +231,7 @@
 
 (defn do-action*
   [xt-ctx
-   {resource ::site/resource
+   {resource ::pass/resource
     purpose ::pass/purpose
     subject ::pass/subject
     action ::pass/action
@@ -264,6 +267,10 @@
              :purpose purpose})))
 
         (let [processed-args (process-args pass-ctx action-doc args)]
+          (doseq [arg processed-args]
+            (when-not (and (vector? arg) (keyword? (first arg)))
+              (throw (ex-info "Every arg must be processed to return a tx op" {:action action :arg arg}))))
+
           (conj
            processed-args
            [::xt/put
@@ -297,12 +304,16 @@
    :xt/fn '(fn [xt-ctx pass-ctx args]
              (juxt.pass.alpha.v3.authorization/do-action* xt-ctx pass-ctx (vec args)))})
 
+;; TODO: This subject should be folded into the pass-ctx as it's optional (could
+;; be an anonymous action)
 (defn do-action [xt-node pass-ctx subject action & args]
+  (assert (xt/entity (xt/db xt-node) "urn:site:tx-fns:do-action"))
   (let [tx (xt/submit-tx
             xt-node
             [[::xt/fn
               "urn:site:tx-fns:do-action"
-              (assoc pass-ctx ::pass/subject subject ::pass/action action) args]])
+              (assoc pass-ctx ::pass/subject subject ::pass/action action)
+              args]])
 
         {::xt/keys [tx-id]} (xt/await-tx xt-node tx)]
 

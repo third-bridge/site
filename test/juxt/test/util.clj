@@ -4,6 +4,7 @@
   (:require
    [juxt.site.alpha.handler :as h]
    [xtdb.api :as xt]
+   [juxt.pass.alpha.v3.authorization :as authz]
    [juxt.apex.alpha :as-alias apex]
    [juxt.http.alpha :as-alias http]
    [juxt.mail.alpha :as-alias mail]
@@ -75,7 +76,6 @@
    ::pass/target '[[resource ::site/resource-provider ::apex/openapi-path]]
    ::pass/effect ::pass/allow})
 
-
 (defn install-test-resources! []
   (submit-and-await!
    [
@@ -89,7 +89,11 @@
       ::pass/rules
       '[
         [(allowed? permission subject action resource)
-         [action :xt/id]]]}]
+         [permission ::pass/subject subject]
+         [(nil? resource)]]
+        [(allowed? permission subject action resource)
+         [permission ::pass/subject subject]
+         [resource :xt/id]]]}]
 
     ;; A permission between them
     [::xt/put
@@ -97,4 +101,6 @@
       ::site/type "Permission"
       ::pass/subject :tester
       ::pass/action :test
-      ::pass/purpose nil}]]))
+      ::pass/purpose nil}]
+
+    [::xt/put (authz/install-do-action-fn)]]))
