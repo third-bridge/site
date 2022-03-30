@@ -556,42 +556,30 @@
 (defn grant-permission! [permission]
   (init/grant-permission! (xt-node) (config) permission))
 
+(comment
+  (init/add-openid-provider! "https://juxt.eu.auth0.com"))
+
+(defn install-put-immutable-public-resource-action! []
+  ;; TODO: make this idempotent? (ensure these resources exist)
+  (init/install-put-immutable-public-resource-action! (xt-node) (config)))
+
 (defn bootstrap-actions! []
   (install-do-action-fn!)
   (put! {:xt/id (me)})
   (install-create-action!)
   (permit-create-action!)
   (install-grant-permission-action!)
-  (permit-grant-permission-action!))
-
-(comment
-  (init/add-openid-provider! "https://juxt.eu.auth0.com"))
+  (permit-grant-permission-action!)
+  (install-put-immutable-public-resource-action!))
 
 (defn example-hello-world []
-  (init/create-immutable-public-resource-action! (xt-node) (config)) ; or make sure these resources exist
+  (install-put-immutable-public-resource-action!)
 
   (do-action
-   (str (base-uri) "/actions/create-immutable-public-resource")
+   (str (base-uri) "/actions/put-immutable-public-resource")
    {:xt/id (str (base-uri) "/hello")
     :juxt.http.alpha/content-type "text/plain"
-    :juxt.http.alpha/content "Hello World!\r\n"})
-
-  ;; Create the action in order to read the resource
-  (create-action!
-   {:xt/id (str (base-uri) "/actions/get-public-resource")
-    :juxt.pass.alpha/scope "read:resource"
-
-    :juxt.pass.alpha/rules
-    [
-     ['(allowed? permission subject action resource)
-      ['permission :xt/id (str (base-uri) "/permissions/public-resources-to-all")]]]})
-
-  ;; All actions must be granted a permission. This permission allows anyone to
-  ;; call get-public-resource
-  (grant-permission!
-   {:xt/id (str (base-uri) "/permissions/public-resources-to-all")
-    :juxt.pass.alpha/action #{(str (base-uri) "/actions/get-public-resource")}
-    :juxt.pass.alpha/purpose nil}))
+    :juxt.http.alpha/content "Hello World!\r\n"}))
 
 (defn example-bootstrap! []
   (bootstrap-actions!)

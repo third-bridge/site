@@ -1,6 +1,10 @@
 = Authentication
 :toc: left
 
+== Introduction
+
+NOTE: TODO
+
 == Add a trusted identity provider
 
 Site does not store user credentials but requires that you provide one or more trusted identity providers that are compatible with OpenID Connect Discovery. Examples include https://www.keycloak.org/[Keycloak], https://auth0.com/[Auth0], Okta, Google, https://aws.amazon.com/cognito/[AWS Cognito] and many more.

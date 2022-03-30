@@ -18,22 +18,18 @@ classic greeting.
 NOTE: TODO: Describe the key entries of the XT document that represents a Site
 resource.
 
-== Hello World!
-
-Following the example <<hello-world-example>> below.
-
-.Creating a simple public 'Hello World' resource
-[[hello-world-example]]
-====
+== Publishing public resources
 
 Before we can create the resource, we need to define an action that lets us do so.
 
-In many organisations, publishing information to the public web may well be a restricted operation so we'll model it as such, and define an action called `https://site.test/actions/create-immutable-public-resource`.
+In many organisations, publishing information to the public web may well be a
+restricted operation so we'll model it as such, and define an action called
+`https://site.test/actions/put-immutable-public-resource`.
 
 [source,clojure]
 ----
 (create-action!
- {:xt/id "https://site.test/actions/create-immutable-public-resource"
+ {:xt/id "https://site.test/actions/put-immutable-public-resource"
   :juxt.pass.alpha/scope "write:resource" <1>
 
   :juxt.pass.alpha.malli/args-schema
@@ -67,27 +63,18 @@ Now we must grant permission for our REPL user to use this action:
 [source,clojure]
 ----
 (grant-permission!
- {:xt/id "https://site.test/permissions/repl/create-immutable-public-resource"
+ {:xt/id "https://site.test/permissions/repl/put-immutable-public-resource"
   :juxt.pass.alpha/subject "urn:site:subjects:repl"
-  :juxt.pass.alpha/action #{"https://site.test/actions/create-immutable-public-resource"}
+  :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-public-resource"}
   :juxt.pass.alpha/purpose nil})
-----
-
-Now we can go ahead and create our resource:
-
-[source,clojure]
-----
-(do-action
- "https://site.test/actions/create-immutable-public-resource"
- {:xt/id "https://site.test/hello"
-  :juxt.http.alpha/content-type "text/plain"
-  :juxt.http.alpha/content "Hello World!\r\n"})
 ----
 
 When Site receives a web request for a resource it will look for a `juxt.site.alpha/methods`
 entry which indicates which action or actions should be used when seeking
-permission. In effect, this allows the resource to indicate which rules are to
-be used in determining whether a user can access the resource.
+permission.
+
+In effect, this allows the resource to indicate which rules are to be used
+in determining whether a user can access the resource.
 
 A `GET` request on our Hello World resource implies will correspond to the
 `https://site.test/actions/get-public-resource` action, so we'll need to create
@@ -118,6 +105,24 @@ The rule of the `http://site.test/actions/get-public-resource` requires a specif
   :juxt.pass.alpha/action #{"https://site.test/actions/get-public-resource"}
   :juxt.pass.alpha/purpose nil})
 ----
+
+== Hello World!
+
+To demonstrate our `put-immutable-public-resource`, let's publish a simple
+resource that will print `Hello World!` on a web page.
+
+.Creating a simple public 'Hello World' resource
+[[hello-world-example]]
+====
+[source,clojure]
+----
+(do-action
+ "https://site.test/actions/put-immutable-public-resource"
+ {:xt/id "https://site.test/hello"
+  :juxt.http.alpha/content-type "text/plain"
+  :juxt.http.alpha/content "Hello World!\r\n"})
+----
+====
 
 Now we can test access with `curl`:
 
