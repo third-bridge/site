@@ -532,12 +532,18 @@
               {::site/request-context (assoc req :ring.response/status status)}))))
         (h req)))))
 
+;;(identity resource)
+
 (defn wrap-authorize-with-actions [h]
   (fn [{::pass/keys [session]
         ::site/keys [db resource]
         :ring.request/keys [method]
         :as req}]
-    (let [subject nil                   ; placeholder for now
+
+;;    (def resource resource)
+
+    (let [subject nil                   ; placeholder for now, but nil means
+                                        ; anonymous
           actions (get-in resource [::http/methods method ::pass/actions])
           permissions
           (authz/check-permissions

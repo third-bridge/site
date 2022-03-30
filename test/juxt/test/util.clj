@@ -3,7 +3,12 @@
 (ns juxt.test.util
   (:require
    [juxt.site.alpha.handler :as h]
-   [xtdb.api :as xt])
+   [xtdb.api :as xt]
+   [juxt.apex.alpha :as-alias apex]
+   [juxt.http.alpha :as-alias http]
+   [juxt.mail.alpha :as-alias mail]
+   [juxt.pass.alpha :as-alias pass]
+   [juxt.site.alpha :as-alias site])
   (:import
    (xtdb.api IXtdb)))
 
@@ -11,12 +16,6 @@
 (def ^:dynamic ^IXtdb *xt-node*)
 (def ^:dynamic *handler*)
 (def ^:dynamic *db*)
-
-(alias 'apex (create-ns 'juxt.apex.alpha))
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'mail (create-ns 'juxt.mail.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
-(alias 'site (create-ns 'juxt.site.alpha))
 
 (defn with-xt [f]
   (with-open [node (xt/start-node *opts*)]
@@ -60,6 +59,7 @@
     (binding [*db* db]
       (f))))
 
+;; Deprecated
 (def access-all-areas
   {:xt/id "https://example.org/access-rule"
    ::site/description "A rule allowing access everything"
@@ -67,9 +67,34 @@
    ::pass/target '[]
    ::pass/effect ::pass/allow})
 
+;; Deprecated
 (def access-all-apis
   {:xt/id "https://example.org/access-rule"
    ::site/description "A rule allowing access to all APIs"
    ::site/type "Rule"
    ::pass/target '[[resource ::site/resource-provider ::apex/openapi-path]]
    ::pass/effect ::pass/allow})
+
+
+(defn install-test-resources! []
+  (submit-and-await!
+   [
+    ;; A tester
+    [::xt/put {:xt/id :tester}]
+
+    ;; A test action
+    [::xt/put
+     {:xt/id :test
+      ::site/type "Action"
+      ::pass/rules
+      '[
+        [(allowed? permission subject action resource)
+         [action :xt/id]]]}]
+
+    ;; A permission between them
+    [::xt/put
+     {:xt/id :permission
+      ::site/type "Permission"
+      ::pass/subject :tester
+      ::pass/action :test
+      ::pass/purpose nil}]]))

@@ -21,8 +21,20 @@
                      '{:find [r
                               grps]
 
-                       :where [(or [r ::site/type "ResourceLocator"]
-                                   [r ::site/type "AppRoutes"] )
+                       :where [(or [r ::site/type "AppRoutes"]
+
+                                   ;; Same as AppRoutes, but a more appropriate
+                                   ;; name in the case of a resource that isn't
+                                   ;; found in the database but does need to
+                                   ;; exist for the purposes of defining PUT
+                                   ;; semantics.
+                                   [r ::site/type "VirtualResource"]
+
+                                   ;; Deprecated because it relies on code
+                                   ;; deployed and we want to avoid this unless
+                                   ;; no alternative is possible.
+                                   [r ::site/type "ResourceLocator"])
+
                                [r ::site/pattern p]
                                [(first grps) grp0]
                                [(some? grp0)]
@@ -64,7 +76,7 @@
               (log/debugf "Calling locator-fn %s: %s" locator-fn description)
               (f {:db db :request req :locator locator :grps grps})))
 
-          "AppRoutes" locator)))))
+          ("AppRoutes" "VirtualResource") locator)))))
 
 (comment
   (put!
@@ -82,6 +94,9 @@
   "Call each locate-resource defmethod, in a particular order, ending
   in :default."
   [{::site/keys [db uri base-uri] :as req}]
+  (assert uri)
+  (assert base-uri)
+  (assert db)
   (or
    ;; We call OpenAPI location here, because a resource can be defined in
    ;; OpenAPI, and exist in XT, simultaneously.
@@ -113,6 +128,7 @@
                               (subs (count base-uri)))})
 
    ;; Return a back-stop resource
+   ;; TODO: I think this needs to be nil
    {::site/resource-provider ::default-empty-resource
     ::http/methods {:get {} :head {} :options {} :put {} :post {}}
     ::site/put-fn static/put-static-resource}))

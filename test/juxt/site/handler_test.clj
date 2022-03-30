@@ -9,21 +9,22 @@
    [juxt.reap.alpha.encoders :refer [format-http-date]]
    [juxt.test.util :refer [with-xt with-handler submit-and-await!
                            *xt-node* *handler*
-                           access-all-areas access-all-apis]])
+                           install-test-resources!]]
+   [juxt.pass.alpha.v3.authorization :as authz]
+   [juxt.site.alpha.locator :as locator]
+   [juxt.apex.alpha :as-alias apex]
+   [juxt.http.alpha :as-alias http]
+   [juxt.pass.alpha :as-alias pass]
+   [juxt.site.alpha :as-alias site]
+   [xtdb.api :as xt])
   (:import
    (java.io ByteArrayInputStream)))
-
-(alias 'apex (create-ns 'juxt.apex.alpha))
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
-(alias 'site (create-ns 'juxt.site.alpha))
 
 (t/use-fixtures :each with-xt with-handler)
 
 (deftest put-test
   (submit-and-await!
-   [[:xtdb.api/put access-all-apis]
-    [:xtdb.api/put
+   [[:xtdb.api/put
      {:xt/id "https://example.org/_site/apis/test/openapi.json"
       ::site/type "OpenAPI"
       :juxt.apex.alpha/openapi
@@ -55,12 +56,77 @@
             (x/entity db "https://example.org/things/foo")
             (dissoc ::site/request))))))
 
+#_((t/join-fixtures [with-xt with-handler])
+ (fn []
+   (install-test-resources!)
+   (submit-and-await!
+    [
+     [:xtdb.api/put
+      {:xt/id "https://example.org/_site/apis/test/openapi.json"
+       ::site/type "OpenAPI"
+       :juxt.apex.alpha/openapi
+       {"servers" [{"url" ""}]
+        "paths"
+        {"/things/foo"
+         {"put"
+          {"requestBody"
+           {"content"
+            {"application/json"
+             {"schema"
+              {"juxt.jinx.alpha/keyword-mappings"
+               {"name" "a/name"}
+               "properties"
+               {"name" {"type" "string"
+                        "minLength" 2}}}}}}
+           "juxt.site.alpha/actions" ["https://example.org/_site/actions/put-things"]}}}}}]])
+
+   (let [body (json/write-value-as-string {"name" "foo"})
+         req {::site/xt-node *xt-node*
+              ::site/db (xt/db *xt-node*)
+              ::site/base-uri "https://example.org"
+              ::site/uri-prefix "https://example.org"
+              ::site/uri "https://example.org/things/foo"
+              :ring.request/method :put
+              :ring.request/body (ByteArrayInputStream. (.getBytes body))
+              :ring.request/headers
+              {"content-length" (str (count body))
+               "content-type" "application/json"}
+              }]
+     (locator/locate-resource req))
+
+   (let [body (json/write-value-as-string {"name" "foo"})
+         response
+         (*handler*
+          {:ring.request/method :put
+           :ring.request/path "/things/foo"
+           :ring.request/body (ByteArrayInputStream. (.getBytes body))
+           :ring.request/headers
+           {"content-length" (str (count body))
+            "content-type" "application/json"}})
+         db (x/db *xt-node*)]
+
+     response
+
+     #_(is (= {:a/name "foo", :xt/id "https://example.org/things/foo"}
+              (->
+               (x/entity db "https://example.org/things/foo")
+               (dissoc ::site/request)))))
+
+   #_(let [body "Hello"]
+       (*handler*
+        {:ring.request/method :put
+         :ring.request/body (ByteArrayInputStream. (.getBytes body))
+         :ring.request/headers
+         {"content-length" (str (count body))
+          "content-type" "application/json"
+          "if-match" "*"}
+         :ring.request/path "/test.png"}))))
+
 ;; Evoke "Throwing Multiple API paths match"
 
 (deftest two-path-parameter-path-preferred-test
   (submit-and-await!
-   [[:xtdb.api/put access-all-apis]
-    [:xtdb.api/put
+   [[:xtdb.api/put
      {:xt/id "https://example.org/_site/apis/test/openapi.json"
       ::site/type "OpenAPI"
       :juxt.apex.alpha/openapi
@@ -112,8 +178,7 @@
   ;; preserved. This test tests an edge case where we want a path parameter to contain a /.
   (log/trace "")
   (submit-and-await!
-   [[:xtdb.api/put access-all-apis]
-    [:xtdb.api/put
+   [[:xtdb.api/put
      {:xt/id "https://example.org/_site/apis/test/openapi.json"
       ::site/type "OpenAPI"
       :juxt.apex.alpha/openapi
@@ -169,8 +234,7 @@
 
 (deftest if-modified-since-test
   (submit-and-await!
-   [[:xtdb.api/put access-all-areas]
-    [:xtdb.api/put
+   [[:xtdb.api/put
      {:xt/id "https://example.org/test.png"
       ::http/last-modified #inst "2020-03-01"
       ::http/content-type "image/png"
@@ -193,8 +257,7 @@
 
 (deftest if-none-match-test
   (submit-and-await!
-   [[:xtdb.api/put access-all-areas]
-    [:xtdb.api/put
+   [[:xtdb.api/put
      {:xt/id "https://example.org/test.png"
       ::http/etag "\"abc\""
       ::http/content-type "image/png"
@@ -217,8 +280,7 @@
 
 ;; 3.1: If-Match
 (deftest if-match-wildcard-test
-  (submit-and-await!
-   [[:xtdb.api/put access-all-areas]])
+  (install-test-resources!)
   (is (= 412
          (:ring.response/status
           (let [body "Hello"]
@@ -231,15 +293,43 @@
                "if-match" "*"}
               :ring.request/path "/test.png"}))))))
 
+#_((t/join-fixtures [with-xt with-handler])
+ (fn []
+   (install-test-resources!)
+
+   #_(let [db (xt/db *xt-node*)]
+     (xt/entity db :tester)
+
+     #_(authz/actions->rules db #{:test})
+     #_(authz/check-permissions
+      (xt/db *xt-node*)
+      #{:test}
+      (cond-> {:subject :tester}
+        ;; When the resource is in the database, we can add it to the
+        ;; permission checking in case there's a specific permission for
+        ;; this resource.
+        ;;(:xt/id resource) (assoc :resource (:xt/id resource))
+        )))
+
+   (let [body "Hello"]
+     (*handler*
+      {:ring.request/method :put
+       :ring.request/body (ByteArrayInputStream. (.getBytes body))
+       :ring.request/headers
+       {"content-length" (str (count body))
+        "content-type" "application/json"
+        "if-match" "*"}
+       :ring.request/path "/test.png"}))))
+
 (defn if-match-run [if-match]
+  (install-test-resources!)
   (submit-and-await!
-   [[:xtdb.api/put access-all-areas]
-    [:xtdb.api/put
+   [[:xtdb.api/put
      {:xt/id "https://example.org/test.png"
       ::site/type "StaticRepresentation"
       ::http/etag "\"abc\""
       ::http/content-type "image/png"
-      ::http/methods {:put {}}
+      ::http/methods {:put {::pass/actions #{:test}}}
       }]])
   (:ring.response/status
    (let [body "Hello"]
@@ -274,13 +364,13 @@
      (is (= 302 (:ring.response/status response)))
      (is (= "/test.html" (get-in response [:ring.response/headers "location"])))))
 
-(deftest content-negotiation-test
-  (submit-and-await!
-   [[:xtdb.api/put access-all-areas]
 
-    [:xtdb.api/put
+(deftest content-negotiation-test
+  (install-test-resources!)
+  (submit-and-await!
+   [[:xtdb.api/put
      {:xt/id "https://example.org/report"
-      ::http/methods {:get {} :head {} :options {}}
+      ::http/methods {:get {::pass/actions #{:test}} :head {} :options {}}
       ::http/representations
       #{{::http/content-type "text/html;charset=utf-8"
          ::http/content "<h1>Latest sales figures</h1>"}
@@ -306,17 +396,15 @@
 
   ;; TODO: Enable test when 406 is re-instated
   #_(let [response
-        (*handler*
-         {:ring.request/method :get
-          :ring.request/path "/report"
-          :ring.request/headers {"accept" "image/png"}})]
-    (is (= 406 (:ring.response/status response)))))
+          (*handler*
+           {:ring.request/method :get
+            :ring.request/path "/report"
+            :ring.request/headers {"accept" "image/png"}})]
+      (is (= 406 (:ring.response/status response)))))
 
 (deftest variants-test
   (submit-and-await!
-   [[:xtdb.api/put access-all-areas]
-
-    [:xtdb.api/put
+   [[:xtdb.api/put
      {:xt/id "https://example.org/report"
       ::http/methods {:get {} :head {} :options {}}}]
 
@@ -359,8 +447,7 @@
 #_((t/join-fixtures [with-xt with-handler])
  (fn []
    (submit-and-await!
-    [ ;;[:xtdb.api/put access-all-areas]
-     [:xtdb.api/put
+    [[:xtdb.api/put
       {:xt/id "https://example.org/sensitive-report.html"
        ::http/content-type "text/html;charset=utf-8"
        ::http/content "Latest sales figures"
@@ -401,8 +488,7 @@
 #_((t/join-fixtures [with-xt with-handler])
  (fn []
    (submit-and-await!
-    [[:xtdb.api/put access-all-areas]
-     [:xtdb.api/put
+    [[:xtdb.api/put
       {:xt/id "https://example.org/report.html"
        ::http/content-type "text/html;charset=utf-8"
        ::http/content "Latest figures"
@@ -427,9 +513,7 @@
 
 #_(deftest app-test
   (submit-and-await!
-   [[:xtdb.api/put access-all-areas]
-
-    [:xtdb.api/put
+   [[:xtdb.api/put
      {:xt/id "https://example.org/view/index.html"
       ::http/methods {:get {}}
       ::http/content-type "text/html;charset=utf-8"
@@ -442,3 +526,39 @@
           :ring.request/headers {"accept" "text/html"}})]
     (is (= 200 (:ring.response/status response)))
     (is (= "<h1>Hello!</h1>" (:ring.response/body response)))))
+
+
+#_((t/join-fixtures [with-xt with-handler])
+ (fn []
+   (install-test-resources!)
+
+   (let [db (xt/db *xt-node*)]
+     (xt/entity db :tester)
+
+     (authz/actions->rules db #{:test})
+     (authz/check-permissions
+        (xt/db *xt-node*)
+        #{:test}
+        (cond-> {:subject :tester}
+          ;; When the resource is in the database, we can add it to the
+          ;; permission checking in case there's a specific permission for
+          ;; this resource.
+          ;;(:xt/id resource) (assoc :resource (:xt/id resource))
+          )))
+
+   (submit-and-await!
+    [
+     [:xtdb.api/put
+      {:xt/id "https://example.org/report"
+       ::http/methods {:get {::pass/actions #{:test}}
+                       :head {}
+                       :options {}}
+       ::http/representations
+       #{{::http/content-type "text/html;charset=utf-8"
+          ::http/content "<h1>Latest sales figures</h1>"}
+         {::http/content-type "text/plain;charset=utf-8"
+          ::http/content "Latest sales figures"}}}]])
+   (*handler*
+    {:ring.request/method :get
+     :ring.request/path "/report"
+     :ring.request/headers {"accept" "text/html"}})))

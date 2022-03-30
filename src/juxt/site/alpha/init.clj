@@ -516,7 +516,7 @@
 (defn add-openid-login!
   [xt-node {::site/keys [base-uri] :as config}
    & {:keys [name provider client-id client-secret]}]
-  (put-immutable-public-resource-action! xt-node config)
+  (install-put-immutable-public-resource-action! xt-node config)
 
   (let [client (format "%s/_site/openid/%s/client" (base-uri) name)
         login (format "%s/_site/openid/%s/login" (base-uri) name)

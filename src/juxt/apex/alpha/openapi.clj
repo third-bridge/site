@@ -340,13 +340,17 @@
 
             acceptable (str/join ", " (map first (get-in operation-object ["requestBody" "content"])))
 
-            methods (let [methods (into
-                                   {}
-                                   (for [mth (conj (map keyword (keys path-item-object)) :options)]
-                                     [mth {}]))]
-                      (cond-> methods
-                        (contains? methods :get)
-                        (conj [:head {}])))
+            ;; These methods are derived from the operations declared for each
+            ;; path, and the actions required.
+            methods
+            (let [methods
+                  (into
+                   {}
+                   (for [mth (conj (map keyword (keys path-item-object)) :options)]
+                     [mth {}]))]
+              (cond-> methods
+                (contains? methods :get)
+                (conj [:head {}])))
 
             post-fn (when (= method :post)
                       (let [post-fn-sym (some-> (get operation-object "juxt.site.alpha/post-fn") symbol)
@@ -461,6 +465,10 @@
    ;; parameters at one level higher in the OpenAPI, and enforce that, then we
    ;; could make this change.
    {::site/keys [base-uri] :as req}]
+
+  (assert uri)
+  (assert base-uri)
+  (assert db)
 
   ;; Do we have any OpenAPIs in the database?
   (or
