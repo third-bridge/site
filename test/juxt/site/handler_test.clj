@@ -364,7 +364,8 @@
          (:ring.response/status
           (let [body "Hello"]
             (*handler*
-             {:ring.request/method :put
+             {::pass/subject :tester
+              :ring.request/method :put
               :ring.request/body (ByteArrayInputStream. (.getBytes body))
               :ring.request/headers
               {"content-length" (str (count body))
@@ -375,30 +376,25 @@
 #_((t/join-fixtures [with-xt with-handler])
  (fn []
    (install-test-resources!)
-
-   #_(let [db (xt/db *xt-node*)]
-     (xt/entity db :tester)
-
-     #_(authz/actions->rules db #{:test})
-     #_(authz/check-permissions
-      (xt/db *xt-node*)
-      #{:test}
-      (cond-> {:subject :tester}
-        ;; When the resource is in the database, we can add it to the
-        ;; permission checking in case there's a specific permission for
-        ;; this resource.
-        ;;(:xt/id resource) (assoc :resource (:xt/id resource))
-        )))
-
-   (let [body "Hello"]
-     (*handler*
-      {:ring.request/method :put
-       :ring.request/body (ByteArrayInputStream. (.getBytes body))
-       :ring.request/headers
-       {"content-length" (str (count body))
-        "content-type" "application/json"
-        "if-match" "*"}
-       :ring.request/path "/test.png"}))))
+   ;; Install a VirtualResource for any top-level png files
+   (let [body "Hello"
+         req {::pass/subject :tester
+              :ring.request/method :put
+              :ring.request/body (ByteArrayInputStream. (.getBytes body))
+              :ring.request/headers
+              {"content-length" (str (count body))
+               "content-type" "application/json"
+               "if-match" "*"}
+              ::site/base-uri "https://example.org"
+              ::site/uri "https://example.org/test.png"
+              ::site/db (xt/db *xt-node*)
+              :ring.request/path "/test.png"}]
+     (locator/locate-resource req)
+     #_(*handler*
+      req
+      ))
+   )
+ )
 
 (defn if-match-run [if-match]
   (install-test-resources!)
@@ -413,7 +409,8 @@
   (:ring.response/status
    (let [body "Hello"]
      (*handler*
-      {:ring.request/method :put
+      {::pass/subject :tester
+       :ring.request/method :put
        :ring.request/body (ByteArrayInputStream. (.getBytes body))
        :ring.request/headers
        {"content-length" (str (count body))
@@ -444,6 +441,8 @@
      (is (= "/test.html" (get-in response [:ring.response/headers "location"])))))
 
 
+
+
 (deftest content-negotiation-test
   (install-test-resources!)
   (submit-and-await!
@@ -458,7 +457,8 @@
 
   (let [response
         (*handler*
-         {:ring.request/method :get
+         {::pass/subject :tester
+          :ring.request/method :get
           :ring.request/path "/report"
           :ring.request/headers {"accept" "text/html"}})]
     (is (= 200 (:ring.response/status response)))
@@ -466,7 +466,8 @@
 
   (let [response
         (*handler*
-         {:ring.request/method :get
+         {::pass/subject :tester
+          :ring.request/method :get
           :ring.request/path "/report"
           :ring.request/headers {"accept" "text/plain"}})]
 

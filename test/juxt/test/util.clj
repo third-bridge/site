@@ -76,6 +76,7 @@
    ::pass/target '[[resource ::site/resource-provider ::apex/openapi-path]]
    ::pass/effect ::pass/allow})
 
+;; TODO: Rename this, it isn't very descriptive!
 (defn install-test-resources! []
   (submit-and-await!
    [
