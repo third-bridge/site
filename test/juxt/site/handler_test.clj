@@ -23,27 +23,60 @@
 (t/use-fixtures :each with-xt with-handler)
 
 (deftest put-test
+  (install-test-resources!)
   (submit-and-await!
-   [[:xtdb.api/put
-     {:xt/id "https://example.org/_site/apis/test/openapi.json"
-      ::site/type "OpenAPI"
-      :juxt.apex.alpha/openapi
-      {"servers" [{"url" ""}]
-       "paths"
-       {"/things/foo"
-        {"put"
-         {"requestBody"
-          {"content"
-           {"application/json"
-            {"schema"
-             {"juxt.jinx.alpha/keyword-mappings"
-              {"name" "a/name"}
-              "properties"
-              {"name" {"type" "string"
-                       "minLength" 2}}}}}}}}}}}]])
+   [
+    [::xt/put
+     {:xt/id "https://example.org/_site/actions/put-things"
+      ::site/type "Action"
+      :juxt.pass.alpha.malli/args-schema
+      [:tuple
+       [:map
+        [:a/name :string]]]
+
+      :juxt.pass.alpha/process
+      [
+       [:juxt.pass.alpha.malli/validate]
+       [:xtdb.api/put]]
+
+      ::pass/rules
+      '[
+        [(allowed? permission subject action resource)
+         [permission ::pass/subject subject]
+         [(nil? resource)]]]}]
+
+    [::xt/put
+     {:xt/id "https://example.org/_site/permissions/put-things"
+      ::site/type "Permission"
+      ::pass/subject :tester
+      ::pass/action "https://example.org/_site/actions/put-things"
+      ::pass/purpose nil}]])
+
+  (submit-and-await!
+    [
+     [:xtdb.api/put
+      {:xt/id "https://example.org/_site/apis/test/openapi.json"
+       ::site/type "OpenAPI"
+       :juxt.apex.alpha/openapi
+       {"servers" [{"url" ""}]
+        "paths"
+        {"/things/foo"
+         {"put"
+          {"requestBody"
+           {"content"
+            {"application/json"
+             {"schema"
+              {"juxt.jinx.alpha/keyword-mappings"
+               {"name" "a/name"}
+               "properties"
+               {"name" {"type" "string"
+                        "minLength" 2}}}}}}
+           "x-juxt-site-action" "https://example.org/_site/actions/put-things"}}}}}]])
+
   (let [body (json/write-value-as-string {"name" "foo"})
         _ (*handler*
-           {:ring.request/method :put
+           {::pass/subject :tester
+            :ring.request/method :put
             :ring.request/path "/things/foo"
             :ring.request/body (ByteArrayInputStream. (.getBytes body))
             :ring.request/headers
@@ -56,7 +89,7 @@
             (x/entity db "https://example.org/things/foo")
             (dissoc ::site/request))))))
 
-((t/join-fixtures [with-xt with-handler])
+#_((t/join-fixtures [with-xt with-handler])
  (fn []
    (install-test-resources!)
 
@@ -65,6 +98,16 @@
      [::xt/put
       {:xt/id "https://example.org/_site/actions/put-things"
        ::site/type "Action"
+       :juxt.pass.alpha.malli/args-schema
+       [:tuple
+        [:map
+         [:a/name :string]]]
+
+       :juxt.pass.alpha/process
+       [
+        [:juxt.pass.alpha.malli/validate]
+        [:xtdb.api/put]]
+
        ::pass/rules
        '[
          [(allowed? permission subject action resource)
@@ -97,12 +140,11 @@
                "properties"
                {"name" {"type" "string"
                         "minLength" 2}}}}}}
-           "juxt.site.alpha/action" "https://example.org/_site/actions/put-things"}}}}}]
+           "x-juxt-site-action" "https://example.org/_site/actions/put-things"}}}}}]
 
-     ;; We need the action to put-things, and a permission on a nil subject
      ])
 
-   (let [body (json/write-value-as-string {"name" "foo"})
+   #_(let [body (json/write-value-as-string {"name" "foo"})
          req {::site/xt-node *xt-node*
               ::site/db (xt/db *xt-node*)
               ::site/base-uri "https://example.org"
@@ -117,7 +159,7 @@
               }]
      (locator/locate-resource req))
 
-   (authz/check-permissions
+   #_(authz/check-permissions
     (xt/db *xt-node*)
     #{"https://example.org/_site/actions/put-things"}
     (cond-> {:subject :tester}
@@ -142,9 +184,9 @@
 
      response
 
-     ;;(x/entity (xt/db *xt-node*) "https://example.org/things/foo")
+     (x/entity (xt/db *xt-node*) "https://example.org/things/foo")
 
-     #_(is (= {:a/name "foo", :xt/id "https://example.org/things/foo"}
+     (is (= {:a/name "foo", :xt/id "https://example.org/things/foo"}
               (->
                (x/entity db "https://example.org/things/foo")
                (dissoc ::site/request)))))

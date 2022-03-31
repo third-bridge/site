@@ -205,31 +205,6 @@
   (let [id (:xt/id new-resource-state)
         _ (assert id)
 
-        ;; Here's where we call the action
-
-        #_authorization
-        #_(pdp/authorization
-           db
-           {'subject subject
-            'resource resource
-            ;; might change to 'action' at
-            ;; this point
-            'request (select-keys req [:ring.request/method :ring.request/path])
-            'environment {}
-            'new-state new-resource-state})
-
-        #_#__ (when-not (= (::pass/access authorization) ::pass/approved)
-                (log/debug "Unauthorized OpenAPI JSON instance"
-                           new-resource-state authorization)
-                (let [status (if-not (::pass/user subject) 401 403)
-                      message (case status
-                                401 "Unauthorized"
-                                403 "Forbidden")]
-                  (throw
-                   (ex-info
-                    message
-                    {::site/request-context (assoc req :ring.response/status status)}))))
-
         already-exists? (xt/entity db id)
 
         last-modified start-date
@@ -238,7 +213,15 @@
 
         ;; Link the resource state with the request that supplied it, for audit
         ;; and other purposes.
-        new-resource-state (assoc new-resource-state ::site/request request-id)]
+        new-resource-state (assoc new-resource-state ::site/request request-id)
+
+        pass-ctx (select-keys req [::pass/subject ::pass/purpose
+                                   ;; Wait, won't this be the resource xt/id? i.e. not the whole resource?
+                                   ::pass/resource
+                                   ])
+        action (get-in req [::site/resource ::apex/operation-action])
+        action-result (authz/do-action xt-node pass-ctx (::pass/subject req) action new-resource-state)
+        _ (log/tracef "action result is %s" action-result)]
 
     ;; Since this resource is 'managed' by the locate-resource in this ns, we
     ;; don't have to worry about http attributes - these will be provided by
@@ -248,31 +231,9 @@
     ;; representation into the db anyway, if only to store the last-modified and
     ;; etag validators?
 
-    ;;(def permissions (::pass/permissions req))
-
-    (let [pass-ctx (select-keys req [::pass/subject ::pass/purpose
-                                     ;; Wait, won't this be the resource xt/id? i.e. not the whole resource?
-                                     ::pass/resource
-                                     ])
-          permissions (::pass/permissions req)
-          actions (distinct (map (comp :xt/id :action) permissions))]
-      ;; Where do we get the action from?
-      (condp (fn [pred actions] (pred (count actions))) actions
-        zero? (throw (ex-info "Action not permitted" {}))
-
-        #(= 1 %)
-        (let [action (first actions)
-              _ (log/debugf "Calling action '%s' with arg '%s'" action new-resource-state)
-              action-result (authz/do-action xt-node pass-ctx (::pass/subject req) action new-resource-state)]
-
-          ;; TODO: What to do with action-result?
-          (log/infof "action result is %s" action-result)
-          action-result
-          ;; if there is a ::site/error? - validation - could be a 400
-
-          )
-
-        #(< 1 %) (throw (ex-info "Multiple actions permitted, ambgiuous which one to execute" {:permissions permissions}))))
+    ;; Handle any error
+    (when-let [{:keys [message ex-data] :as error} (::site/error action-result)]
+      (return req (:ring.response/status error 500) message ex-data))
 
     (-> req
         (assoc :ring.response/status (if-not already-exists? 201 204)
@@ -364,6 +325,7 @@
                              (assoc :inject-property inject-property))]))
 
             operation-object (get path-item-object (name method))
+            action (get operation-object "x-juxt-site-action")
 
             acceptable (str/join ", " (map first (get-in operation-object ["requestBody" "content"])))
 
@@ -384,7 +346,7 @@
                       ;; duplicate here, but then we need some other way of
                       ;; ushering the request through the authorization
                       ;; middleware.
-                      {::pass/actions #{(get operation-object "juxt.site.alpha/action")}}]))]
+                      {::pass/actions #{(get operation-object "x-juxt-site-action")}}]))]
               (cond-> methods
                 (contains? methods :get)
                 (conj [:head (get methods :get)])
@@ -430,6 +392,7 @@
                      ::apex/operation operation-object
                      ::apex/openapi-path path
                      ::apex/openapi-path-params path-params
+                     ::apex/operation-action action
 
                      ::http/methods methods
 

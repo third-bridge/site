@@ -22,13 +22,12 @@
    [juxt.site.alpha.cache :as cache]
    [juxt.site.alpha.init :as init]
    [clojure.string :as str]
-   [juxt.grab.alpha.parser :as parser])
+   [juxt.grab.alpha.parser :as parser]
+   [juxt.dave.alpha :as-alias dave]
+   [juxt.http.alpha :as-alias http]
+   [juxt.pass.alpha :as-alias pass]
+   [juxt.site.alpha :as-alias site])
   (:import (java.util Date)))
-
-(alias 'dave (create-ns 'juxt.dave.alpha))
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
-(alias 'site (create-ns 'juxt.site.alpha))
 
 (defn base64-reader [form]
   {:pre [(string? form)]}
