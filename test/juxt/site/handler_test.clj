@@ -251,11 +251,38 @@
     (is (= "putAB"
            (get-in r [::site/resource ::apex/operation "operationId"])))))
 
-
 (deftest inject-path-parameter-with-forward-slash-test
   ;; PUT a project code of ABC/DEF (with Swagger) and ensure the / is
   ;; preserved. This test tests an edge case where we want a path parameter to contain a /.
   (log/trace "")
+
+  (install-test-resources!)
+  (submit-and-await!
+   [
+    [::xt/put
+     {:xt/id "https://example.org/_site/actions/put-things"
+      ::site/type "Action"
+      :juxt.pass.alpha.malli/args-schema
+      [:tuple [:map]]
+
+      :juxt.pass.alpha/process
+      [
+       [:juxt.pass.alpha.malli/validate]
+       [:xtdb.api/put]]
+
+      ::pass/rules
+      '[
+        [(allowed? permission subject action resource)
+         [permission ::pass/subject subject]
+         [(nil? resource)]]]}]
+
+    [::xt/put
+     {:xt/id "https://example.org/_site/permissions/put-things"
+      ::site/type "Permission"
+      ::pass/subject :tester
+      ::pass/action "https://example.org/_site/actions/put-things"
+      ::pass/purpose nil}]])
+
   (submit-and-await!
    [[:xtdb.api/put
      {:xt/id "https://example.org/_site/apis/test/openapi.json"
@@ -276,7 +303,8 @@
            {"application/json"
             {"schema"
              {"properties"
-              {"name" {"type" "string" "minLength" 1}}}}}}}}
+              {"name" {"type" "string" "minLength" 1}}}}}}
+          "x-juxt-site-action" "https://example.org/_site/actions/put-things"}}
 
         "/things/{a}/{n}"
         {"parameters"
@@ -291,12 +319,14 @@
            {"application/json"
             {"schema"
              {"properties"
-              {"name" {"type" "string" "minLength" 1}}}}}}}}}}}]])
+              {"name" {"type" "string" "minLength" 1}}}}}}
+          "x-juxt-site-action" "https://example.org/_site/actions/put-things"}}}}}]])
 
   (let [path (str"/things/" (java.net.URLEncoder/encode "ABC/DEF"))
         body (json/write-value-as-string {"name" "zip"})
         r (*handler*
-           {:ring.request/method :put
+           {::pass/subject :tester
+            :ring.request/method :put
             :ring.request/path path
             :ring.request/body (ByteArrayInputStream. (.getBytes body))
             :ring.request/headers

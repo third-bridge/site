@@ -1266,11 +1266,12 @@
    wrap-find-current-representations
    wrap-negotiate-representation
 
-   ;; Authorize
-   ;; Not ready yet, being rewritten
+   ;; Authorize - deprecated
    #_wrap-authorize-with-acls
    #_wrap-authorize-with-pdp
-   wrap-authorize-with-actions
+   ;; This is more recent than the above but we should do authorization via
+   ;; actions to avoid race-conditions
+   #_wrap-authorize-with-actions
 
    ;; 405
    wrap-method-not-allowed?
