@@ -97,7 +97,7 @@
                "properties"
                {"name" {"type" "string"
                         "minLength" 2}}}}}}
-           "juxt.site.alpha/actions" ["https://example.org/_site/actions/put-things"]}}}}}]
+           "juxt.site.alpha/action" "https://example.org/_site/actions/put-things"}}}}}]
 
      ;; We need the action to put-things, and a permission on a nil subject
      ])

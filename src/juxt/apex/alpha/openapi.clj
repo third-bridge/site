@@ -375,7 +375,16 @@
                    {}
                    (for [[mth operation-object] path-item-object]
                      [(keyword mth)
-                      {::pass/actions (set (get operation-object "juxt.site.alpha/actions"))}]))]
+                      ;; We fish out the action and make the call conditional on
+                      ;; permission to call it. This will mean that permissions
+                      ;; will be searched for twice, once by the authorization
+                      ;; middlware, once in the do-action transaction. The
+                      ;; latter is necessary as it's in the tx-fn and defends
+                      ;; against inconsistency. Perhaps we don't need to
+                      ;; duplicate here, but then we need some other way of
+                      ;; ushering the request through the authorization
+                      ;; middleware.
+                      {::pass/actions #{(get operation-object "juxt.site.alpha/action")}}]))]
               (cond-> methods
                 (contains? methods :get)
                 (conj [:head (get methods :get)])
