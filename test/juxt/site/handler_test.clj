@@ -204,6 +204,33 @@
 ;; Evoke "Throwing Multiple API paths match"
 
 (deftest two-path-parameter-path-preferred-test
+  (install-test-resources!)
+  (submit-and-await!
+   [
+    [::xt/put
+     {:xt/id "https://example.org/_site/actions/put-things"
+      ::site/type "Action"
+      :juxt.pass.alpha.malli/args-schema
+      [:tuple [:map]]
+
+      :juxt.pass.alpha/process
+      [
+       [:juxt.pass.alpha.malli/validate]
+       [:xtdb.api/put]]
+
+      ::pass/rules
+      '[
+        [(allowed? permission subject action resource)
+         [permission ::pass/subject subject]
+         [(nil? resource)]]]}]
+
+    [::xt/put
+     {:xt/id "https://example.org/_site/permissions/put-things"
+      ::site/type "Permission"
+      ::pass/subject :tester
+      ::pass/action "https://example.org/_site/actions/put-things"
+      ::pass/purpose nil}]])
+
   (submit-and-await!
    [[:xtdb.api/put
      {:xt/id "https://example.org/_site/apis/test/openapi.json"
@@ -222,7 +249,8 @@
            {"application/json"
             {"schema"
              {"properties"
-              {"name" {"type" "string" "minLength" 1}}}}}}}}
+              {"name" {"type" "string" "minLength" 1}}}}}}
+          "x-juxt-site-action" "https://example.org/_site/actions/put-things"}}
 
         "/things/{a}/{b}"
         {"parameters"
@@ -237,10 +265,12 @@
            {"application/json"
             {"schema"
              {"properties"
-              {"name" {"type" "string" "minLength" 1}}}}}}}}}}}]])
+              {"name" {"type" "string" "minLength" 1}}}}}}
+          "x-juxt-site-action" "https://example.org/_site/actions/put-things"}}}}}]])
   (let [body (json/write-value-as-string {"name" "foo"})
         r (*handler*
-           {:ring.request/method :put
+           {::pass/subject :tester
+            :ring.request/method :put
             ;; Matches both {a} and {b}
             :ring.request/path "/things/foo/bar"
             :ring.request/body (ByteArrayInputStream. (.getBytes body))
@@ -254,8 +284,6 @@
 (deftest inject-path-parameter-with-forward-slash-test
   ;; PUT a project code of ABC/DEF (with Swagger) and ensure the / is
   ;; preserved. This test tests an edge case where we want a path parameter to contain a /.
-  (log/trace "")
-
   (install-test-resources!)
   (submit-and-await!
    [
