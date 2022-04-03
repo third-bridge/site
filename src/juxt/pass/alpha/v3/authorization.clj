@@ -308,15 +308,13 @@
    :xt/fn '(fn [xt-ctx pass-ctx args]
              (juxt.pass.alpha.v3.authorization/do-action* xt-ctx pass-ctx (vec args)))})
 
-;; TODO: This subject should be folded into the pass-ctx as it's optional (could
-;; be an anonymous action)
-(defn do-action [xt-node pass-ctx subject action & args]
+(defn do-action [xt-node pass-ctx action & args]
   (assert (xt/entity (xt/db xt-node) "urn:site:tx-fns:do-action"))
   (let [tx (xt/submit-tx
             xt-node
             [[::xt/fn
               "urn:site:tx-fns:do-action"
-              (assoc pass-ctx ::pass/subject subject ::pass/action action)
+              (assoc pass-ctx ::pass/action action)
               args]])
 
         {::xt/keys [tx-id]} (xt/await-tx xt-node tx)]

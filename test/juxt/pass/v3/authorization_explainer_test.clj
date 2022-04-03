@@ -1042,8 +1042,7 @@
 
   (authz/do-action
    *xt-node*
-   {}
-   (:xt/id SUE_SUBJECT)
+   {::pass/subject (:xt/id SUE_SUBJECT)}
    (:xt/id CREATE_PERSON_ACTION)
    ALICE)
 
@@ -1053,9 +1052,8 @@
 
   (authz/do-action
    *xt-node*
-   {}
+   {::pass/subject (:xt/id CREATE_PERSON_ACTION)}
    (:xt/id ALICE_SUBJECT)
-   (:xt/id CREATE_PERSON_ACTION)
    BOB)
 
   (is (not (xt/entity (xt/db *xt-node*) (:xt/id BOB))))
@@ -1180,8 +1178,7 @@
      (let [tmr
            (authz/do-action
             *xt-node*
-            {}
-            (:xt/id ALICE_SUBJECT)
+            {::pass/subject (:xt/id ALICE_SUBJECT)}
             (:xt/id CREATE_ACCESS_TOKEN_ACTION)
             {::pass/client :client})
            db (xt/db *xt-node*)]
