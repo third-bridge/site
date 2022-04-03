@@ -141,7 +141,8 @@
 
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed, and
-  get me the documents"
+  get me the documents. If resources-in-scope is given, only consider resources
+  in that set."
   [db actions {::pass/keys [subject purpose include-rules resources-in-scope]}]
   (let [rules (actions->rules db actions)
         results
@@ -191,7 +192,7 @@
              (assoc options ::pass/resources-in-scope (set (map join-key coll)))
              (pull-allowed-resources db actions)
              (group-by :xt/id))]
-    (map #(update % join-key idx) coll)))
+    (map #(update % join-key (comp first idx)) coll)))
 
 (defn resolve-with-ctx [form ctx]
   (postwalk

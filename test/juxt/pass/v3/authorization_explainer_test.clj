@@ -1399,18 +1399,21 @@
 
      ;; Bernie sees the trades from her desk, see wants more details on the
      ;; trader concerned.
-     (let [trades
-           (pull-allowed-resources
+     (let [subject "https://example.org/people/bernie"
+           trades
+           (authz/pull-allowed-resources
+            db
             #{"https://example.org/actions/list-trades"}
-            "https://example.org/people/bernie" "Trading" (+ 1 2))]
+            {::pass/subject subject
+             ::pass/purpose "Trading"})]
 
-       ;; This is the join
+       ;; This is the join action.
        (authz/join-with-pull-allowed-resources
         db
         trades
         ::trader
         #{"https://example.org/actions/get-trader-personal-info"}
-        {::pass/subject "https://example.org/people/bernie"
+        {::pass/subject subject
          ::pass/purpose "Personal"}))
 
      ;; Susie can get Sam's details
