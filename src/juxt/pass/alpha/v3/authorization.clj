@@ -139,12 +139,10 @@
                         check-result))]
     (xt/pull db pull-expr resource)))
 
-;; TODO: This subject should be folded into the pass-ctx as it's optional (could
-;; be an anonymous action)
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed, and
   get me the documents"
-  [db actions {::pass/keys [subject purpose include-rules]}]
+  [db actions {::pass/keys [subject purpose include-rules resources-in-scope]}]
   (let [rules (actions->rules db actions)
         results
         (xt/q
@@ -167,20 +165,33 @@
                     [permission ::pass/purpose purpose]]
 
             include-rules
-            (conj '(include? subject action resource)))
+            (conj '(include? subject action resource))
+
+            resources-in-scope
+            (conj '[(contains? resources-in-scope resource)]
+             ))
 
           :rules (vec (concat rules include-rules))
 
-          :in '[subject actions purpose]}
+          :in '[subject actions purpose resources-in-scope]}
 
-         subject actions purpose)
+         subject actions purpose (or resources-in-scope #{}))
 
         pull-expr (vec (mapcat (comp ::pass/pull :action) results))]
 
     (->> results
          (map :resource)
-         (xt/pull-many db pull-expr)
-         )))
+         (xt/pull-many db pull-expr))))
+
+(defn join-with-pull-allowed-resources
+  "Join collection on given join-key with another pull of allowed-resources with
+  given actions and options."
+  [db coll join-key actions options]
+  (let [idx (->>
+             (assoc options ::pass/resources-in-scope (set (map join-key coll)))
+             (pull-allowed-resources db actions)
+             (group-by :xt/id))]
+    (map #(update % join-key idx) coll)))
 
 (defn resolve-with-ctx [form ctx]
   (postwalk

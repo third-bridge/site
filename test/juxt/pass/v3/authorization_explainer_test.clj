@@ -1235,6 +1235,13 @@
                 ::role #{"https://example.org/roles/trader"}
                 ::desk "https://example.org/desks/equities/bonds"}]
 
+     ;; Boris is also a bond trader
+     [::xt/put {:xt/id "https://example.org/people/boris"
+                ::type "Person"
+                ::name "Boris Sokolov"
+                ::role #{"https://example.org/roles/trader"}
+                ::desk "https://example.org/desks/equities/bonds"}]
+
      ;; Brian and Betty reports to Bernie, head of the bonds desk
      [::xt/put {:xt/id "https://example.org/people/bernie"
                 ::type "Person"
@@ -1331,18 +1338,37 @@
                 ::pass/action "https://example.org/actions/control-list-trades"
                 ::pass/purpose #{"RiskReporting"}
                 ::role "https://example.org/roles/regulatory-risk-controller"
-                }]])
+                }]
+
+     [::xt/put {:xt/id "https://example.org/actions/get-trader-personal-info"
+                ::site/type "Action"
+                ::pass/pull '[*]
+                ::pass/rules
+                '[
+                  [(allowed? permission subject action trader)
+                   [permission :xt/id "https://example.org/permissions/heads-of-desks-can-query-own-trader-info"]
+                   [subject ::role "https://example.org/roles/head-of-desk"]
+                   [trader ::type "Person"]
+                   ;; Only for a trader that works on the same desk
+                   [trader ::desk desk]
+                   [subject ::desk desk]]]}]
+
+     [::xt/put {:xt/id "https://example.org/permissions/heads-of-desks-can-query-own-trader-info"
+                ::site/type "Permission"
+                ::pass/action "https://example.org/actions/get-trader-personal-info"
+                ::pass/purpose #{"Personal"}}]
+
+     ])
 
    (let [db (xt/db *xt-node*)
          action (xt/entity db "https://example.org/actions/list-trades")
 
          pull-allowed-resources
-         (fn [subject purpose expected]
+         (fn [actions subject purpose expected]
            (let [resources
                  (authz/pull-allowed-resources
                   db
-                  #{"https://example.org/actions/list-trades"
-                    "https://example.org/actions/control-list-trades"}
+                  actions
                   {::pass/subject subject
                    ::pass/purpose purpose}
                   )]
@@ -1353,21 +1379,45 @@
 
      (assert action)
 
-     (pull-allowed-resources "https://example.org/people/sam" "Trading" 1)
-     (pull-allowed-resources "https://example.org/people/brian" "Trading" 2)
-     (pull-allowed-resources "https://example.org/people/betty" "Trading" 1)
-     (pull-allowed-resources "https://example.org/people/bernie" "Trading" (+ 1 2))
-     (pull-allowed-resources "https://example.org/people/susie" "Trading" (+ 1 0))
-     (pull-allowed-resources "https://example.org/people/cameron" "RiskReporting" 4)
+     (let [actions #{"https://example.org/actions/list-trades"
+                     "https://example.org/actions/control-list-trades"}]
+       (pull-allowed-resources actions "https://example.org/people/sam" "Trading" 1)
+       (pull-allowed-resources actions "https://example.org/people/brian" "Trading" 2)
+       (pull-allowed-resources actions "https://example.org/people/betty" "Trading" 1)
+       (pull-allowed-resources actions "https://example.org/people/bernie" "Trading" (+ 1 2))
+       (pull-allowed-resources actions "https://example.org/people/susie" "Trading" (+ 1 0))
+       (pull-allowed-resources actions "https://example.org/people/cameron" "RiskReporting" 4)
+       )
 
-     ;; use an action to 'join' from a set of entities to another set
+     (pull-allowed-resources
+      #{"https://example.org/actions/get-trader-personal-info"}
+      "https://example.org/people/susie" "Personal" 3)
 
+     (pull-allowed-resources
+      #{"https://example.org/actions/get-trader-personal-info"}
+      "https://example.org/people/bernie" "Personal" 4)
 
-     #_(xt/q db '{:find [e (pull trader [*])]
-                  :where [[e ::trader trader]
-                          [(contains? ctx e)]] :in [ctx]}
-             (set (map :xt/id (q "https://example.org/people/cameron" "RiskReporting" 4)))
-             )
+     ;; Bernie sees the trades from her desk, see wants more details on the
+     ;; trader concerned.
+     (let [trades
+           (pull-allowed-resources
+            #{"https://example.org/actions/list-trades"}
+            "https://example.org/people/bernie" "Trading" (+ 1 2))]
+
+       ;; This is the join
+       (authz/join-with-pull-allowed-resources
+        db
+        trades
+        ::trader
+        #{"https://example.org/actions/get-trader-personal-info"}
+        {::pass/subject "https://example.org/people/bernie"
+         ::pass/purpose "Personal"}))
+
+     ;; Susie can get Sam's details
+
+     ;; TODO: Use an action to 'join' from a set of entities to another set
+
+     ;; TODO: Try making the role membership the permission
 
 
      )))
