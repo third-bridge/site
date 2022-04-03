@@ -1286,7 +1286,6 @@
                   [(allowed? permission subject action trade)
                    [permission ::role "https://example.org/roles/trader"]
                    [subject ::role "https://example.org/roles/trader"]
-                   [action :xt/id "https://example.org/actions/list-trades"]
                    [trade ::type "Trade"]
                    [trade ::trader subject]
                    ]
@@ -1294,7 +1293,6 @@
                   [(allowed? permission subject action trade)
                    [permission ::role "https://example.org/roles/head-of-desk"]
                    [subject ::role "https://example.org/roles/head-of-desk"]
-                   [action :xt/id "https://example.org/actions/list-trades"]
                    [trade ::type "Trade"]
                    [trade ::desk desk]
                    [subject ::desk desk]
@@ -1310,7 +1308,6 @@
                   [(allowed? permission subject action trade)
                    [permission ::role "https://example.org/roles/regulatory-risk-controller"]
                    [subject ::role "https://example.org/roles/regulatory-risk-controller"]
-                   [action :xt/id "https://example.org/actions/control-list-trades"]
                    [trade ::type "Trade"]
                    ]]}]
 
@@ -1351,31 +1348,9 @@
                (is (= expected (count resources)))
                (assert (= expected (count resources)))
                resources
-               )
-
-             #_(xt/q
-                db
-                {:find '[(pull resource [*]) (pull permission [*])]
-                 :keys '[resource permission]
-                 :where '[
-                          [action ::site/type "Action"]
-                          [permission ::site/type "Permission"]
-                          [permission ::pass/action action]
-                          [permission ::pass/purpose purpose]
-                          (allowed? permission subject action resource)
-                          ]
-                 :rules (::pass/rules action)
-                 :in '[subject action purpose]}
-
-                subject (:xt/id action) purpose))]
+               ))]
 
      (assert action)
-
-     #_(assert
-        (= (count (xt/q db '{:find [e]  :where [[e ::type "Trade"]]}))
-           (count (q
-                   "https://example.org/people/cameron"
-                   "RiskReporting"))))
 
      (q "https://example.org/people/sam" "Trading" 1)
      (q "https://example.org/people/brian" "Trading" 2)
