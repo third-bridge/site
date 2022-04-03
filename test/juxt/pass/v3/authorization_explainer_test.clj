@@ -1191,7 +1191,7 @@
 ;; People in the regulatory control have a role which allows them to see all trades
 
 
-#_((t/join-fixtures [with-xt])
+((t/join-fixtures [with-xt])
  (fn []
    (submit-and-await!
     [
@@ -1279,6 +1279,7 @@
      ;; Add an action that lists trades
      [::xt/put {:xt/id "https://example.org/actions/list-trades"
                 ::site/type "Action"
+                ::pass/pull '[*]
                 ::pass/rules
                 '[
                   ;; Allow traders to see their own trades
@@ -1331,31 +1332,58 @@
    (let [db (xt/db *xt-node*)
          action (xt/entity db "https://example.org/actions/list-trades")
 
-         q (fn [subject purpose]
-             (xt/q
-              db
-              {:find '[(pull resource [*]) (pull permission [*])]
-               :keys '[resource permission]
-               :where '[
-                        [action ::site/type "Action"]
-                        [permission ::site/type "Permission"]
-                        [permission ::pass/action action]
-                        [permission ::pass/purpose purpose]
-                        (allowed? permission subject action resource)
-                        ]
-               :rules (::pass/rules action)
-               :in '[subject action purpose]}
+         q (fn [subject purpose expected]
+             (let [resources
+                   (authz/pull-allowed-resources
+                    db
+                    #{"https://example.org/actions/list-trades"}
+                    {::pass/subject subject
+                     ::pass/purpose purpose}
+                    )]
+               (is (= expected (count resources)))
+               (assert (= expected (count resources)))
+               resources
+               )
 
-              subject (:xt/id action) purpose
-              )
-             )
-         ]
+             #_(xt/q
+                db
+                {:find '[(pull resource [*]) (pull permission [*])]
+                 :keys '[resource permission]
+                 :where '[
+                          [action ::site/type "Action"]
+                          [permission ::site/type "Permission"]
+                          [permission ::pass/action action]
+                          [permission ::pass/purpose purpose]
+                          (allowed? permission subject action resource)
+                          ]
+                 :rules (::pass/rules action)
+                 :in '[subject action purpose]}
+
+                subject (:xt/id action) purpose))]
 
      (assert action)
 
-     (q
-      "https://example.org/people/cameron"
-      "RiskReporting")
+     #_(assert
+        (= (count (xt/q db '{:find [e]  :where [[e ::type "Trade"]]}))
+           (count (q
+                   "https://example.org/people/cameron"
+                   "RiskReporting"))))
+
+     (q "https://example.org/people/sam" "Trading" 1)
+     (q "https://example.org/people/brian" "Trading" 2)
+     (q "https://example.org/people/betty" "Trading" 1)
+     (q "https://example.org/people/bernie" "Trading" (+ 1 2))
+     (q "https://example.org/people/susie" "Trading" (+ 1 0))
+     (q "https://example.org/people/cameron" "RiskReporting" 4)
 
      ;; use an action to 'join' from a set of entities to another set
+
+
+     (xt/q db '{:find [e (pull trader [*])]
+                :where [[e ::trader trader]
+                        [(contains? ctx e)]] :in [ctx]}
+           (set (map :xt/id (q "https://example.org/people/cameron" "RiskReporting" 4)))
+           )
+
+
      )))

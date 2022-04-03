@@ -178,7 +178,8 @@
 
     (->> results
          (map :resource)
-         (xt/pull-many db pull-expr))))
+         (xt/pull-many db pull-expr)
+         )))
 
 (defn resolve-with-ctx [form ctx]
   (postwalk
