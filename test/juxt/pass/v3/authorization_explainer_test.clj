@@ -1276,7 +1276,7 @@
                 ::trader "https://example.org/people/betty"
                 ::value 180}]
 
-     ;; Add an action that lists trades
+     ;; Add an action that lists trades, pulling all attributes
      [::xt/put {:xt/id "https://example.org/actions/list-trades"
                 ::site/type "Action"
                 ::pass/pull '[*]
@@ -1298,12 +1298,19 @@
                    [trade ::type "Trade"]
                    [trade ::desk desk]
                    [subject ::desk desk]
-                   ]
+                   ]]}]
 
+     ;; Add an action that lists trades, pulling only that trade attributes that
+     ;; are accessible to a regulatory risk controller.
+     [::xt/put {:xt/id "https://example.org/actions/control-list-trades"
+                ::site/type "Action"
+                ::pass/pull '[::desk ::value :xt/id]
+                ::pass/rules
+                '[
                   [(allowed? permission subject action trade)
                    [permission ::role "https://example.org/roles/regulatory-risk-controller"]
                    [subject ::role "https://example.org/roles/regulatory-risk-controller"]
-                   [action :xt/id "https://example.org/actions/list-trades"]
+                   [action :xt/id "https://example.org/actions/control-list-trades"]
                    [trade ::type "Trade"]
                    ]]}]
 
@@ -1324,7 +1331,7 @@
 
      [::xt/put {:xt/id "https://example.org/permissions/control-can-list-all-trades"
                 ::site/type "Permission"
-                ::pass/action "https://example.org/actions/list-trades"
+                ::pass/action "https://example.org/actions/control-list-trades"
                 ::pass/purpose #{"RiskReporting"}
                 ::role "https://example.org/roles/regulatory-risk-controller"
                 }]])
@@ -1336,7 +1343,8 @@
              (let [resources
                    (authz/pull-allowed-resources
                     db
-                    #{"https://example.org/actions/list-trades"}
+                    #{"https://example.org/actions/list-trades"
+                      "https://example.org/actions/control-list-trades"}
                     {::pass/subject subject
                      ::pass/purpose purpose}
                     )]
@@ -1379,11 +1387,11 @@
      ;; use an action to 'join' from a set of entities to another set
 
 
-     (xt/q db '{:find [e (pull trader [*])]
-                :where [[e ::trader trader]
-                        [(contains? ctx e)]] :in [ctx]}
-           (set (map :xt/id (q "https://example.org/people/cameron" "RiskReporting" 4)))
-           )
+     #_(xt/q db '{:find [e (pull trader [*])]
+                  :where [[e ::trader trader]
+                          [(contains? ctx e)]] :in [ctx]}
+             (set (map :xt/id (q "https://example.org/people/cameron" "RiskReporting" 4)))
+             )
 
 
      )))
