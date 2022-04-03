@@ -24,8 +24,6 @@
 
 (defn check-permissions
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
-  ;; TODO: since subject is strictly optional too, only actions is required, so
-  ;; put subject in options.
   [db actions {:keys [subject resource purpose] :as pass-ctx}]
 
   (let [rules (actions->rules db actions)]
@@ -125,7 +123,7 @@
 (defn pull-allowed-resource
   "Given a subject, a set of possible actions and a resource, pull the allowed
   attributes."
-  [db subject actions resource {:keys [purpose]}]
+  [db actions resource {::pass/keys [subject purpose]}]
   (let [check-result
         (check-permissions
          db
@@ -145,7 +143,7 @@
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed, and
   get me the documents"
-  [db subject actions {:keys [purpose include-rules]}]
+  [db actions {::pass/keys [subject purpose include-rules]}]
   (let [rules (actions->rules db actions)
         results
         (xt/q

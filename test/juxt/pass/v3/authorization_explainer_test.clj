@@ -578,10 +578,9 @@
           (let [actual
                 (authz/pull-allowed-resource
                  db
-                 (:xt/id subject)
                  #{(:xt/id READ_USERNAME_ACTION) (:xt/id READ_SECRETS_ACTION)}
                  (:xt/id ALICE)
-                 {})]
+                 {::pass/subject (:xt/id subject)})]
             (is (= expected actual)))
 
         BOB_SUBJECT {::username "alice" ::secret "foo"}
@@ -727,10 +726,9 @@
             (let [db (xt/db *xt-node*)]
               (authz/pull-allowed-resources
                db
-               (:xt/id subject)
                #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                  (:xt/id READ_MESSAGE_METADATA_ACTION)}
-               {})))]
+               {::pass/subject (:xt/id subject)})))]
 
       ;; Alice and Bob can read all the messages in the group
       (let [messages (get-messages ALICE_SUBJECT)]
@@ -758,11 +756,11 @@
                 (let [db (xt/db *xt-node*)]
                   (authz/pull-allowed-resources
                    db
-                   (:xt/id ALICE_SUBJECT)
                    #{(:xt/id READ_MESSAGE_CONTENT_ACTION)
                      (:xt/id READ_MESSAGE_METADATA_ACTION)}
-                   {:include-rules [['(include? subject action message)
-                                     ['message ::from (:xt/id ALICE)]]]}))))))))
+                   {::pass/subject (:xt/id ALICE_SUBJECT)
+                    ::pass/include-rules [['(include? subject action message)
+                                           ['message ::from (:xt/id ALICE)]]]}))))))))
 
 ;; Alice has a medical record. She wants to allow Oscar access to it, but only
 ;; in emergencies (to provide to a doctor in case of urgent need).
@@ -829,19 +827,17 @@
             (let [db (xt/db *xt-node*)]
               (authz/pull-allowed-resources
                db
-               (:xt/id subject)
                #{(:xt/id action)}
-               {})))
+               {::pass/subject (:xt/id subject)})))
 
           get-medical-record
           (fn [subject action]
             (let [db (xt/db *xt-node*)]
               (authz/pull-allowed-resource
                db
-               (:xt/id subject)
                #{(:xt/id action)}
                "https://example.org/alice/medical-record"
-               {})))]
+               {::pass/subject (:xt/id subject)})))]
 
       (is (zero? (count (get-medical-records OSCAR_SUBJECT READ_MEDICAL_RECORD_ACTION))))
       (is (= 1 (count (get-medical-records OSCAR_SUBJECT EMERGENCY_READ_MEDICAL_RECORD_ACTION))))
@@ -905,19 +901,19 @@
             (let [db (xt/db *xt-node*)]
               (authz/pull-allowed-resources
                db
-               (:xt/id subject)
                #{(:xt/id action)}
-               {:purpose purpose})))
+               {::pass/subject (:xt/id subject)
+                ::pass/purpose purpose})))
 
           get-medical-record
           (fn [subject action purpose]
             (let [db (xt/db *xt-node*)]
               (authz/pull-allowed-resource
                db
-               (:xt/id subject)
                #{(:xt/id action)}
                "https://example.org/alice/medical-record"
-               {:purpose purpose})))]
+               {::pass/subject (:xt/id subject)
+                ::pass/purpose purpose})))]
 
       (is (zero? (count (get-medical-records OSCAR_SUBJECT READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/marketing"))))
       (is (= 1 (count (get-medical-records OSCAR_SUBJECT READ_MEDICAL_RECORD_ACTION "https://example.org/purposes/emergency"))))
