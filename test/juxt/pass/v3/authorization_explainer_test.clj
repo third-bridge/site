@@ -450,8 +450,8 @@
         (is (= expected
                (authz/allowed-resources
                 db
-                (:xt/id subject) actions
-                {})))
+                actions
+                {::pass/subject (:xt/id subject)})))
 
       ;; Alice can see all her files.
       ALICE_SUBJECT

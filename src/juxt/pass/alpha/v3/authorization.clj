@@ -57,8 +57,9 @@
         permissions))))
 
 (defn allowed-resources
-  "Given a subject and a set of possible actions, which resources are allowed?"
-  [db subject actions {:keys [purpose]}]
+  "Given a set of possible actions, and possibly a subject and purpose, which
+  resources are allowed?"
+  [db actions {::pass/keys [subject purpose]}]
   (let [rules (actions->rules db actions)]
     (xt/q
      db
