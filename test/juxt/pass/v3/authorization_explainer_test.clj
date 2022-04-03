@@ -1221,20 +1221,28 @@
                 ::role #{"https://example.org/roles/trader"}
                 ::desk "https://example.org/desks/equities/swaps"}]
 
+     ;; Susie is the head of the swaps desk
      [::xt/put {:xt/id "https://example.org/people/susie"
                 ::type "Person"
                 ::name "Susie Young"
                 ::role #{"https://example.org/roles/head-of-desk"}
                 ::desk "https://example.org/desks/equities/swaps"}]
 
-     ;; Brian is a bonds trader
+     ;; Brian is a bond trader
      [::xt/put {:xt/id "https://example.org/people/brian"
                 ::type "Person"
                 ::name "Brian Tanner"
                 ::role #{"https://example.org/roles/trader"}
                 ::desk "https://example.org/desks/equities/bonds"}]
 
-     ;; Brian reports to Bernie, head of the bonds desk
+     ;; Betty is also a bond trader
+     [::xt/put {:xt/id "https://example.org/people/betty"
+                ::type "Person"
+                ::name "Betty Jacobs"
+                ::role #{"https://example.org/roles/trader"}
+                ::desk "https://example.org/desks/equities/bonds"}]
+
+     ;; Brian and Betty reports to Bernie, head of the bonds desk
      [::xt/put {:xt/id "https://example.org/people/bernie"
                 ::type "Person"
                 ::name "Bernadette Pulson"
@@ -1251,65 +1259,110 @@
                 ::role #{"https://example.org/roles/regulatory-risk-controller"}}]
 
      ;; Add some trades
-     [::xt/put {:xt/id "https://example.org/trades/01"
+     [::xt/put {:xt/id "https://example.org/trades/S01"
+                ::type "Trade"
+                ::desk "https://example.org/desks/equities/swaps"
+                ::trader "https://example.org/people/sam"
+                ::value 95}]
+
+     [::xt/put {:xt/id "https://example.org/trades/B01"
                 ::type "Trade"
                 ::desk "https://example.org/desks/equities/bonds"
                 ::trader "https://example.org/people/brian"
                 ::value 20}]
 
-     [::xt/put {:xt/id "https://example.org/trades/02"
+     [::xt/put {:xt/id "https://example.org/trades/B02"
                 ::type "Trade"
                 ::desk "https://example.org/desks/equities/bonds"
                 ::trader "https://example.org/people/brian"
                 ::value -30}]
 
+     [::xt/put {:xt/id "https://example.org/trades/B03"
+                ::type "Trade"
+                ::desk "https://example.org/desks/equities/bonds"
+                ::trader "https://example.org/people/betty"
+                ::value 180}]
+
      ;; Add an action that lists trades
      [::xt/put {:xt/id "https://example.org/actions/list-trades"
                 ::site/type "Action"
                 ::pass/rules
-                '[[(allowed? permission subject action resource)
-                   [resource ::type "Trade"]
-                   [permission ::role role]
-                   [subject ::role role]
+                '[
+                  ;; Allow traders to see their own trades
+                  [(allowed? permission subject action trade)
+                   [permission ::role "https://example.org/roles/trader"]
+                   [subject ::role "https://example.org/roles/trader"]
+                   [action :xt/id "https://example.org/actions/list-trades"]
+                   [trade ::type "Trade"]
+                   [trade ::trader subject]
+                   ]
+
+                  [(allowed? permission subject action trade)
+                   [permission ::role "https://example.org/roles/head-of-desk"]
+                   [subject ::role "https://example.org/roles/head-of-desk"]
+                   [action :xt/id "https://example.org/actions/list-trades"]
+                   [trade ::type "Trade"]
+                   [trade ::desk desk]
+                   [subject ::desk desk]
+                   ]
+
+                  [(allowed? permission subject action trade)
+                   [permission ::role "https://example.org/roles/regulatory-risk-controller"]
+                   [subject ::role "https://example.org/roles/regulatory-risk-controller"]
+                   [action :xt/id "https://example.org/actions/list-trades"]
+                   [trade ::type "Trade"]
                    ]]}]
 
      ;; Add a permission that lets traders list trades
      [::xt/put {:xt/id "https://example.org/permissions/traders-can-list-trades"
                 ::site/type "Permission"
                 ::pass/action "https://example.org/actions/list-trades"
-                ::pass/purpose nil
-                ::role #{"https://example.org/roles/trader"}
+                ::pass/purpose #{"Trading"}
+                ::role "https://example.org/roles/trader"
+                }]
+
+     [::xt/put {:xt/id "https://example.org/permissions/heads-of-desks-can-list-trades"
+                ::site/type "Permission"
+                ::pass/action "https://example.org/actions/list-trades"
+                ::pass/purpose #{"Trading"}
+                ::role "https://example.org/roles/head-of-desk"
+                }]
+
+     [::xt/put {:xt/id "https://example.org/permissions/control-can-list-all-trades"
+                ::site/type "Permission"
+                ::pass/action "https://example.org/actions/list-trades"
+                ::pass/purpose #{"RiskReporting"}
+                ::role "https://example.org/roles/regulatory-risk-controller"
                 }]])
 
    (let [db (xt/db *xt-node*)
-         action (xt/entity db "https://example.org/actions/list-trades")]
-     ;; Use the list-trades action to look up the rules
+         action (xt/entity db "https://example.org/actions/list-trades")
+
+         q (fn [subject purpose]
+             (xt/q
+              db
+              {:find '[(pull resource [*]) (pull permission [*])]
+               :keys '[resource permission]
+               :where '[
+                        [action ::site/type "Action"]
+                        [permission ::site/type "Permission"]
+                        [permission ::pass/action action]
+                        [permission ::pass/purpose purpose]
+                        (allowed? permission subject action resource)
+                        ]
+               :rules (::pass/rules action)
+               :in '[subject action purpose]}
+
+              subject (:xt/id action) purpose
+              )
+             )
+         ]
 
      (assert action)
 
-     (xt/q
-      db
-      {:find '[(pull resource [*]) (pull permission [*])]
-       :keys '[resource permission]
-       :where '[
-
-                [action ::site/type "Action"]
-
-                ;; Only consider a permitted action
-                [permission ::site/type "Permission"]
-                [permission ::pass/action action]
-                (allowed? permission subject action resource)
-
-                ;; Only permissions that match our purpose
-                [permission ::pass/purpose purpose]
-                ]
-       :rules (::pass/rules action)
-       :in '[subject action purpose]
-       }
-      "https://example.org/people/brian"
-      "https://example.org/actions/list-trades"
-      nil
-      )
+     (q
+      "https://example.org/people/cameron"
+      "RiskReporting")
 
      ;; use an action to 'join' from a set of entities to another set
      )))
