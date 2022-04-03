@@ -1336,28 +1336,29 @@
    (let [db (xt/db *xt-node*)
          action (xt/entity db "https://example.org/actions/list-trades")
 
-         q (fn [subject purpose expected]
-             (let [resources
-                   (authz/pull-allowed-resources
-                    db
-                    #{"https://example.org/actions/list-trades"
-                      "https://example.org/actions/control-list-trades"}
-                    {::pass/subject subject
-                     ::pass/purpose purpose}
-                    )]
-               (is (= expected (count resources)))
-               (assert (= expected (count resources)))
-               resources
-               ))]
+         pull-allowed-resources
+         (fn [subject purpose expected]
+           (let [resources
+                 (authz/pull-allowed-resources
+                  db
+                  #{"https://example.org/actions/list-trades"
+                    "https://example.org/actions/control-list-trades"}
+                  {::pass/subject subject
+                   ::pass/purpose purpose}
+                  )]
+             (is (= expected (count resources)))
+             (assert (= expected (count resources)))
+             resources
+             ))]
 
      (assert action)
 
-     (q "https://example.org/people/sam" "Trading" 1)
-     (q "https://example.org/people/brian" "Trading" 2)
-     (q "https://example.org/people/betty" "Trading" 1)
-     (q "https://example.org/people/bernie" "Trading" (+ 1 2))
-     (q "https://example.org/people/susie" "Trading" (+ 1 0))
-     (q "https://example.org/people/cameron" "RiskReporting" 4)
+     (pull-allowed-resources "https://example.org/people/sam" "Trading" 1)
+     (pull-allowed-resources "https://example.org/people/brian" "Trading" 2)
+     (pull-allowed-resources "https://example.org/people/betty" "Trading" 1)
+     (pull-allowed-resources "https://example.org/people/bernie" "Trading" (+ 1 2))
+     (pull-allowed-resources "https://example.org/people/susie" "Trading" (+ 1 0))
+     (pull-allowed-resources "https://example.org/people/cameron" "RiskReporting" 4)
 
      ;; use an action to 'join' from a set of entities to another set
 
