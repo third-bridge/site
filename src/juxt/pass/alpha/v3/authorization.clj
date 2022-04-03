@@ -120,6 +120,8 @@
 
           resource actions purpose))))
 
+;; TODO: This subject should be folded into the pass-ctx as it's optional (could
+;; be an anonymous action)
 (defn pull-allowed-resource
   "Given a subject, a set of possible actions and a resource, pull the allowed
   attributes."
@@ -138,6 +140,8 @@
                         check-result))]
     (xt/pull db pull-expr resource)))
 
+;; TODO: This subject should be folded into the pass-ctx as it's optional (could
+;; be an anonymous action)
 (defn pull-allowed-resources
   "Given a subject and a set of possible actions, which resources are allowed, and
   get me the documents"

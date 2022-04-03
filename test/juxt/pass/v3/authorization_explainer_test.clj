@@ -1198,7 +1198,7 @@
 ;; People in the regulatory control have a role which allows them to see all trades
 
 
-((t/join-fixtures [with-xt])
+#_((t/join-fixtures [with-xt])
  (fn []
    (submit-and-await!
     [
