@@ -1398,7 +1398,8 @@
       "https://example.org/people/bernie" "Personal" 4)
 
      ;; Bernie sees the trades from her desk, see wants more details on the
-     ;; trader concerned.
+     ;; trader concerned. Works the same with https://example.org/people/susie
+
      (let [subject "https://example.org/people/bernie"
            trades
            (authz/pull-allowed-resources
@@ -1416,7 +1417,6 @@
         {::pass/subject subject
          ::pass/purpose "Personal"}))
 
-     ;; Susie can get Sam's details
 
      ;; TODO: Use an action to 'join' from a set of entities to another set
 
