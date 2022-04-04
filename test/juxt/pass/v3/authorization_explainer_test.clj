@@ -9,7 +9,6 @@
   (:require
    [clojure.set :as set]
    [clojure.test :refer [deftest is are use-fixtures] :as t]
-   [clojure.walk :refer [postwalk]]
    [juxt.pass.alpha :as-alias pass]
    [juxt.pass.alpha.malli :as-alias pass.malli]
    [juxt.pass.alpha.process :as-alias pass.process]
@@ -1189,8 +1188,6 @@
 ;; Traders belong to a desk
 ;; Heads of desk can see all their desk's trades
 ;; People in the regulatory control have a role which allows them to see all trades
-
-
 ((t/join-fixtures [with-xt])
  (fn []
    (submit-and-await!
@@ -1356,9 +1353,7 @@
      [::xt/put {:xt/id "https://example.org/permissions/heads-of-desks-can-query-own-trader-info"
                 ::site/type "Permission"
                 ::pass/action "https://example.org/actions/get-trader-personal-info"
-                ::pass/purpose #{"Personal"}}]
-
-     ])
+                ::pass/purpose #{"Personal"}}]])
 
    (let [db (xt/db *xt-node*)
          action (xt/entity db "https://example.org/actions/list-trades")
@@ -1370,12 +1365,10 @@
                   db
                   actions
                   {::pass/subject subject
-                   ::pass/purpose purpose}
-                  )]
+                   ::pass/purpose purpose})]
              (is (= expected (count resources)))
              (assert (= expected (count resources)))
-             resources
-             ))]
+             resources))]
 
      (assert action)
 
@@ -1386,8 +1379,7 @@
        (pull-allowed-resources actions "https://example.org/people/betty" "Trading" 1)
        (pull-allowed-resources actions "https://example.org/people/bernie" "Trading" (+ 1 2))
        (pull-allowed-resources actions "https://example.org/people/susie" "Trading" (+ 1 0))
-       (pull-allowed-resources actions "https://example.org/people/cameron" "RiskReporting" 4)
-       )
+       (pull-allowed-resources actions "https://example.org/people/cameron" "RiskReporting" 4))
 
      (pull-allowed-resources
       #{"https://example.org/actions/get-trader-personal-info"}
@@ -1418,9 +1410,5 @@
          ::pass/purpose "Personal"}))
 
 
-     ;; TODO: Use an action to 'join' from a set of entities to another set
-
      ;; TODO: Try making the role membership the permission
-
-
      )))
