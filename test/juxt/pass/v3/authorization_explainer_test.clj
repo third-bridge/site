@@ -2,9 +2,6 @@
 
 #_(remove-ns 'juxt.pass.v3.authorization-explainer-test)
 
-;; TODO: Build back access-token concept, apps, scopes and filtering of available
-;; actions.
-
 (ns juxt.pass.v3.authorization-explainer-test
   (:require
    [clojure.set :as set]
@@ -1409,6 +1406,8 @@
         {::pass/subject subject
          ::pass/purpose "Personal"}))
 
-
      ;; TODO: Try making the role membership the permission
      )))
+
+;; TODO: Build back access-token concept, apps, scopes and filtering of available
+;; actions.
