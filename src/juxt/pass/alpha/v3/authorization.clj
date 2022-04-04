@@ -152,14 +152,12 @@
           :keys '[resource action purpose permission]
           :where
           (cond-> '[
-                    [action ::site/type "Action"]
-
                     ;; Only consider given actions
+                    [action ::site/type "Action"]
                     [(contains? actions action)]
 
-                    ;; Only consider a permitted action
+                    ;; Only consider allowed permssions
                     [permission ::site/type "Permission"]
-                    [permission ::pass/action action]
                     (allowed? permission subject action resource)
 
                     ;; Only permissions that match our purpose
