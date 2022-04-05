@@ -84,7 +84,7 @@
   (when kid
     (some (fn [m] (when (= kid (get m "kid")) m)) (get jwks "keys"))))
 
-(defn decode-id-token [req jwt jwks openid-configuration {::pass/keys [oauth2-client-id] :as oauth-client}]
+(defn decode-id-token [req jwt jwks openid-configuration oauth2-client-id]
   (when jwt
     (let [decoded-jwt (JWT/decode jwt)
           kid (.getKeyId decoded-jwt)
@@ -192,6 +192,10 @@
           (xt/submit-tx xt-node [[:xtdb.api/put result]])
           (::pass/jwks result))))))
 
+(identity resource)
+
+
+
 (defn callback
   "OAuth2 callback"
   [{::site/keys [resource db xt-node]
@@ -205,9 +209,10 @@
   (when-not session
     (return req 500 "No session found" {}))
 
+  (def resource resource)
+
   ;; Exchange code for JWT
   (let [{::pass/keys [oauth2-client]} resource
-
         {::pass/keys [oauth2-client-id oauth2-client-secret redirect-uri openid-provider]}
         (xt/entity db oauth2-client)
 
@@ -271,7 +276,7 @@
 
         json-body (json/read-value body)
 
-        id-token (decode-id-token req (get json-body "id_token") jwks openid-configuration oauth2-client)
+        id-token (decode-id-token req (get json-body "id_token") jwks openid-configuration oauth2-client-id)
 
         original-nonce (::pass/nonce session)
         claimed-nonce (get-in id-token [:claims "nonce"])

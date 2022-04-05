@@ -456,22 +456,22 @@
   (create-action!
    xt-node
    config
-   {:xt/id (str (base-uri) "/actions/put-immutable-public-resource")
+   {:xt/id (str base-uri "/actions/put-immutable-public-resource")
     :juxt.pass.alpha/scope "write:resource"
 
     :juxt.pass.alpha.malli/args-schema
     [:tuple
      [:map
-      [:xt/id [:re (str (base-uri) "/.*")]]]]
+      [:xt/id [:re (str base-uri "/.*")]]]]
 
     :juxt.pass.alpha/process
     [
      [:juxt.pass.alpha.process/update-in
       [0] 'merge
       {::http/methods
-       {:get {::pass/actions #{(str (base-uri) "/actions/get-public-resource")}}
-        :head {::pass/actions #{(str (base-uri) "/actions/get-public-resource")}}
-        :options {::pass/actions #{(str (base-uri) "/actions/get-options")}}}}]
+       {:get {::pass/actions #{(str base-uri "/actions/get-public-resource")}}
+        :head {::pass/actions #{(str base-uri "/actions/get-public-resource")}}
+        :options {::pass/actions #{(str base-uri "/actions/get-options")}}}}]
 
      [:juxt.pass.alpha.malli/validate]
      [:xtdb.api/put]]
@@ -484,55 +484,60 @@
   (grant-permission!
    xt-node
    config
-   {:xt/id (str (base-uri) "/permissions/repl/put-immutable-public-resource")
+   {:xt/id (str base-uri "/permissions/repl/put-immutable-public-resource")
     :juxt.pass.alpha/subject "urn:site:subjects:repl"
-    :juxt.pass.alpha/action #{(str (base-uri) "/actions/put-immutable-public-resource")}
+    :juxt.pass.alpha/action #{(str base-uri "/actions/put-immutable-public-resource")}
     :juxt.pass.alpha/purpose nil})
 
   ;; Create the action in order to read the resource
   (create-action!
    xt-node
    config
-   {:xt/id (str (base-uri) "/actions/get-public-resource")
+   {:xt/id (str base-uri "/actions/get-public-resource")
     :juxt.pass.alpha/scope "read:resource"
 
     :juxt.pass.alpha/rules
     [
      ['(allowed? permission subject action resource)
-      ['permission :xt/id (str (base-uri) "/permissions/public-resources-to-all")]]]})
+      ['permission :xt/id (str base-uri "/permissions/public-resources-to-all")]]]})
 
   ;; All actions must be granted a permission. This permission allows anyone to
   ;; call get-public-resource
   (grant-permission!
    xt-node
    config
-   {:xt/id (str (base-uri) "/permissions/public-resources-to-all")
-    :juxt.pass.alpha/action #{(str (base-uri) "/actions/get-public-resource")}
+   {:xt/id (str base-uri "/permissions/public-resources-to-all")
+    :juxt.pass.alpha/action #{(str base-uri "/actions/get-public-resource")}
     :juxt.pass.alpha/purpose nil}))
 
-(defn add-openid-provider! [config-uri]
+(defn add-openid-provider! [xt-node config-uri]
   (let [_ (printf "Loading OpenID configuration from %s\n" config-uri)
         config (json/read-value (slurp config-uri))]
     (printf "Issuer added: %s\n" (get config "issuer"))
     (put!
+     xt-node
      {:xt/id config-uri
       :juxt.pass.alpha/openid-configuration config})))
 
 (defn add-openid-login!
   [xt-node {::site/keys [base-uri] :as config}
    & {:keys [name provider client-id client-secret]}]
+
+  (assert name)
   (install-put-immutable-public-resource-action! xt-node config)
 
-  (let [client (format "%s/_site/openid/%s/client" (base-uri) name)
-        login (format "%s/_site/openid/%s/login" (base-uri) name)
-        callback (format "%s/_site/openid/%s/callback" (base-uri) name)
+  (let [client (format "%s/_site/openid/%s/client" base-uri name)
+        login (format "%s/_site/openid/%s/login" base-uri name)
+        callback (format "%s/_site/openid/%s/callback" base-uri name)
         put-immutable-public-resource
         (fn [doc]
           (do-action
-           (str (base-uri) "/actions/put-immutable-public-resource")
+           xt-node
+           (str base-uri "/actions/put-immutable-public-resource")
            doc))]
 
     (put!
+     xt-node
      {:xt/id client
       :juxt.pass.alpha/openid-provider provider
       :juxt.pass.alpha/oauth2-client-id client-id
