@@ -145,6 +145,8 @@
   in that set."
   [db actions {::pass/keys [subject purpose include-rules resources-in-scope]}]
   (let [rules (actions->rules db actions)
+        _ (when-not (seq rules)
+            (throw (ex-info "No rules found for actions" {:actions actions})))
         results
         (xt/q
          db
@@ -168,7 +170,7 @@
 
             resources-in-scope
             (conj '[(contains? resources-in-scope resource)]
-             ))
+                  ))
 
           :rules (vec (concat rules include-rules))
 

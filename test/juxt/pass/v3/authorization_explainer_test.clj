@@ -1067,7 +1067,271 @@
 ;; TODO: Test actions like this:
 ;;(authz/process-args CREATE_PERSON_ACTION [{::username "alice"}])
 
+;; Create a trading desk - equities swaps and corporate bonds
+;; Traders can see their own trades, but not the trades others
+;; Traders belong to a desk
+;; Heads of desk can see all their desk's trades
+;; People in the regulatory control have a role which allows them to see all trades
+(deftest roles-as-permissions-test
+  (submit-and-await!
+   [
+    ;; Desks
+    [::xt/put {:xt/id "https://example.org/desks/equities/swaps"
+               ::type "Desk"}]
+    [::xt/put {:xt/id "https://example.org/desks/equities/bonds"
+               ::type "Desk"}]
 
+    ;; Actors
+
+    ;; Sam
+    [::xt/put {:xt/id "https://example.org/people/sam"
+               ::type "Person"
+               ::name "Sam Charlton"}]
+
+    ;; Sam is a swaps trader. She has the 'permission' to assume the role of a
+    ;; trader. This document authorizes her, according to the rules of
+    ;; (potentially various) actions.
+    [::xt/put {:xt/id "https://example.org/people/sam/position"
+               ::site/type "Permission"
+               ::pass/purpose "Trading"
+               ::person "https://example.org/people/sam"
+               ::role #{"https://example.org/roles/trader"}
+               ::desk "https://example.org/desks/equities/swaps"}]
+
+    ;; Steve
+    [::xt/put {:xt/id "https://example.org/people/steve"
+               ::type "Person"
+               ::name "Steven Greene"}]
+
+    ;; Steve is also a swaps trader
+    [::xt/put {:xt/id "https://example.org/people/steve/position"
+               ::site/type "Permission"
+               ::pass/purpose "Trading"
+               ::person "https://example.org/people/steve"
+               ::role #{"https://example.org/roles/trader"}
+               ::desk "https://example.org/desks/equities/swaps"}]
+
+    ;; Susie
+    [::xt/put {:xt/id "https://example.org/people/susie"
+               ::type "Person"
+               ::name "Susie Young"}]
+
+    ;; Susie is the head of the swaps desk
+    [::xt/put {:xt/id "https://example.org/people/susie/position"
+               ::site/type "Permission"
+               ::pass/purpose #{"Trading" "LineManagement"}
+               ::person "https://example.org/people/susie"
+               ::role #{"https://example.org/roles/head-of-desk"}
+               ::desk "https://example.org/desks/equities/swaps"}]
+
+    ;; Brian is a bond trader
+    [::xt/put {:xt/id "https://example.org/people/brian"
+               ::type "Person"
+               ::name "Brian Tanner"}]
+
+    [::xt/put {:xt/id "https://example.org/people/brian/position"
+               ::site/type "Permission"
+               ::pass/purpose "Trading"
+               ::person "https://example.org/people/brian"
+               ::role #{"https://example.org/roles/trader"}
+               ::desk "https://example.org/desks/equities/bonds"}]
+
+    ;; Betty is also a bond trader
+    [::xt/put {:xt/id "https://example.org/people/betty"
+               ::type "Person"
+               ::name "Betty Jacobs"}]
+
+    [::xt/put {:xt/id "https://example.org/people/betty/position"
+               ::site/type "Permission"
+               ::pass/purpose "Trading"
+               ::person "https://example.org/people/betty"
+               ::role #{"https://example.org/roles/trader"}
+               ::desk "https://example.org/desks/equities/bonds"}]
+
+    ;; Boris is also a bond trader
+    [::xt/put {:xt/id "https://example.org/people/boris"
+               ::type "Person"
+               ::name "Boris Sokolov"}]
+
+    [::xt/put {:xt/id "https://example.org/people/boris/position"
+               ::site/type "Permission"
+               ::pass/purpose "Trading"
+               ::person "https://example.org/people/boris"
+               ::role #{"https://example.org/roles/trader"}
+               ::desk "https://example.org/desks/equities/bonds"}]
+
+    ;; Brian and Betty reports to Bernie, head of the bonds desk
+    [::xt/put {:xt/id "https://example.org/people/bernie"
+               ::type "Person"
+               ::name "Bernadette Pulson"}]
+
+    [::xt/put {:xt/id "https://example.org/people/bernie/position"
+               ::site/type "Permission"
+               ::pass/purpose #{"Trading" "LineManagement"}
+               ::person "https://example.org/people/bernie"
+               ::role #{"https://example.org/roles/head-of-desk"}
+               ::desk "https://example.org/desks/equities/bonds"}]
+
+    ;; Cameron works in one of the bank's control functions, ensuring risk is
+    ;; reported to the regulator. He needs to see across the whole equity trade
+    ;; population.
+    [::xt/put {:xt/id "https://example.org/people/cameron"
+               ::type "Person"
+               ::name "Cameron White"}]
+
+    [::xt/put {:xt/id "https://example.org/people/cameron/position"
+               ::site/type "Permission"
+               ::pass/purpose "RiskReporting"
+               ::person "https://example.org/people/cameron"
+               ;; Cameron's role means he can see all trades, but can't see trader details
+               ::role #{"https://example.org/roles/regulatory-risk-controller"}}]
+
+    ;; Add some trades
+    [::xt/put {:xt/id "https://example.org/trades/S01"
+               ::type "Trade"
+               ::desk "https://example.org/desks/equities/swaps"
+               ::trader "https://example.org/people/sam"
+               ::value 95}]
+
+    [::xt/put {:xt/id "https://example.org/trades/B01"
+               ::type "Trade"
+               ::desk "https://example.org/desks/equities/bonds"
+               ::trader "https://example.org/people/brian"
+               ::value 20}]
+
+    [::xt/put {:xt/id "https://example.org/trades/B02"
+               ::type "Trade"
+               ::desk "https://example.org/desks/equities/bonds"
+               ::trader "https://example.org/people/brian"
+               ::value -30}]
+
+    [::xt/put {:xt/id "https://example.org/trades/B03"
+               ::type "Trade"
+               ::desk "https://example.org/desks/equities/bonds"
+               ::trader "https://example.org/people/betty"
+               ::value 180}]
+
+    ;; Add an action that lists trades, pulling all attributes
+    [::xt/put {:xt/id "https://example.org/actions/list-trades"
+               ::site/type "Action"
+               ::pass/pull '[*]
+               ::pass/rules
+               '[
+                 ;; Allow traders to see their own trades
+                 [(allowed? role-membership person action trade)
+                  [action :xt/id "https://example.org/actions/list-trades"]
+                  [role-membership ::role "https://example.org/roles/trader"]
+                  [role-membership ::person person]
+                  [trade ::type "Trade"]
+                  [trade ::trader person]]
+
+                 [(allowed? role-membership person action trade)
+
+                  ;; Subjects who have the head-of-desk role
+                  [role-membership ::role "https://example.org/roles/head-of-desk"]
+                  [role-membership ::person person]
+                  ;; Can list
+                  [action :xt/id "https://example.org/actions/list-trades"]
+                  ;; trades
+                  [trade ::type "Trade"]
+                  ;; from the same desk
+                  [trade ::desk desk]
+                  [role-membership ::desk desk]]]}]
+
+    ;; Add an action that lists trades, pulling only that trade attributes that
+    ;; are accessible to a regulatory risk controller.
+    [::xt/put {:xt/id "https://example.org/actions/control-list-trades"
+               ::site/type "Action"
+               ::pass/pull '[::desk ::value :xt/id]
+               ::pass/rules
+               '[
+                 [(allowed? role-membership person action trade)
+                  [role-membership ::role "https://example.org/roles/regulatory-risk-controller"]
+                  [role-membership ::person person]
+                  [action :xt/id "https://example.org/actions/control-list-trades"]
+                  [trade ::type "Trade"]
+                  ]]}]
+
+    [::xt/put {:xt/id "https://example.org/actions/get-trader-personal-info"
+               ::site/type "Action"
+               ::pass/pull '[*]
+               ::pass/rules
+               '[
+                 [(allowed? role-membership head-of-desk get-trader-personal-info trader)
+
+                  ;; Subjects who have the head-of-desk role
+                  [role-membership ::site/type "Permission"]
+                  [role-membership ::role "https://example.org/roles/head-of-desk"]
+                  [role-membership ::person head-of-desk]
+
+                  [get-trader-personal-info :xt/id "https://example.org/actions/get-trader-personal-info"]
+
+                  [trader ::type "Person"]
+                  ;; Only for a trader that works on the same desk
+                  [trader-role-membership ::site/type "Permission"]
+                  [trader-role-membership ::person trader]
+                  [trader-role-membership ::desk desk]
+                  [role-membership ::desk desk]]]}]])
+
+  (let [db (xt/db *xt-node*)
+        action (xt/entity db "https://example.org/actions/list-trades")
+
+        pull-allowed-resources
+        (fn [actions subject purpose expected]
+          (let [resources
+                (authz/pull-allowed-resources
+                 db
+                 actions
+                 {::pass/subject subject
+                  ::pass/purpose purpose})]
+            (is (= expected (count resources)))
+            (assert (= expected (count resources)))
+            resources))]
+
+    (assert action)
+
+    (let [actions #{"https://example.org/actions/list-trades"
+                    "https://example.org/actions/control-list-trades"}]
+      (pull-allowed-resources actions "https://example.org/people/sam" "Trading" 1)
+      (pull-allowed-resources actions "https://example.org/people/brian" "Trading" 2)
+      (pull-allowed-resources actions "https://example.org/people/betty" "Trading" 1)
+      (pull-allowed-resources actions "https://example.org/people/bernie" "Trading" (+ 1 2))
+      (pull-allowed-resources actions "https://example.org/people/susie" "Trading" (+ 1 0))
+      (pull-allowed-resources actions "https://example.org/people/cameron" "RiskReporting" 4))
+
+    (pull-allowed-resources
+     #{"https://example.org/actions/get-trader-personal-info"}
+     "https://example.org/people/susie" "LineManagement" 3)
+
+    (pull-allowed-resources
+     #{"https://example.org/actions/get-trader-personal-info"}
+     "https://example.org/people/bernie" "LineManagement" 4)
+
+    ;; Bernie sees the trades from her desk, see wants more details on the
+    ;; trader concerned. Works the same with https://example.org/people/susie
+
+    (let [subject "https://example.org/people/bernie"
+          trades
+          (authz/pull-allowed-resources
+           db
+           #{"https://example.org/actions/list-trades"}
+           {::pass/subject subject
+            ::pass/purpose "Trading"})
+          result
+          (->>
+           (authz/join-with-pull-allowed-resources
+            db
+            trades
+            ::trader
+            #{"https://example.org/actions/get-trader-personal-info"}
+            {::pass/subject subject
+             ::pass/purpose "LineManagement"})
+           (map (juxt :xt/id identity))
+           (into {}))]
+
+      (is (= "Trade" (get-in result ["https://example.org/trades/B03" ::type]) ))
+      (is (= "Betty Jacobs" (get-in result ["https://example.org/trades/B03" ::trader ::name])))
+      (is (= 180 (get-in result ["https://example.org/trades/B03" ::value]))))))
 
 
 ;; TODO: Extend to GraphQL
@@ -1189,253 +1453,12 @@
        (xt/entity db (get-in tmr [::pass/puts 0]))))))
 
 
-;; Create a trading desk - equities swaps and corporate bonds
-;; Traders can see their own trades, but not the trades others
-;; Traders belong to a desk
-;; Heads of desk can see all their desk's trades
-;; People in the regulatory control have a role which allows them to see all trades
+
+
 #_((t/join-fixtures [with-xt])
- (fn []
-   (submit-and-await!
-    [
-     ;; Desks
-     [::xt/put {:xt/id "https://example.org/desks/equities/swaps"
-                ::type "Desk"}]
-     [::xt/put {:xt/id "https://example.org/desks/equities/bonds"
-                ::type "Desk"}]
-
-     ;; Actors
-
-     ;; Sam
-     [::xt/put {:xt/id "https://example.org/people/sam"
-                ::type "Person"
-                ::name "Sam Charlton"}]
-
-     ;; Sam is a swaps trader
-     [::xt/put {:xt/id "https://example.org/people/sam/position"
-                ::site/type "Permission"
-                ::pass/purpose "Trading"
-                ::person "https://example.org/people/sam"
-                ::role #{"https://example.org/roles/trader"}
-                ::desk "https://example.org/desks/equities/swaps"}]
-
-     #_[::xt/put {:xt/id "https://example.org/people/steve"
-                ::type "Person"
-                ::name "Steven Greene"
-                ::role #{"https://example.org/roles/trader"}
-                ::desk "https://example.org/desks/equities/swaps"}]
-
-     ;; Susie is the head of the swaps desk
-     #_[::xt/put {:xt/id "https://example.org/people/susie"
-                ::type "Person"
-                ::name "Susie Young"
-                ::role #{"https://example.org/roles/head-of-desk"}
-                ::desk "https://example.org/desks/equities/swaps"}]
-
-     ;; Brian is a bond trader
-     #_[::xt/put {:xt/id "https://example.org/people/brian"
-                ::type "Person"
-                ::name "Brian Tanner"
-                ::role #{"https://example.org/roles/trader"}
-                ::desk "https://example.org/desks/equities/bonds"}]
-
-     ;; Betty is also a bond trader
-     #_[::xt/put {:xt/id "https://example.org/people/betty"
-                ::type "Person"
-                ::name "Betty Jacobs"
-                ::role #{"https://example.org/roles/trader"}
-                ::desk "https://example.org/desks/equities/bonds"}]
-
-     ;; Boris is also a bond trader
-     #_[::xt/put {:xt/id "https://example.org/people/boris"
-                ::type "Person"
-                ::name "Boris Sokolov"
-                ::role #{"https://example.org/roles/trader"}
-                ::desk "https://example.org/desks/equities/bonds"}]
-
-     ;; Brian and Betty reports to Bernie, head of the bonds desk
-     #_[::xt/put {:xt/id "https://example.org/people/bernie"
-                ::type "Person"
-                ::name "Bernadette Pulson"
-                ::role #{"https://example.org/roles/head-of-desk"}
-                ::desk "https://example.org/desks/equities/bonds"}]
-
-     ;; Cameron works in one of the bank's control functions, ensuring risk is
-     ;; reported to the regulator. He needs to see across the whole equity trade
-     ;; population.
-     #_[::xt/put {:xt/id "https://example.org/people/cameron"
-                ::type "Person"
-                ::name "Cameron White"
-                ;; Cameron's role means he can see all trades, but can't see trader details
-                ::role #{"https://example.org/roles/regulatory-risk-controller"}}]
-
-     ;; Add some trades
-     [::xt/put {:xt/id "https://example.org/trades/S01"
-                ::type "Trade"
-                ::desk "https://example.org/desks/equities/swaps"
-                ::trader "https://example.org/people/sam"
-                ::value 95}]
-
-     #_[::xt/put {:xt/id "https://example.org/trades/B01"
-                ::type "Trade"
-                ::desk "https://example.org/desks/equities/bonds"
-                ::trader "https://example.org/people/brian"
-                ::value 20}]
-
-     #_[::xt/put {:xt/id "https://example.org/trades/B02"
-                ::type "Trade"
-                ::desk "https://example.org/desks/equities/bonds"
-                ::trader "https://example.org/people/brian"
-                ::value -30}]
-
-     #_[::xt/put {:xt/id "https://example.org/trades/B03"
-                ::type "Trade"
-                ::desk "https://example.org/desks/equities/bonds"
-                ::trader "https://example.org/people/betty"
-                ::value 180}]
-
-     ;; Add an action that lists trades, pulling all attributes
-     [::xt/put {:xt/id "https://example.org/actions/list-trades"
-                ::site/type "Action"
-                ::pass/pull '[*]
-                ::pass/rules
-                '[
-                  ;; Allow traders to see their own trades
-                  [(allowed? permission subject action resource)
-                   [permission ::role "https://example.org/roles/trader"]
-                   ;;[subject ::role "https://example.org/roles/trader"]
-                   [resource ::type "Trade"]
-                   ;;[trade ::trader subject]
-                   ]
-
-                  #_[(allowed? permission subject action trade)
-                   [permission ::person subject]
-                   [permission ::role "https://example.org/roles/trader"]
-                   [subject ::role "https://example.org/roles/head-of-desk"]
-                   [trade ::type "Trade"]
-                   [trade ::desk desk]
-                   [subject ::desk desk]
-                   ]]}]
-
-     ;; Add an action that lists trades, pulling only that trade attributes that
-     ;; are accessible to a regulatory risk controller.
-     #_[::xt/put {:xt/id "https://example.org/actions/control-list-trades"
-                ::site/type "Action"
-                ::pass/pull '[::desk ::value :xt/id]
-                ::pass/rules
-                '[
-                  [(allowed? permission subject action trade)
-                   [permission ::role "https://example.org/roles/regulatory-risk-controller"]
-                   [subject ::role "https://example.org/roles/regulatory-risk-controller"]
-                   [trade ::type "Trade"]
-                   ]]}]
-
-     ;; Add a permission that lets traders list trades
-     #_[::xt/put {:xt/id "https://example.org/permissions/traders-can-list-trades"
-                ::site/type "Permission"
-                ::pass/action "https://example.org/actions/list-trades"
-                ::pass/purpose #{"Trading"}
-                ::role "https://example.org/roles/trader"
-                }]
-
-     #_[::xt/put {:xt/id "https://example.org/permissions/heads-of-desks-can-list-trades"
-                ::site/type "Permission"
-                ::pass/action "https://example.org/actions/list-trades"
-                ::pass/purpose #{"Trading"}
-                ::role "https://example.org/roles/head-of-desk"
-                }]
-
-     #_[::xt/put {:xt/id "https://example.org/permissions/control-can-list-all-trades"
-                ::site/type "Permission"
-                ::pass/action "https://example.org/actions/control-list-trades"
-                ::pass/purpose #{"RiskReporting"}
-                ::role "https://example.org/roles/regulatory-risk-controller"
-                }]
-
-     #_[::xt/put {:xt/id "https://example.org/actions/get-trader-personal-info"
-                ::site/type "Action"
-                ::pass/pull '[*]
-                ::pass/rules
-                '[
-                  [(allowed? permission subject action trader)
-                   [permission :xt/id "https://example.org/permissions/heads-of-desks-can-query-own-trader-info"]
-                   [subject ::role "https://example.org/roles/head-of-desk"]
-                   [trader ::type "Person"]
-                   ;; Only for a trader that works on the same desk
-                   [trader ::desk desk]
-                   [subject ::desk desk]]]}]
-
-     #_[::xt/put {:xt/id "https://example.org/permissions/heads-of-desks-can-query-own-trader-info"
-                ::site/type "Permission"
-                ::pass/action "https://example.org/actions/get-trader-personal-info"
-                ::pass/purpose #{"Personal"}}]])
-
-   (let [db (xt/db *xt-node*)
-         action (xt/entity db "https://example.org/actions/list-trades")
-
-         pull-allowed-resources
-         (fn [actions subject purpose expected]
-           (let [resources
-                 (authz/pull-allowed-resources
-                  db
-                  actions
-                  {::pass/subject subject
-                   ::pass/purpose purpose})]
-             (is (= expected (count resources)))
-             (assert (= expected (count resources)))
-             resources))]
-
-     (assert action)
-
-     (authz/pull-allowed-resources
-      db
-      #{"https://example.org/actions/list-trades"
-        ;;"https://example.org/actions/control-list-trades"
-        }
-      {::pass/subject "https://example.org/people/sam"
-       ::pass/purpose "Trading"
-       })
-
-     #_(do
-         (let [actions #{"https://example.org/actions/list-trades"
-                         "https://example.org/actions/control-list-trades"}]
-           (pull-allowed-resources actions "https://example.org/people/sam" "Trading" 1)
-           (pull-allowed-resources actions "https://example.org/people/brian" "Trading" 2)
-           (pull-allowed-resources actions "https://example.org/people/betty" "Trading" 1)
-           (pull-allowed-resources actions "https://example.org/people/bernie" "Trading" (+ 1 2))
-           (pull-allowed-resources actions "https://example.org/people/susie" "Trading" (+ 1 0))
-           (pull-allowed-resources actions "https://example.org/people/cameron" "RiskReporting" 4))
-
-         (pull-allowed-resources
-          #{"https://example.org/actions/get-trader-personal-info"}
-          "https://example.org/people/susie" "Personal" 3)
-
-         (pull-allowed-resources
-          #{"https://example.org/actions/get-trader-personal-info"}
-          "https://example.org/people/bernie" "Personal" 4)
-
-         ;; Bernie sees the trades from her desk, see wants more details on the
-         ;; trader concerned. Works the same with https://example.org/people/susie
-
-         (let [subject "https://example.org/people/bernie"
-               trades
-               (authz/pull-allowed-resources
-                db
-                #{"https://example.org/actions/list-trades"}
-                {::pass/subject subject
-                 ::pass/purpose "Trading"})]
-
-           ;; This is the join action.
-           (authz/join-with-pull-allowed-resources
-            db
-            trades
-            ::trader
-            #{"https://example.org/actions/get-trader-personal-info"}
-            {::pass/subject subject
-             ::pass/purpose "Personal"})))
-
-     ;; TODO: Try making the role membership the permission
-     )))
+   (fn []
+     )
+   )
 
 ;; TODO: Build back access-token concept, apps, scopes and filtering of available
 ;; actions.
