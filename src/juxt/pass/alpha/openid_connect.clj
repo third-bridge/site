@@ -17,7 +17,6 @@
    [juxt.site.alpha.response :refer [redirect]]
    [jsonista.core :as json]
    [clojure.tools.logging :as log]
-   [juxt.http.alpha :as-alias http]
    [juxt.pass.alpha :as-alias pass]
    [juxt.pass.jwt :as-alias jwt]
    [juxt.site.alpha :as-alias site])
