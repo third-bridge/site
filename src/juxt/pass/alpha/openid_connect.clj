@@ -192,10 +192,6 @@
           (xt/submit-tx xt-node [[:xtdb.api/put result]])
           (::pass/jwks result))))))
 
-(identity resource)
-
-
-
 (defn callback
   "OAuth2 callback"
   [{::site/keys [resource db xt-node]
