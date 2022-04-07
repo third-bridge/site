@@ -48,6 +48,10 @@
 
   :ready)
 
+(defn demo []
+  (require 'demo)
+  (in-ns 'demo)
+  )
 
 #_(map first
      (xt/q (db) {:find ['scope]

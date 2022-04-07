@@ -59,7 +59,7 @@ call actions we create.
 [source,clojure]
 .Install the do-action transaction function
 ----
-(install-do-action-fn!)
+include::../../dev/demo.clj[tag=install-do-action-fn!,indent=0]
 ----
 
 === Create a subject representing the REPL user
@@ -78,7 +78,7 @@ REPL subject.
 [source,clojure]
 .Add the REPL subject
 ----
-(put! {:xt/id (me)})
+include::../../dev/demo.clj[tag=put-repl-user!,indent=0]
 ----
 
 NOTE: In future we might allow different users using the same REPL to identify
@@ -94,13 +94,13 @@ directly into the database because we don't have a way of creating actions yet!
 [source,clojure]
 .Install the create-action action
 ----
-(install-create-action!)
+include::../../dev/demo.clj[tag=install-create-action!,indent=0]
 ----
 
 [source,clojure]
 .Permit the create-action action
 ----
-(permit-create-action!)
+include::../../dev/demo.clj[tag=permit-create-action!,indent=0]
 ----
 
 === Define the grant-permission action
@@ -108,8 +108,10 @@ directly into the database because we don't have a way of creating actions yet!
 Now that we have our `create-action` function installed we can use it to create
 an action that will grant permissions.
 
+[source,clojure]
+.Install the action to grant permissions
 ----
-(install-grant-permission-action!)
+include::../../dev/demo.clj[tag=install-grant-permission-action!,indent=0]
 ----
 
 Note that this function will return a copy of the *transaction metadata record*
@@ -154,5 +156,5 @@ granting permissions!
 
 .Granting the REPL user the permission to grant permssions.
 ----
-(permit-grant-permission-action!)
+include::../../dev/demo.clj[tag=permit-grant-permission-action!,indent=0]
 ----

@@ -28,31 +28,7 @@ restricted operation so we'll model it as such, and define an action called
 
 [source,clojure]
 ----
-(create-action!
- {:xt/id "https://site.test/actions/put-immutable-public-resource"
-  :juxt.pass.alpha/scope "write:resource" <1>
-
-  :juxt.pass.alpha.malli/args-schema
-  [:tuple
-   [:map
-    [:xt/id [:re "https://site.test/.*"]]]]
-
-  :juxt.pass.alpha/process
-  [
-   [:juxt.pass.alpha.process/update-in
-    [0] 'merge
-    {::http/methods <2>
-     {:get {::pass/actions #{"https://site.test/actions/get-public-resource"}}
-      :head {::pass/actions #{"https://site.test/actions/get-public-resource"}}
-      :options {::pass/actions #{"https://site.test/actions/get-options"}}}}]
-
-   [:juxt.pass.alpha.malli/validate]
-   [:xtdb.api/put]]
-
-  :juxt.pass.alpha/rules
-  '[
-    [(allowed? permission subject action resource) <3>
-     [permission :juxt.pass.alpha/subject subject]]]})
+include::../../dev/demo.clj[tag=create-action-put-immutable-public-resource!,indent=0]
 ----
 <1> We'll put this action in the `write:resource` scope
 <2> We add (or override) the HTTP methods allowed on this resource. Each entry is a mapping from an allowed method to a set of actions. This restricts the search for permissions to a set of actions. The fact that we don't specify any methods such as PUT, POST or DELETE that will change the resource is the reason we've named this action as creating an immutable public resource.
@@ -62,11 +38,7 @@ Now we must grant permission for our REPL user to use this action:
 
 [source,clojure]
 ----
-(grant-permission!
- {:xt/id "https://site.test/permissions/repl/put-immutable-public-resource"
-  :juxt.pass.alpha/subject "urn:site:subjects:repl"
-  :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-public-resource"}
-  :juxt.pass.alpha/purpose nil})
+include::../../dev/demo.clj[tag=grant-permission-to-call-action-put-immutable-public-resource!,indent=0]
 ----
 
 When Site receives a web request for a resource it will look for a `juxt.site.alpha/methods`
@@ -82,15 +54,7 @@ that now.
 
 [source,clojure]
 ----
-(create-action!
- {:xt/id "http://site.test/actions/get-public-resource"
-  :juxt.pass.alpha/scope "read:resource" <1>
-
-  :juxt.pass.alpha/rules
-  '[
-    [(allowed? permission subject action resource)
-     [permission :xt/id "http://site.test/permissions/public-resources-to-all"] <2>
-     ]]})
+include::../../dev/demo.clj[tag=create-action-get-public-resource!,indent=0]
 ----
 <1> We use a more appropriate scope that better reflects this action.
 <2> This is a very weak rule that matches a particular permission.
@@ -100,15 +64,12 @@ The rule of the `http://site.test/actions/get-public-resource` requires a specif
 
 [source,clojure]
 ----
-(grant-permission!
- {:xt/id "https://site.test/permissions/public-resources-to-all"
-  :juxt.pass.alpha/action #{"https://site.test/actions/get-public-resource"}
-  :juxt.pass.alpha/purpose nil})
+include::../../dev/demo.clj[tag=grant-permission-to-call-get-public-resource!,indent=0]
 ----
 
 === Hello World!
 
-To demonstrate our `put-immutable-public-resource`, let's publish a simple
+To demonstrate our new `put-immutable-public-resource` action, let's publish a
 resource that will print `Hello World!` on a web page.
 
 .Creating a simple public 'Hello World' resource
@@ -116,11 +77,7 @@ resource that will print `Hello World!` on a web page.
 ====
 [source,clojure]
 ----
-(do-action
- "https://site.test/actions/put-immutable-public-resource"
- {:xt/id "https://site.test/hello"
-  :juxt.http.alpha/content-type "text/plain"
-  :juxt.http.alpha/content "Hello World!\r\n"})
+include::../../dev/demo.clj[tag=create-hello-world-resource!,indent=0]
 ----
 
 Now we can test access with `curl`:
@@ -153,41 +110,13 @@ authenticated user.
 We'll need an action to publish a private resource.
 
 ----
-(create-action!
-  {:xt/id "https://site.test/actions/put-immutable-private-resource"
-   :juxt.pass.alpha/scope "write:resource"
-
-   :juxt.pass.alpha.malli/args-schema
-   [:tuple
-    [:map
-     [:xt/id [:re "https://site.test/.*"]]]]
-
-   :juxt.pass.alpha/process
-   [
-    [:juxt.pass.alpha.process/update-in
-     [0] 'merge
-     {::http/methods
-      {:get {::pass/actions #{"https://site.test/actions/get-private-resource"}}
-       :head {::pass/actions #{"https://site.test/actions/get-private-resource"}}
-       :options {::pass/actions #{"https://site.test/actions/get-options"}}}}]
-
-    [:juxt.pass.alpha.malli/validate]
-    [:xtdb.api/put]]
-
-   :juxt.pass.alpha/rules
-   '[
-     [(allowed? permission subject action resource)
-      [permission :juxt.pass.alpha/subject subject]]]})
+include::../../dev/demo.clj[tag=create-action-put-immutable-private-resource!,indent=0]
 ----
 
 We'll grant this permission to our REPL user.
 
 ----
-(grant-permission!
-  {:xt/id "https://site.test/permissions/repl/put-immutable-private-resource"
-   :juxt.pass.alpha/subject "urn:site:subjects:repl"
-   :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-private-resource"}
-   :juxt.pass.alpha/purpose nil})
+include::../../dev/demo.clj[tag=grant-permission-to-put-immutable-private-resource!,indent=0]
 ----
 
 Now we'll create the action that is used to get a private resource. The rules
@@ -195,17 +124,13 @@ mandate that a permission has been granted on a specific resource and the
 subject is not nil.
 
 ----
-(create-action!
-  {:xt/id (str base-uri "https://site.test/actions/get-private-resource")
-   :juxt.pass.alpha/scope "read:resource"
-
-   :juxt.pass.alpha/rules
-   [
-    ['(allowed? permission subject action resource)
-     '[permission :juxt.pass.alpha/resource resource]
-     ['permission :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"]
-     ['subject :xt/id]]]}))
+include::../../dev/demo.clj[tag=create-action-get-private-resource,indent=0]
 ----
 
-NOTE: TODO: Now we need to create the actual private resource and grant a
-permission upon it.
+NOTE: TODO: Now we need to create the actual private resource
+
+NOTE: TODO: Trigger a 401
+
+NOTE: TODO: Install a 401 error page with a redirect to login
+
+NOTE: TODO: Grant a permission upon it.

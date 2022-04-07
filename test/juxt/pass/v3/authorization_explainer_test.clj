@@ -1334,7 +1334,7 @@
 ;; TODO: Pull syntax integrated with authorization
 ;;trades
 
-#_((t/join-fixtures [with-xt])
+((t/join-fixtures [with-xt])
  (fn []
    (submit-and-await!
     [

@@ -204,8 +204,6 @@
   (when-not session
     (return req 500 "No session found" {}))
 
-  (def resource resource)
-
   ;; Exchange code for JWT
   (let [{::pass/keys [oauth2-client]} resource
         {::pass/keys [oauth2-client-id oauth2-client-secret redirect-uri openid-provider]}

@@ -41,6 +41,10 @@ image::Auth0-Application-Settings.png[]
 
 Back in the Auth0 application settings, fill out the `Application Login URI` and `Allowed Callback URLs`.
 
+Application Login URI:: bar
+
+Allowed Callback URLs:: foo
+
 image::Auth0-Application-URIs.png[]
 
 We're now ready to test.

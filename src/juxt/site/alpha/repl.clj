@@ -129,7 +129,13 @@
    (->> (q '{:find [(pull e [:xt/id ::site/type])]
              :where [[e :xt/id]]})
         (map first)
-        (filter (fn [e] (not (#{"Request" "ActionLogEntry"} (::site/type e)))))
+        (filter (fn [e]
+                  (not (#{"Request"
+                          "ActionLogEntry"
+                          "Session"
+                          "SessionToken"
+                          }
+                        (::site/type e)))))
         (map :xt/id)
         (sort-by str)))
   ([pat]
