@@ -452,7 +452,8 @@
      (p/pattern-parser #"(?<scheme>https?)://" {:group {:juxt.reap.alpha.rfc7230/scheme "scheme"}})
      host-parser))))
 
-(defn install-put-immutable-public-resource-action! [xt-node {::site/keys [base-uri] :as config}]
+(defn install-put-immutable-public-resource-action!
+  [xt-node {::site/keys [base-uri] :as config}]
   (create-action!
    xt-node
    config
@@ -509,6 +510,58 @@
    {:xt/id (str base-uri "/permissions/public-resources-to-all")
     :juxt.pass.alpha/action #{(str base-uri "/actions/get-public-resource")}
     :juxt.pass.alpha/purpose nil}))
+
+(defn install-put-immutable-private-resource-action!
+  [xt-node {::site/keys [base-uri] :as config}]
+  (create-action!
+   xt-node
+   config
+   {:xt/id (str base-uri "/actions/put-immutable-private-resource")
+    :juxt.pass.alpha/scope "write:resource"
+
+    :juxt.pass.alpha.malli/args-schema
+    [:tuple
+     [:map
+      [:xt/id [:re (str base-uri "/.*")]]]]
+
+    :juxt.pass.alpha/process
+    [
+     [:juxt.pass.alpha.process/update-in
+      [0] 'merge
+      {::http/methods
+       {:get {::pass/actions #{(str base-uri "/actions/get-private-resource")}}
+        :head {::pass/actions #{(str base-uri "/actions/get-private-resource")}}
+        :options {::pass/actions #{(str base-uri "/actions/get-options")}}}}]
+
+     [:juxt.pass.alpha.malli/validate]
+     [:xtdb.api/put]]
+
+    :juxt.pass.alpha/rules
+    '[
+      [(allowed? permission subject action resource)
+       [permission :juxt.pass.alpha/subject subject]]]})
+
+  (grant-permission!
+   xt-node
+   config
+   {:xt/id (str base-uri "/permissions/repl/put-immutable-private-resource")
+    :juxt.pass.alpha/subject "urn:site:subjects:repl"
+    :juxt.pass.alpha/action #{(str base-uri "/actions/put-immutable-private-resource")}
+    :juxt.pass.alpha/purpose nil})
+
+  ;; Create the action in order to read the resource
+  (create-action!
+   xt-node
+   config
+   {:xt/id (str base-uri "/actions/get-private-resource")
+    :juxt.pass.alpha/scope "read:resource"
+
+    :juxt.pass.alpha/rules
+    [
+     ['(allowed? permission subject action resource)
+      '[permission :juxt.pass.alpha/resource resource]
+      ['permission :juxt.pass.alpha/action (str base-uri "/actions/get-private-resource")]
+      ['subject :xt/id]]]}))
 
 (defn add-openid-provider! [xt-node config-uri]
   (let [_ (printf "Loading OpenID configuration from %s\n" config-uri)

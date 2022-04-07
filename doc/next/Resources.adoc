@@ -106,7 +106,7 @@ The rule of the `http://site.test/actions/get-public-resource` requires a specif
   :juxt.pass.alpha/purpose nil})
 ----
 
-== Hello World!
+=== Hello World!
 
 To demonstrate our `put-immutable-public-resource`, let's publish a simple
 resource that will print `Hello World!` on a web page.
@@ -122,7 +122,6 @@ resource that will print `Hello World!` on a web page.
   :juxt.http.alpha/content-type "text/plain"
   :juxt.http.alpha/content "Hello World!\r\n"})
 ----
-====
 
 Now we can test access with `curl`:
 
@@ -144,3 +143,69 @@ permissions-policy: interest-cohort=()
 
 Hello World!
 ----
+====
+
+== Publishing private resources
+
+Now let's publish an immutable private resource which can only be seen by an
+authenticated user.
+
+We'll need an action to publish a private resource.
+
+----
+(create-action!
+  {:xt/id "https://site.test/actions/put-immutable-private-resource"
+   :juxt.pass.alpha/scope "write:resource"
+
+   :juxt.pass.alpha.malli/args-schema
+   [:tuple
+    [:map
+     [:xt/id [:re "https://site.test/.*"]]]]
+
+   :juxt.pass.alpha/process
+   [
+    [:juxt.pass.alpha.process/update-in
+     [0] 'merge
+     {::http/methods
+      {:get {::pass/actions #{"https://site.test/actions/get-private-resource"}}
+       :head {::pass/actions #{"https://site.test/actions/get-private-resource"}}
+       :options {::pass/actions #{"https://site.test/actions/get-options"}}}}]
+
+    [:juxt.pass.alpha.malli/validate]
+    [:xtdb.api/put]]
+
+   :juxt.pass.alpha/rules
+   '[
+     [(allowed? permission subject action resource)
+      [permission :juxt.pass.alpha/subject subject]]]})
+----
+
+We'll grant this permission to our REPL user.
+
+----
+(grant-permission!
+  {:xt/id "https://site.test/permissions/repl/put-immutable-private-resource"
+   :juxt.pass.alpha/subject "urn:site:subjects:repl"
+   :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-private-resource"}
+   :juxt.pass.alpha/purpose nil})
+----
+
+Now we'll create the action that is used to get a private resource. The rules
+mandate that a permission has been granted on a specific resource and the
+subject is not nil.
+
+----
+(create-action!
+  {:xt/id (str base-uri "https://site.test/actions/get-private-resource")
+   :juxt.pass.alpha/scope "read:resource"
+
+   :juxt.pass.alpha/rules
+   [
+    ['(allowed? permission subject action resource)
+     '[permission :juxt.pass.alpha/resource resource]
+     ['permission :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"]
+     ['subject :xt/id]]]}))
+----
+
+NOTE: TODO: Now we need to create the actual private resource and grant a
+permission upon it.

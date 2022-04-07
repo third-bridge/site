@@ -569,6 +569,57 @@
   ;; TODO: make this idempotent? (ensure these resources exist)
   (init/install-put-immutable-public-resource-action! (xt-node) (config)))
 
+(defn install-put-immutable-private-resource-action! []
+  ;; TODO: make this idempotent? (ensure these resources exist)
+  (init/install-put-immutable-private-resource-action! (xt-node) (config)))
+
+(defn install-put-immutable-private-resource-action!
+  [xt-node {::site/keys [base-uri] :as config}]
+  (create-action!
+   {:xt/id "https://site.test/actions/put-immutable-private-resource"
+    :juxt.pass.alpha/scope "write:resource"
+
+    :juxt.pass.alpha.malli/args-schema
+    [:tuple
+     [:map
+      [:xt/id [:re "https://site.test/.*"]]]]
+
+    :juxt.pass.alpha/process
+    [
+     [:juxt.pass.alpha.process/update-in
+      [0] 'merge
+      {::http/methods
+       {:get {::pass/actions #{"https://site.test/actions/get-private-resource"}}
+        :head {::pass/actions #{"https://site.test/actions/get-private-resource"}}
+        :options {::pass/actions #{"https://site.test/actions/get-options"}}}}]
+
+     [:juxt.pass.alpha.malli/validate]
+     [:xtdb.api/put]]
+
+    :juxt.pass.alpha/rules
+    '[
+      [(allowed? permission subject action resource)
+       [permission :juxt.pass.alpha/subject subject]]]})
+
+  (grant-permission!
+   {:xt/id "https://site.test/permissions/repl/put-immutable-private-resource"
+    :juxt.pass.alpha/subject "urn:site:subjects:repl"
+    :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-private-resource"}
+    :juxt.pass.alpha/purpose nil})
+
+  ;; Create the action in order to read the resource
+  (create-action!
+   {:xt/id (str base-uri "https://site.test/actions/get-private-resource")
+    :juxt.pass.alpha/scope "read:resource"
+
+    :juxt.pass.alpha/rules
+    [
+     ['(allowed? permission subject action resource)
+      '[permission :juxt.pass.alpha/resource resource]
+      ['permission :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"]
+      ['subject :xt/id]]]}))
+
+
 (defn bootstrap-actions! []
   (install-do-action-fn!)
   (put! {:xt/id (me)})
