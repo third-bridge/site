@@ -27,6 +27,11 @@ image::Auth0-Create-Application.png[]
 
 Under settings, take the value of `Client ID` and copy the `Client Secret`, pasting them into the code below, replacing `<client-id>` and `<client-secret>` respectively.
 
+|===
+|Application Login URI|+https://site.test/_site/openid/auth0/login+
+|Allowed Callback URLs|+https://site.test/_site/openid/auth0/callback+
+|===
+
 image::Auth0-Application-Settings.png[]
 
 [source,clojure]
@@ -40,10 +45,6 @@ image::Auth0-Application-Settings.png[]
 ====
 
 Back in the Auth0 application settings, fill out the `Application Login URI` and `Allowed Callback URLs`.
-
-Application Login URI:: bar
-
-Allowed Callback URLs:: foo
 
 image::Auth0-Application-URIs.png[]
 

@@ -15,16 +15,84 @@ classic greeting.
 
 == Anatomy of a Site resource
 
-NOTE: TODO: Describe the key entries of the XT document that represents a Site
-resource.
+In Site, every XT document represents a web resource. This means that the terms
+resource and document are somewhat synonymous in Site documentation.
+
+In the same way every web resource has a Uniform Resource Identitier (URI),
+every document in the XTDB database has an XT (`:xt/id`) identifier.
+
+In this way, exposing data to the web is trivial. There is convoluted logic or
+mappings, it's a simply one-to-one correspondence. All Site does is provide the
+protocol layer to handle HTTP requests.
+
+Site uses the request URI to lookup the corresponding XT document, and uses
+certain known attributes of the document to determine the web resource's
+configuration and state. This mapping is illustrated in
+<<http-protocol-mappings>>. The values of these attributes determine the
+corresponding status, headers and body of the protocol response.
+
+[NOTE]
+--
+Beyond the `:xt/id` id attribute, the attribute keywords that are
+recognised by Site as having special significance are qualified by namespaces
+reserved by Site. These always start with `juxt` and there are a handful of
+namespaces which are used, such as `juxt.http`, `juxt.site` and
+`juxt.pass`.
+
+It's important to understand that these XT documents are _your_ documents, with
+attributes you choose from _your_ domain. The documents are merely augmented
+with additional non-conflicting attributes recognised by Site.
+--
+
+.HTTP protocol mappings to XT document attributes
+[[http-protocol-mappings]]
+|===
+|Web|XT
+
+|URI|`:xt/id`
+|Methods|`:juxt.http.alpha/methods`
+|Representations|`:juxt.site.alpha/variant-of`
+|Body|`:juxt.http.alpha/body`, `:juxt.http.alpha/content`
+|Content Type|`:juxt.http.alpha/content-type`
+|Content Language|`:juxt.http.alpha/content-language`
+|Content Location|`:juxt.http.alpha/content-location`
+|Content Encoding|`:juxt.http.alpha/content-encoding`
+|Last-Modified|`:juxt.http.alpha/last-modified`
+|ETag|`:juxt.http.alpha/etag`
+|Content Length|`:juxt.http.alpha/content-length`
+|Trailer|`:juxt.http.alpha/trailer`
+|Transfer-Encoding|`:juxt.http.alpha/transfer-encoding`
+|Vary|`:juxt.http.alpha/vary`
+|OPTIONS|`:juxt.http.alpha/options`
+|===
+
+In fact, you can think of XT as the a file-system to a static web-server. But
+rather than encoding web metadata in filename conventions and convoluted
+configuration, a web resource (its state, configuration and metadata) is stored
+in a database, where it can be more easily managed, queried and updated. _A
+database is simply a better place for this data than a file-system._ In the same
+way you'd run an Apache web server over a file-system to publish to the web, you
+run Site over an XTDB database.
 
 == Publishing public resources
 
 Before we can create the resource, we need to define an action that lets us do so.
 
 In many organisations, publishing information to the public web may well be a
-restricted operation so we'll model it as such, and define an action called
-`https://site.test/actions/put-immutable-public-resource`.
+restricted operation so <<create-action-put-immutable-public-resource>> shows
+how to do so.
+
+.Creating an action which can create an immutable public resource
+[[create-action-put-immutable-public-resource]]
+====
+We'll do the following steps:
+
+. Create an action
+. Grant permission to call the action
+. Call the action
+
+The action contains both the validation rules to ensure that only GET, HEAD and
+OPTIONS methods are allowed, and that these map onto the correct actions.
 
 [source,clojure]
 ----
@@ -66,6 +134,7 @@ The rule of the `http://site.test/actions/get-public-resource` requires a specif
 ----
 include::../../dev/demo.clj[tag=grant-permission-to-call-get-public-resource!,indent=0]
 ----
+====
 
 === Hello World!
 
@@ -127,10 +196,18 @@ subject is not nil.
 include::../../dev/demo.clj[tag=create-action-get-private-resource,indent=0]
 ----
 
+Now
+
 NOTE: TODO: Now we need to create the actual private resource
 
 NOTE: TODO: Trigger a 401
 
 NOTE: TODO: Install a 401 error page with a redirect to login
 
-NOTE: TODO: Grant a permission upon it.
+== TODO after
+
+NOTE: TODO: Get a 403
+
+NOTE: TODO: Recognise the iss/sub pair by adding an identity
+
+NOTE: TODO: Grant a permission to the identity to use the get-private-resource action
