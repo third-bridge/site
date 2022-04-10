@@ -5,8 +5,10 @@
    [juxt.site.alpha.repl :refer :all]
    [juxt.http.alpha :as-alias http]
    [juxt.pass.alpha :as-alias pass]
+   [juxt.site.alpha :as-alias site]
    [clojure.walk :refer [postwalk]]
-   [clojure.string :as str]))
+   [clojure.string :as str]
+   [malli.core :as m]))
 
 (defn demo-install-do-action-fn! []
   ;; tag::install-do-action-fn![]
@@ -225,6 +227,60 @@
      ;; end::create-immutable-private-resource![]
      ))))
 
+(defn demo-create-action-put-error-resource! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-action-put-error-resource![]
+     (create-action!
+      {:xt/id "https://site.test/actions/put-error-resource"
+       :juxt.pass.alpha/scope "write:resource"
+
+       :juxt.pass.alpha.malli/args-schema
+       [:tuple
+        [:map
+         [:xt/id [:re "https://site.test/_site/errors/[a-z\\-]{3,}"]]
+         [:juxt.site.alpha/type [:= "ErrorResource"]]
+         [:ring.response/status :int]]]
+
+       :juxt.pass.alpha/process
+       [
+        [:juxt.pass.alpha.malli/validate]
+        [:xtdb.api/put]]
+
+       :juxt.pass.alpha/rules
+       '[
+         [(allowed? permission subject action resource)
+          [permission :juxt.pass.alpha/subject subject]]]})
+     ;; end::create-action-put-error-resource![]
+     ))))
+
+(defn demo-grant-permission-to-put-error-resource! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-to-put-error-resource![]
+     (grant-permission!
+      {:xt/id "https://site.test/permissions/repl/put-error-resource"
+       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/action #{"https://site.test/actions/put-error-resource"}
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-to-put-error-resource![]
+     ))))
+
+(defn demo-put-unauthorized-error-resource! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::put-unauthorized-error-resource![]
+     (do-action
+      "https://site.test/actions/put-error-resource"
+      {:xt/id "https://site.test/_site/errors/unauthorized"
+       :juxt.site.alpha/type "ErrorResource"
+       :ring.response/status 401})
+     ;; end::put-unauthorized-error-resource![]
+     ))))
+
 (defn demo-bootstrap-resources! []
   (demo-create-action-put-immutable-public-resource!)
   (demo-grant-permission-to-call-action-put-immutable-public-resource!)
@@ -235,5 +291,12 @@
   (demo-grant-permission-to-put-immutable-private-resource!)
   (demo-create-action-get-private-resource!)
 
-  ;;(demo-create-immutable-private-resource!)
+  ;; This is 'just' an example showing how to create a /privte.html resource. We
+  ;; don't want this resource part of every install!
+  ;; (demo-create-immutable-private-resource!)
+
+  (demo-create-action-put-error-resource!)
+  (demo-grant-permission-to-put-error-resource!)
+  (demo-put-unauthorized-error-resource!)
+
   )

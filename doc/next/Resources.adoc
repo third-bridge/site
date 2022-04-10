@@ -200,7 +200,7 @@ We'll grant this permission to our REPL user.
 ----
 include::../../dev/demo.clj[tag=grant-permission-to-put-immutable-private-resource!,indent=0]
 ----
-`
+
 Now we'll create the action that is used to get a private resource. The rules
 mandate that a permission has been granted on a specific resource and the
 subject is not nil.
@@ -243,6 +243,25 @@ Unauthorized
 == Error resources
 
 Site allows errors to be represented with custom representations.
+
+====
+First, create an error resource.
+
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-put-error-resource!,indent=0]
+----
+
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=grant-permission-to-put-immutable-private-resource!,indent=0]
+----
+
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=put-unauthorized-error-resource!,indent=0]
+----
+====
 
 
 
