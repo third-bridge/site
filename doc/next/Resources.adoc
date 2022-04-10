@@ -82,7 +82,7 @@ In many organisations, publishing information to the public web may well be a
 restricted operation so <<create-action-put-immutable-public-resource>> shows
 how to do so.
 
-.Creating an action which can create an immutable public resource
+.Creating and accessing a public resource
 [[create-action-put-immutable-public-resource]]
 ====
 We'll do the following steps:
@@ -178,12 +178,20 @@ authenticated user.
 
 We'll need an action to publish a private resource.
 
+
+.Creating and accessing a private resource
+====
+
+Again, let's complete the following steps:
+
+[source,clojure]
 ----
 include::../../dev/demo.clj[tag=create-action-put-immutable-private-resource!,indent=0]
 ----
 
 We'll grant this permission to our REPL user.
 
+[source,clojure]
 ----
 include::../../dev/demo.clj[tag=grant-permission-to-put-immutable-private-resource!,indent=0]
 ----
@@ -192,22 +200,45 @@ Now we'll create the action that is used to get a private resource. The rules
 mandate that a permission has been granted on a specific resource and the
 subject is not nil.
 
+[source,clojure]
 ----
 include::../../dev/demo.clj[tag=create-action-get-private-resource,indent=0]
 ----
 
-Now
+Now to create the private resource.
 
-NOTE: TODO: Now we need to create the actual private resource
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-immutable-private-resource!,indent=0]
+----
 
-NOTE: TODO: Trigger a 401
+Let's try to access the private resource.
 
-NOTE: TODO: Install a 401 error page with a redirect to login
+----
+curl -i https://site.test/private.html
+----
 
-== TODO after
+We should get a response with a 401 status. We're not authorized to access this
+resource.
 
-NOTE: TODO: Get a 403
+----
+HTTP/1.1 401 Unauthorized
+Server: nginx/1.20.2
+Date: Sat, 09 Apr 2022 08:12:40 GMT
+Content-Type: text/plain;charset=utf-8
+Content-Length: 14
+Connection: keep-alive
+site-request-id: https://site.test/_site/requests/980cf294f4ab87688c65581d
+permissions-policy: interest-cohort=()
 
-NOTE: TODO: Recognise the iss/sub pair by adding an identity
+Unauthorized
+----
+====
 
-NOTE: TODO: Grant a permission to the identity to use the get-private-resource action
+We have a private resource but the 401 status response tells us we are not
+authorized to access it.
+
+To authorize the subject we'll need to first determine who is trying to access
+the resource.
+
+That's the subject of <<authentication>>.

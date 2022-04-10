@@ -563,8 +563,13 @@
       ['permission :juxt.pass.alpha/action (str base-uri "/actions/get-private-resource")]
       ['subject :xt/id]]]}))
 
-(defn add-openid-provider! [xt-node config-uri]
-  (let [_ (printf "Loading OpenID configuration from %s\n" config-uri)
+(defn put-openid-provider! [xt-node issuer]
+  (let [;; https://openid.net/specs/openid-connect-discovery-1_0.html#rfc.section.4
+        ;; tells us we rely on the configuration information being available at
+        ;; a fixed path.
+        config-uri (str issuer "/.well-known/openid-configuration")
+
+        _ (printf "Loading OpenID configuration from %s\n" config-uri)
         config (json/read-value (slurp config-uri))]
     (printf "Issuer added: %s\n" (get config "issuer"))
     (put!
@@ -572,7 +577,7 @@
      {:xt/id config-uri
       :juxt.pass.alpha/openid-configuration config})))
 
-(defn add-openid-login!
+(defn put-openid-login!
   [xt-node {::site/keys [base-uri] :as config}
    & {:keys [name provider client-id client-secret]}]
 

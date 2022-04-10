@@ -964,13 +964,7 @@
               {::http/content-type "text/html;charset=utf-8"
                ::http/content-length (count content)
                ::http/content content})
-            (let [content
-                  (str (status-message status)
-                       ;; For text/plain we might be using the site tool. Here,
-                       ;; we decide that providing a little more context to the
-                       ;; user outweighs the need to restrict information about
-                       ;; the underlying implementation.
-                       " – " (.getMessage e) "\r\n\r\n")]
+            (let [content (str (status-message status) "\r\n")]
               {::http/content-type "text/plain;charset=utf-8"
                ::http/content-length (count content)
                ::http/content content})])
@@ -1271,7 +1265,7 @@
    #_wrap-authorize-with-pdp
    ;; This is more recent than the above but we should do authorization via
    ;; actions to avoid race-conditions
-   #_wrap-authorize-with-actions
+   wrap-authorize-with-actions
 
    ;; 405
    wrap-method-not-allowed?

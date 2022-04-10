@@ -196,20 +196,34 @@
 
 (defn demo-create-action-get-private-resource! []
   (eval
-   (quote
-    ;; tag::create-action-get-private-resource[]
-    (create-action!
-     {:xt/id "https://site.test/actions/get-private-resource"
-      :juxt.pass.alpha/scope "read:resource"
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-action-get-private-resource[]
+     (create-action!
+      {:xt/id "https://site.test/actions/get-private-resource"
+       :juxt.pass.alpha/scope "read:resource"
 
-      :juxt.pass.alpha/rules
-      [
-       ['(allowed? permission subject action resource)
-        '[permission :juxt.pass.alpha/resource resource]
-        ['permission :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"]
-        ['subject :xt/id]]]})
-    ;; end::create-action-get-private-resource[]
-    )))
+       :juxt.pass.alpha/rules
+       [
+        ['(allowed? permission subject action resource)
+         '[permission :juxt.pass.alpha/resource resource]
+         ['permission :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"]
+         ['subject :xt/id]]]})
+     ;; end::create-action-get-private-resource[]
+     ))))
+
+(defn demo-create-immutable-private-resource! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-immutable-private-resource![]
+     (do-action
+      "https://site.test/actions/put-immutable-private-resource"
+      {:xt/id "https://site.test/private.html"
+       :juxt.http.alpha/content-type "text/html;charset=utf-8"
+       :juxt.http.alpha/content "<p>This is a protected message that those authorized are allowed to read.</p>"})
+     ;; end::create-immutable-private-resource![]
+     ))))
 
 (defn demo-bootstrap-resources! []
   (demo-create-action-put-immutable-public-resource!)
@@ -218,4 +232,5 @@
   (demo-grant-permission-to-call-get-public-resource!)
   (demo-create-action-put-immutable-private-resource!)
   (demo-grant-permission-to-put-immutable-private-resource!)
-  (demo-create-action-get-private-resource!))
+  (demo-create-action-get-private-resource!)
+  (demo-create-immutable-private-resource!))

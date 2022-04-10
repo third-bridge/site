@@ -17,6 +17,7 @@ include::Actions.adoc[leveloffset=+1]
 
 include::Resources.adoc[leveloffset=+1]
 
+[[authentication]]
 include::Authentication.adoc[leveloffset=+1]
 
 include::Authorization.adoc[leveloffset=+1]
