@@ -30,7 +30,7 @@ Examples include:
 == Adding an OpenID Provider
 
 When communicating with an OpenID Provider, Site assumes the role of an
-https://www.rfc-editor.org/rfc/rfc6749#section-1.1[_OAuth2 client_], also known
+https://www.rfc-editor.org/rfc/rfc6749#section-1.1[_OAuth 2.0 Client_], also known
 as a *Relying Party*.
 
 TIP: Terminology for OpenID Connect can be found at
@@ -89,8 +89,26 @@ The instructions for registering an OAuth 2.0 Client application with an OpenID
 Provider are usually quite similar but you should follow the instructions
 provided by your chosen OpenID Provider.
 
-As an example, <<creating-a-client-application>> explains how we created our
-client application in Auth0.
+To communicate with the OpenID Provider, Site must provide a number of web
+resources (endpoints). Once the OAuth 2.0 Client id and secret are known, these
+can be created with the `install-openid-resources!` function.
+
+The `install-openid-resources!` function requires the following arguments:
+
+[cols="2,8"]
+|===
+|name|A unique name identifying the *OpenID Provider* and application registered in Site. This is encoded into the application's URIs so it's possible to have many such combinations.
+|issuer-id|The *Issuer Identifier*, this is a URL, always starting with `https://`.
+|client-id|The OAuth 2.0 *Client ID*
+|client-secret|The OAuth 2.0 *Client Secret*
+|===
+
+If called successfully, the function will return the URIs of the various Site
+resources created. These can be provided as OAuth 2.0 Client settings in the
+OpenID Provider, and some of these will be required.
+
+As a complete example, <<creating-a-client-application>> explains how we created
+our client application in Auth0.
 
 .Creating the OAuth 2.0 Client application in Auth0
 [[creating-a-client-application]]
@@ -125,10 +143,10 @@ the *Relying Party* (Site) by the *OpenID Provider* (Auth0), giving the
 following values:
 
 |===
-|`:name`|A unique name identifying the *OpenID Provider* and application registered in Site. This is encoded into the application's URIs so it's possible to have many such combinations.
-|`:issuer-id`|*Issuer Identifier*, as captured above in <<installing-an-openid-provider>>
-|`:client-id`|*Client ID* (as above)
-|`:client-secret`|*Client Secret* (as above)
+|:name|auth0-site-test
+|:issuer-id|+https://juxt.eu.auth0.com+
+|:client-id|d8X0TfEIcTl5oaltA4oy9ToEPdn5nFUK
+|:client-secret|zb86gDUf_rEnwENYJBeih-cAzICjjPvvumThTw6qIqCVvtP83vYFtjuHni_m2ndt
 |===
 
 We created the required web resources for the application by calling the
@@ -174,7 +192,7 @@ Site must acquire an ID_TOKEN in order to identify a subject.
 
 The way it does this is by communicate with an OpenID Provider.
 
-In the language of OAuth2, Site takes on the role of a Client and the OpenID Provider
+In the language of OAuth 2.0, Site takes on the role of a Client and the OpenID Provider
 takes on the role of the Authorization Server.
 
 Once Site has established confidence in the subject's claims, it can then
