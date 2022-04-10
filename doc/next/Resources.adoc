@@ -74,7 +74,7 @@ database is simply a better place for this data than a file-system._ In the same
 way you'd run an Apache web server over a file-system to publish to the web, you
 run Site over an XTDB database.
 
-== Publishing public resources
+== Publishing a public resource
 
 Before we can create the resource, we need to define an action that lets us do so.
 
@@ -171,7 +171,12 @@ Hello World!
 ----
 ====
 
-== Publishing private resources
+== Representations
+
+NOTE: TODO
+
+[[publishing-private-resources]]
+== Publishing a private resource
 
 Now let's publish an immutable private resource which can only be seen by an
 authenticated user.
@@ -195,7 +200,7 @@ We'll grant this permission to our REPL user.
 ----
 include::../../dev/demo.clj[tag=grant-permission-to-put-immutable-private-resource!,indent=0]
 ----
-
+`
 Now we'll create the action that is used to get a private resource. The rules
 mandate that a permission has been granted on a specific resource and the
 subject is not nil.
@@ -234,6 +239,14 @@ permissions-policy: interest-cohort=()
 Unauthorized
 ----
 ====
+
+== Error resources
+
+Site allows errors to be represented with custom representations.
+
+
+
+== Next Steps
 
 We have a private resource but the 401 status response tells us we are not
 authorized to access it.

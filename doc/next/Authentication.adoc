@@ -13,6 +13,39 @@ authenticating an end-user and providing claims about them.
 If Site trusts the OpenID Provider, and the OpenID Provider trusts the claims
 made by the user, then Site can trust those user claims too.
 
+When communicating with an OpenID Provider, Site assumes the role of an
+https://www.rfc-editor.org/rfc/rfc6749#section-1.1[_OAuth 2.0 Client_], also known
+as a *Relying Party*.
+
+When an unidentified user accesses Site, Site can request an *ID Token*, which
+contains the user's claims, from the OpenID Provider. These claims are trusted
+by the OpenID Provider, which signs them with a cryptographic signature that
+Site can verify.
+
+TIP: Terminology for OpenID Connect can be found at
+https://openid.net/specs/openid-connect-core-1_0.html#Terminology
+
+Typically, the process of integrating an OpenID Provider comprises two steps.
+
+The first step is to register an account with the OpenID Provider and let Site
+fetch the OpenID Provider's configuration. This is described in
+<<registering-the-openid-provider>>.
+
+The second step is to create an OAuth 2.0 Client application which is what Site
+will use to acquire an ID Token containing information (claims) about the
+end-user we want to authenticate. This step is described in
+<<creating-the-client-application>>.
+
+It's possible to register mutliple OpenID Providers with Site, and there are
+situations where there might be a need for more than one OAuth 2.0 Client
+application to exist for a given OpenID Provider.
+
+== Selecting an OpenID Provider
+
+How the OpenID Provider establishes trust in the user's claims is up to the
+OpenID Provider. It's important which choose a reputable provider that you
+trust.
+
 When it comes to choosing an OpenID Provider there are many options
 available. Site is compatible with any of the many OpenID Providers that
 implements the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID
@@ -27,25 +60,8 @@ Examples include:
 * https://www.keycloak.org/[Keycloak]
 * https://www.ory.sh/kratos[Ory Kratos]
 
-== Adding an OpenID Provider
-
-When communicating with an OpenID Provider, Site assumes the role of an
-https://www.rfc-editor.org/rfc/rfc6749#section-1.1[_OAuth 2.0 Client_], also known
-as a *Relying Party*.
-
-TIP: Terminology for OpenID Connect can be found at
-https://openid.net/specs/openid-connect-core-1_0.html#Terminology
-
-When an unidentified user accesses Site, Site can request an *ID Token*, which
-contains the user's claims, from the OpenID Provider. These claims are trusted
-by the OpenID Provider, which signs them with a cryptographic signature that
-Site can verify.
-
-How the OpenID Provider establishes trust in the user's claims is up to the
-OpenID Provider. It's important which choose a reputable provider that you
-trust.
-
-Site can be configured to communicate with any number of OpenID Providers.
+[[registering-the-openid-provider]]
+== Registering the OpenID Provider
 
 The examples in this section explain how to configure a particular OpenID
 Provider (Auth0) but the process is similar for other providers.
@@ -61,8 +77,6 @@ signatures when the OpenID Provider returns cryptographically signed data.
 [[installing-an-openid-provider]]
 .Adding Auth0 as an OpenID Provider
 ====
-For the examples in this section, we chose to use https://auth0.com/[Auth0].
-
 We first created an account with Auth0 and chose the name `juxt` in the EU
 region. Auth0 created the `juxt.eu.auth0.com` domain for us, representing the
 Issuer.
@@ -78,8 +92,14 @@ Identifier* as a parameter:
 ----
 (install-openid-provider! "https://juxt.eu.auth0.com")
 ----
+
+CAUTION: If you've decided to use Auth0 too, you'll have to decide on a tenant
+name and your Issuer Identifier will be different from ours. Make sure to
+remember this when following the examples in this section.
+
 ====
 
+[[creating-the-client-application]]
 == Creating the OAuth 2.0 Client Application
 
 OpenID is built open OAuth 2.0, so we must create an OAuth 2.0 Client
@@ -180,10 +200,21 @@ image::Auth0-Application-URIs.png[]
 
 ====
 
+== Redirecting a 401 response to the login resource
+
+Remember the `401 Unauthorized` response we got back in
+<<publishing-private-resources>>? Now we can at least authenticate the end-user.
+
+If the user is using a browser, it's a better user experience if we redirect the
+user from an unauthorized resource to the login resource, and then return them
+to the original resource once they've been authenticated.
+
+
+
 We're now ready to test.
 
 ----
-curl -Li https://site.test/_site/openid/auth0/login
+curl -Li https://site.test/_site/openid/auth0-site-test/login
 ----
 
 == Understanding the authentication flow
