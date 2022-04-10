@@ -7,15 +7,16 @@ To authorize a private resource we will need to establish the identity of the
 person (or machine) that it attempting to access it.
 
 Currently, Site does not provide its own authentication service but relies on a
-third-party service known as an _identity provider_.
+third-party service known as an *OpenID Provider* that is capable of
+authenticating an end-user and providing claims about them.
 
-If Site trusts the identity provider, and the identity provider trusts the
-claims made by the user, then Site can trust those user claims too.
+If Site trusts the OpenID Provider, and the OpenID Provider trusts the claims
+made by the user, then Site can trust those user claims too.
 
-When it comes to choosing an identity provider, there are many options
-available. Site is compatible with any of the many providers that implements the
-https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID Connect
-Discovery] protocol.
+When it comes to choosing an OpenID Provider there are many options
+available. Site is compatible with any of the many OpenID Providers that
+implements the https://openid.net/specs/openid-connect-discovery-1_0.html[OpenID
+Connect Discovery] protocol.
 
 Examples include:
 
@@ -26,89 +27,75 @@ Examples include:
 * https://www.keycloak.org/[Keycloak]
 * https://www.ory.sh/kratos[Ory Kratos]
 
-NOTE: TODO: Install a 401 error page with a redirect to login
+== Adding an OpenID Provider
 
-NOTE: TODO: Get a 403
+When communicating with an OpenID Provider, Site assumes the role of an
+https://www.rfc-editor.org/rfc/rfc6749#section-1.1[_OAuth2 client_], also known
+as a *Relying Party*.
 
-NOTE: TODO: Recognise the iss/sub pair by adding an identity
+TIP: Terminology for OpenID Connect can be found at
+https://openid.net/specs/openid-connect-core-1_0.html#Terminology
 
-NOTE: TODO: Grant a permission to the identity to use the get-private-resource action
+When an unidentified user accesses Site, Site can request an *ID Token*, which
+contains the user's claims, from the OpenID Provider. These claims are trusted
+by the OpenID Provider, which signs them with a cryptographic signature that
+Site can verify.
 
-== Adding a trusted an identity provider
-
-When communicating with an identity provider, Site assumes the role of an
-https://www.rfc-editor.org/rfc/rfc6749#section-1.1[_OAuth2 client_].
-
-When an unidentified user accesses Site, Site can request an _id token_ from the
-identity provider that contains the user's claims. These claims are trusted by
-the identity provider, who signs them with a cryptographic signature Site can
-verify.
-
-How the identity provider establishes trust in the user's claims is up to the
-identity provider, so it's important which choose a reputable one which you
+How the OpenID Provider establishes trust in the user's claims is up to the
+OpenID Provider. It's important which choose a reputable provider that you
 trust.
 
-.Registering an account with Auth0
+Site can be configured to communicate with any number of OpenID Providers.
+
+The examples in this section explain how to configure a particular OpenID
+Provider (Auth0) but the process is similar for other providers.
+
+Site needs to be configured which each OpenID Provider via the
+`install-openid-provider!` function, as demonstrated in
+<<installing-an-openid-provider>>.
+
+Site will then download and store the OpenID Provider's configuration which will
+allow it to interact with the OpenID Provider, exchange information and verify the
+signatures when the OpenID Provider returns cryptographically signed data.
+
+[[installing-an-openid-provider]]
+.Adding Auth0 as an OpenID Provider
 ====
-
-For the examples in this section, I've chosen to use Auth0.
-
-I registered my details with Auth0 and chose the account name `juxt`. Auth0
-created the `juxt.eu.auth0.com` domain for me.
-
-====
-
-Site can be configured to communicate with any number of identity providers.
-
-For each provider, Site needs to be given the location of the OpenID Connect
-Discovery document on the web with the `add-openid-provider!` function. Site
-will then download and store the provider's configuration which will allow it to
-interact with the provider, exchange information and verify the signatures when
-the provider returns cryptographically signed data.
-
-To ensure that communication between Site and the identity provider is secure we
-must initially register Site as a client with the identity provider and obtain a
-secret which is known only to Site and the identity provider.
-
-The instructions for registering a client with an identity provider that
-supports OpenID Connect are usually quite similar but you should follow the
-instructions provided by your chosen identity provider.
-
-
-
-
-As an example, <<registering-with-auth0>> explains how we registered our
-instance of Site with Auth0, an identity provider that supports OpenID Connect
-Discovery.
-
-
-
-.Adding Auth0 as an OpenID Connect provider
-[[registering-with-auth0]]
-====
+For the examples in this section, we chose to use https://auth0.com/[Auth0].
 
 We first created an account with Auth0 and chose the name `juxt` in the EU
-region. Auth0 created the `juxt.eu.auth0.com` domain for us.
-
-With Auth0, `https://juxt.eu.auth0.com` becomes the issuer. We made a note of
-this.
+region. Auth0 created the `juxt.eu.auth0.com` domain for us, representing the
+Issuer.
 
 |===
-|Issuer|+https://juxt.eu.auth0.com+
+|Issuer Identifier|+https://juxt.eu.auth0.com+
 |===
 
-Then we registered Auth0 as an identity provider in Site, with the issuer as
-a parameter:
+Then we registered Auth0 as an OpenID Provider in Site, with the *Issuer
+Identifier* as a parameter:
 
 [source,clojure]
 ----
-(put-openid-provider! "https://juxt.eu.auth0.com")
+(install-openid-provider! "https://juxt.eu.auth0.com")
 ----
 ====
 
-.Registering Site as an Auth0 application client
+== Creating the OAuth 2.0 Client Application
+
+OpenID is built open OAuth 2.0, so we must create an OAuth 2.0 Client
+application which can represent Site in the OAuth 2.0 protocol.
+
+The instructions for registering an OAuth 2.0 Client application with an OpenID
+Provider are usually quite similar but you should follow the instructions
+provided by your chosen OpenID Provider.
+
+As an example, <<creating-a-client-application>> explains how we created our
+client application in Auth0.
+
+.Creating the OAuth 2.0 Client application in Auth0
+[[creating-a-client-application]]
 ====
-We then accessed the `Applications` menu item.
+In Auth0 we located and selected the `Applications` menu item.
 
 image::Auth0-Applications-Menuitem.png[width=20%]
 
@@ -126,37 +113,54 @@ After the application was created, we accessed `Settings` from the application's
 
 image::Auth0-Application-Settings.png[]
 
-We noted the `Client ID` and the `Client Secret`:
+We copied the `Client ID` and the `Client Secret`:
 
 |===
 |Client ID|d8X0TfEIcTl5oaltA4oy9ToEPdn5nFUK
 |Client Secret|zb86gDUf_rEnwENYJBeih-cAzICjjPvvumThTw6qIqCVvtP83vYFtjuHni_m2ndt
 |===
 
-Then we scrolled down to the `Application URIs` section.
+We returned to the REPL to install the web resources required to be provided by
+the *Relying Party* (Site) by the *OpenID Provider* (Auth0), giving the
+following values:
 
-image::Auth0-Application-URIs.png[]
+|===
+|`:name`|A unique name identifying the *OpenID Provider* and application registered in Site. This is encoded into the application's URIs so it's possible to have many such combinations.
+|`:issuer-id`|*Issuer Identifier*, as captured above in <<installing-an-openid-provider>>
+|`:client-id`|*Client ID* (as above)
+|`:client-secret`|*Client Secret* (as above)
+|===
 
-We filled out the `Application Login URI` and `Allowed Callback URLs` (these
-will be created in Site later on):
+We created the required web resources for the application by calling the
+`install-openid-resources!` function.
+
+[source,clojure]
+----
+(install-openid-resources!
+:name "auth0-site-test"
+:issuer-id "https://juxt.eu.auth0.com"
+:client-id "d8X0TfEIcTl5oaltA4oy9ToEPdn5nFUK"
+:client-secret "zb86gDUf_rEnwENYJBeih-cAzICjjPvvumThTw6qIqCVvtP83vYFtjuHni_m2ndt")
+=>
+{:login-uri "https://site.test/_site/openid/auth0-site-test/login",
+ :callback-uri "https://site.test/_site/openid/auth0-site-test/callback"}
+----
+
+Calling the `install-openid-resources!` function returned a map containing the
+application's URIs, which we made a note of.
 
 |===
 |Application Login URI|+https://site.test/_site/openid/auth0-site-test/login+
 |Allowed Callback URLs|+https://site.test/_site/openid/auth0-site-test/callback+
 |===
 
-Finally we called Site's `put-openid-login!` REPL function to let Site know the client-id and client-secret that it will need when communicating with Auth0
+Then we returned to the Auth0 settings and scrolled down to the `Application URIs` section.
 
-[source,clojure]
-----
-(put-openid-login!
-:name "auth0-site-test"
-:issuer "https://juxt.eu.auth0.com"
-:client-id "d8X0TfEIcTl5oaltA4oy9ToEPdn5nFUK"
-:client-secret "zb86gDUf_rEnwENYJBeih-cAzICjjPvvumThTw6qIqCVvtP83vYFtjuHni_m2ndt")
-----
+We entered in the application URIs as shown below:
+
+image::Auth0-Application-URIs.png[]
+
 ====
-
 
 We're now ready to test.
 
@@ -168,10 +172,10 @@ curl -Li https://site.test/_site/openid/auth0/login
 
 Site must acquire an ID_TOKEN in order to identify a subject.
 
-The way it does this is by communicate with an identity provider.
+The way it does this is by communicate with an OpenID Provider.
 
-In the language of OAuth2, Site takes on the role of a Client and the Identity
-Provider takes on the role of the Authorization Server.
+In the language of OAuth2, Site takes on the role of a Client and the OpenID Provider
+takes on the role of the Authorization Server.
 
 Once Site has established confidence in the subject's claims, it can then
 proceed to authorize access to its resources.
@@ -190,14 +194,14 @@ participant Client as site
 database XT
 end box
 
-box Identity Provider
+box "OpenID Provider"
 participant "/authorize" as auth
 participant "/login" as login
 participant "/token" as token
 end box
 
 browser -> site: GET /login
-site <- XT: Look up config of\nIdentity Provider
+site <- XT: Look up config of\nOpenID Provider
 site -> XT: Create session cookie,\nwith state value
 site -> browser: Set session cookie,\nredirect to /authorize
 browser -> auth: GET /authorize, no session cookie

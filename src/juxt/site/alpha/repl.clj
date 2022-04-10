@@ -561,15 +561,15 @@
 (defn grant-permission! [permission]
   (init/grant-permission! (xt-node) (config) permission))
 
-(defn put-openid-provider! [issuer]
-  (init/put-openid-provider! (xt-node) issuer))
+(defn install-openid-provider! [issuer]
+  (init/install-openid-provider! (xt-node) issuer))
 
-(defn put-openid-login!
+(defn install-openid-resources!
   [& options]
-  (apply init/put-openid-login! (xt-node) (config) options))
+  (apply init/install-openid-resources! (xt-node) (config) options))
 
 (comment
-  (put-openid-provider! "https://juxt.eu.auth0.com/.well-known/openid-configuration"))
+  (install-openid-provider! "https://juxt.eu.auth0.com/.well-known/openid-configuration"))
 
 (defn install-put-immutable-public-resource-action! []
   ;; TODO: make this idempotent? (ensure these resources exist)

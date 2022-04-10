@@ -34,14 +34,14 @@
   "Redirect to an authorization endpoint"
   [{::site/keys [resource xt-node db] :as req}]
   (let [{::pass/keys [oauth2-client]} resource
-        {::pass/keys [oauth2-client-id redirect-uri openid-provider]} (xt/entity db oauth2-client)
+        {::pass/keys [oauth2-client-id redirect-uri openid-issuer-id]} (xt/entity db oauth2-client)
 
         _ (when-not oauth2-client-id
             (return req 500 "No oauth2 client id found" {}))
         _ (when-not redirect-uri
             (return req 500 "A :juxt.pass.alpha/redirect entry must be specified" {}))
 
-        openid-configuration (some-> openid-provider (lookup db) ::pass/openid-configuration)
+        openid-configuration (some-> openid-issuer-id (lookup db) ::pass/openid-configuration)
         _ (when-not openid-configuration
             (return req 500 "No openid configuration found" {:openid-configuration-id (some-> resource ::pass/openid-configuration-id)}))
 

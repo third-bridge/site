@@ -563,11 +563,11 @@
       ['permission :juxt.pass.alpha/action (str base-uri "/actions/get-private-resource")]
       ['subject :xt/id]]]}))
 
-(defn put-openid-provider! [xt-node issuer]
+(defn install-openid-provider! [xt-node issuer-id]
   (let [;; https://openid.net/specs/openid-connect-discovery-1_0.html#rfc.section.4
         ;; tells us we rely on the configuration information being available at
-        ;; a fixed path.
-        config-uri (str issuer "/.well-known/openid-configuration")
+        ;; the fixed path /.well-known/openid-configuration.
+        config-uri (str issuer-id "/.well-known/openid-configuration")
 
         _ (printf "Loading OpenID configuration from %s\n" config-uri)
         config (json/read-value (slurp config-uri))]
@@ -577,9 +577,9 @@
      {:xt/id config-uri
       :juxt.pass.alpha/openid-configuration config})))
 
-(defn put-openid-login!
+(defn install-openid-resources!
   [xt-node {::site/keys [base-uri] :as config}
-   & {:keys [name provider client-id client-secret]}]
+   & {:keys [name issuer-id client-id client-secret]}]
 
   (assert name)
   (install-put-immutable-public-resource-action! xt-node config)
@@ -597,19 +597,27 @@
     (put!
      xt-node
      {:xt/id client
-      :juxt.pass.alpha/openid-provider provider
+      :juxt.pass.alpha/openid-issuer-id issuer-id
       :juxt.pass.alpha/oauth2-client-id client-id
       :juxt.pass.alpha/oauth2-client-secret client-secret
       :juxt.pass.alpha/redirect-uri callback})
 
-    (put-immutable-public-resource
-     {:xt/id login
-      :juxt.http.alpha/content-type "text/plain"
-      :juxt.site.alpha/get-fn 'juxt.pass.alpha.openid-connect/login
-      :juxt.pass.alpha/oauth2-client client})
+    (let [login
+          (put-immutable-public-resource
+           {:xt/id login
+            :juxt.http.alpha/content-type "text/plain"
+            :juxt.site.alpha/get-fn 'juxt.pass.alpha.openid-connect/login
+            :juxt.pass.alpha/oauth2-client client})
 
-    (put-immutable-public-resource
-     {:xt/id callback
-      :juxt.http.alpha/content-type "text/plain"
-      :juxt.site.alpha/get-fn 'juxt.pass.alpha.openid-connect/callback
-      :juxt.pass.alpha/oauth2-client client})))
+          callback
+          (put-immutable-public-resource
+           {:xt/id callback
+            :juxt.http.alpha/content-type "text/plain"
+            :juxt.site.alpha/get-fn 'juxt.pass.alpha.openid-connect/callback
+            :juxt.pass.alpha/oauth2-client client})
+          ]
+      {:login-uri (get-in login [::pass/puts 0])
+       :callback-uri (get-in callback [::pass/puts 0])})
+
+
+    ))
