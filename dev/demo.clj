@@ -281,6 +281,29 @@
      ;; end::put-unauthorized-error-resource![]
      ))))
 
+#_{:xt/id "{{base-uri}}/_site/errors/unauthorized.html"
+ :juxt.http.alpha/methods #{:get :head :options}
+ :juxt.site.alpha/variant-of "{{base-uri}}/_site/errors/unauthorized"
+ :juxt.site.alpha/type "TemplatedRepresentation"
+ :juxt.site.alpha/template "{{base-uri}}/_site/templates/unauthorized.html"
+ :juxt.site.alpha/template-model juxt.pass.alpha.authentication/unauthorized-template-model
+ :juxt.pass.alpha/classification "PUBLIC"}
+
+(defn demo-put-unauthorized-error-representation-for-html! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::put-unauthorized-error-representation-for-html![]
+     (do-action
+      "https://site.test/actions/put-immutable-public-resource"
+      {:xt/id "https://site.test/_site/errors/unauthorized.html"
+       :juxt.site.alpha/variant-of "https://site.test/_site/errors/unauthorized"
+       :juxt.http.alpha/content-type "text/html;charset=utf-8"
+       :juxt.http.alpha/content "<h1>Unauthorized</h1>"})
+     ;; end::put-unauthorized-error-representation-for-html![]
+     )))
+  )
+
 (defn demo-bootstrap-resources! []
   (demo-create-action-put-immutable-public-resource!)
   (demo-grant-permission-to-call-action-put-immutable-public-resource!)
@@ -298,5 +321,6 @@
   (demo-create-action-put-error-resource!)
   (demo-grant-permission-to-put-error-resource!)
   (demo-put-unauthorized-error-resource!)
+  (demo-put-unauthorized-error-representation-for-html!)
 
   )

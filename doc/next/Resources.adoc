@@ -261,6 +261,11 @@ include::../../dev/demo.clj[tag=grant-permission-to-put-immutable-private-resour
 ----
 include::../../dev/demo.clj[tag=put-unauthorized-error-resource!,indent=0]
 ----
+
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=put-unauthorized-error-representation-for-html!,indent=0]
+----
 ====
 
 
