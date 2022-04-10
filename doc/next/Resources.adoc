@@ -82,7 +82,7 @@ In many organisations, publishing information to the public web may well be a
 restricted operation so <<create-action-put-immutable-public-resource>> shows
 how to do so.
 
-.Creating and accessing a public resource
+.Creating a public resource
 [[create-action-put-immutable-public-resource]]
 ====
 We'll do the following steps:

@@ -571,15 +571,15 @@
 (comment
   (install-openid-provider! "https://juxt.eu.auth0.com/.well-known/openid-configuration"))
 
-(defn install-put-immutable-public-resource-action! []
+#_(defn install-put-immutable-public-resource-action! []
   ;; TODO: make this idempotent? (ensure these resources exist)
   (init/install-put-immutable-public-resource-action! (xt-node) (config)))
 
-(defn install-put-immutable-private-resource-action! []
+#_(defn install-put-immutable-private-resource-action! []
   ;; TODO: make this idempotent? (ensure these resources exist)
   (init/install-put-immutable-private-resource-action! (xt-node) (config)))
 
-(defn install-put-immutable-private-resource-action!
+#_(defn install-put-immutable-private-resource-action!
   [xt-node {::site/keys [base-uri] :as config}]
   (create-action!
    {:xt/id "https://site.test/actions/put-immutable-private-resource"
@@ -625,17 +625,15 @@
       ['permission :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"]
       ['subject :xt/id]]]}))
 
-
 (defn bootstrap-actions! []
   (install-do-action-fn!)
   (put! {:xt/id (me)})
   (install-create-action!)
   (permit-create-action!)
   (install-grant-permission-action!)
-  (permit-grant-permission-action!)
-  #_(install-put-immutable-public-resource-action!))
+  (permit-grant-permission-action!))
 
-(defn example-hello-world []
+#_(defn example-hello-world []
   (install-put-immutable-public-resource-action!)
 
   (do-action
@@ -644,7 +642,7 @@
     :juxt.http.alpha/content-type "text/plain"
     :juxt.http.alpha/content "Hello World!\r\n"}))
 
-(defn example-bootstrap! []
+#_(defn example-bootstrap! []
   (bootstrap-actions!)
 
   ;; Create create-person action

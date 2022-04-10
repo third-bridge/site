@@ -452,7 +452,7 @@
      (p/pattern-parser #"(?<scheme>https?)://" {:group {:juxt.reap.alpha.rfc7230/scheme "scheme"}})
      host-parser))))
 
-(defn install-put-immutable-public-resource-action!
+#_(defn install-put-immutable-public-resource-action!
   [xt-node {::site/keys [base-uri] :as config}]
   (create-action!
    xt-node
@@ -511,7 +511,7 @@
     :juxt.pass.alpha/action #{(str base-uri "/actions/get-public-resource")}
     :juxt.pass.alpha/purpose nil}))
 
-(defn install-put-immutable-private-resource-action!
+#_(defn install-put-immutable-private-resource-action!
   [xt-node {::site/keys [base-uri] :as config}]
   (create-action!
    xt-node
@@ -582,7 +582,7 @@
    & {:keys [name issuer-id client-id client-secret]}]
 
   (assert name)
-  (install-put-immutable-public-resource-action! xt-node config)
+  #_(install-put-immutable-public-resource-action! xt-node config)
 
   (let [client (format "%s/_site/openid/%s/client" base-uri name)
         login (format "%s/_site/openid/%s/login" base-uri name)

@@ -230,7 +230,10 @@
   (demo-grant-permission-to-call-action-put-immutable-public-resource!)
   (demo-create-action-get-public-resource!)
   (demo-grant-permission-to-call-get-public-resource!)
+
   (demo-create-action-put-immutable-private-resource!)
   (demo-grant-permission-to-put-immutable-private-resource!)
   (demo-create-action-get-private-resource!)
-  (demo-create-immutable-private-resource!))
+
+  ;;(demo-create-immutable-private-resource!)
+  )
