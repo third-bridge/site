@@ -14,8 +14,7 @@ If Site trusts the OpenID Provider, and the OpenID Provider trusts the claims
 made by the user, then Site can trust those user claims too.
 
 When communicating with an OpenID Provider, Site assumes the role of an
-https://www.rfc-editor.org/rfc/rfc6749#section-1.1[_OAuth 2.0 Client_], also known
-as a *Relying Party*.
+https://www.rfc-editor.org/rfc/rfc6749#section-1.1[_OAuth 2.0 Client_] or, in the terminology of OpenID, a *Relying Party*.
 
 When an unidentified user accesses Site, Site can request an *ID Token*, which
 contains the user's claims, from the OpenID Provider. These claims are trusted
