@@ -299,7 +299,7 @@
       {:xt/id "https://site.test/_site/errors/unauthorized.html"
        :juxt.site.alpha/variant-of "https://site.test/_site/errors/unauthorized"
        :juxt.http.alpha/content-type "text/html;charset=utf-8"
-       :juxt.http.alpha/content "<h1>Unauthorized</h1>"})
+       :juxt.http.alpha/content "<h1>Unauthorized</h1>\r\n"})
      ;; end::put-unauthorized-error-representation-for-html![]
      )))
   )

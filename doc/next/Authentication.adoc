@@ -179,13 +179,18 @@ We created the required web resources for the application by calling the
 :issuer-id "https://juxt.eu.auth0.com"
 :client-id "d8X0TfEIcTl5oaltA4oy9ToEPdn5nFUK"
 :client-secret "zb86gDUf_rEnwENYJBeih-cAzICjjPvvumThTw6qIqCVvtP83vYFtjuHni_m2ndt")
-=>
+----
+
+
+Calling the `install-openid-resources!` function returned a map:
+
+[source,clojure]
+----
 {:login-uri "https://site.test/_site/openid/auth0-site-test/login",
  :callback-uri "https://site.test/_site/openid/auth0-site-test/callback"}
 ----
 
-Calling the `install-openid-resources!` function returned a map containing the
-application's URIs, which we made a note of.
+This map contained the application's URIs, which we made a note of.
 
 |===
 |Application Login URI|+https://site.test/_site/openid/auth0-site-test/login+

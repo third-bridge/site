@@ -254,7 +254,7 @@ include::../../dev/demo.clj[tag=create-action-put-error-resource!,indent=0]
 
 [source,clojure]
 ----
-include::../../dev/demo.clj[tag=grant-permission-to-put-immutable-private-resource!,indent=0]
+include::../../dev/demo.clj[tag=grant-permission-to-put-error-resource!,indent=0]
 ----
 
 [source,clojure]
