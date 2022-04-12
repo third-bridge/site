@@ -563,18 +563,34 @@
       ['permission :juxt.pass.alpha/action (str base-uri "/actions/get-private-resource")]
       ['subject :xt/id]]]}))
 
+(defn openid-provider-configuration-url
+  "Returns the URL of the OpenID Provider Configuration Information."
+  [issuer-id]
+  ;; See https://openid.net/specs/openid-connect-discovery-1_0.html#rfc.section.4.1
+  ;;
+  ;; "If the Issuer value contains a path component, any terminating / MUST be
+  ;; removed before appending /.well-known/openid-configuration."
+  ;;
+  ;; This uses a reluctant regex qualifier.
+  (str (second (re-matches #"(.*?)/?" issuer-id)) "/.well-known/openid-configuration"))
+
+;; Should be true
+(comment
+  (=
+   (openid-provider-configuration-url "https://juxt.eu.auth0.com")
+   (openid-provider-configuration-url "https://juxt.eu.auth0.com/")))
+
 (defn install-openid-provider! [xt-node issuer-id]
   (let [;; https://openid.net/specs/openid-connect-discovery-1_0.html#rfc.section.4
         ;; tells us we rely on the configuration information being available at
-        ;; the fixed path /.well-known/openid-configuration.
-        config-uri (str issuer-id "/.well-known/openid-configuration")
-
+        ;; the path <issuer-id>/.well-known/openid-configuration.
+        config-uri (openid-provider-configuration-url issuer-id)
         _ (printf "Loading OpenID configuration from %s\n" config-uri)
         config (json/read-value (slurp config-uri))]
     (printf "Issuer added: %s\n" (get config "issuer"))
     (put!
      xt-node
-     {:xt/id config-uri
+     {:xt/id issuer-id
       :juxt.pass.alpha/openid-configuration config})))
 
 (defn install-openid-resources!

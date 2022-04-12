@@ -81,7 +81,7 @@ region. Auth0 created the `juxt.eu.auth0.com` domain for us, representing the
 Issuer.
 
 |===
-|Issuer Identifier|+https://juxt.eu.auth0.com+
+|Issuer Identifier|+https://juxt.eu.auth0.com/+
 |===
 
 Then we registered Auth0 as an OpenID Provider in Site, with the *Issuer
@@ -89,7 +89,7 @@ Identifier* as a parameter:
 
 [source,clojure]
 ----
-(install-openid-provider! "https://juxt.eu.auth0.com")
+(install-openid-provider! "https://juxt.eu.auth0.com/")
 ----
 
 CAUTION: If you've decided to use Auth0 too, you'll have to decide on a tenant
@@ -163,7 +163,7 @@ following values:
 
 |===
 |:name|auth0-site-test
-|:issuer-id|+https://juxt.eu.auth0.com+
+|:issuer-id|+https://juxt.eu.auth0.com/+
 |:client-id|d8X0TfEIcTl5oaltA4oy9ToEPdn5nFUK
 |:client-secret|zb86gDUf_rEnwENYJBeih-cAzICjjPvvumThTw6qIqCVvtP83vYFtjuHni_m2ndt
 |===
@@ -175,7 +175,7 @@ We created the required web resources for the application by calling the
 ----
 (install-openid-resources!
 :name "auth0-site-test"
-:issuer-id "https://juxt.eu.auth0.com"
+:issuer-id "https://juxt.eu.auth0.com/"
 :client-id "d8X0TfEIcTl5oaltA4oy9ToEPdn5nFUK"
 :client-secret "zb86gDUf_rEnwENYJBeih-cAzICjjPvvumThTw6qIqCVvtP83vYFtjuHni_m2ndt")
 ----

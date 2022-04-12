@@ -6,12 +6,9 @@
    [juxt.site.alpha.selmer :as selmer]
    [clojure.walk :refer [postwalk]]
    [juxt.site.alpha.graphql.templating :as graphql-templating]
-   [clojure.tools.logging :as log]
-   [xtdb.api :as xt]))
-
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'site (create-ns 'juxt.site.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
+   [xtdb.api :as xt]
+   [juxt.http.alpha :as-alias http]
+   [juxt.site.alpha :as-alias site]))
 
 (declare add-payload)
 
@@ -70,6 +67,13 @@
 (defn process-template-model [template-model {::site/keys [db] :as req}]
   ;; A template model can be a stored query.
   (let [f (cond
+            (nil? template-model)
+            (throw
+             (ex-info
+              "Nil template-model. Template resources must have a :juxt.site.alpha/template-model attribute."
+              {:resource (::site/resource req)
+               ::site/request-context (assoc req :ring.response/status 500)}))
+
             ;; If a symbol, it is expected to be a resolvable internal function
             ;; (to support basic templates built on the request and internal
             ;; Site data).

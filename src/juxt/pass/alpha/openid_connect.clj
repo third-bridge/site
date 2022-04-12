@@ -19,7 +19,9 @@
    [clojure.tools.logging :as log]
    [juxt.pass.alpha :as-alias pass]
    [juxt.pass.jwt :as-alias jwt]
-   [juxt.site.alpha :as-alias site])
+   [ring.middleware.params :as params]
+   [juxt.site.alpha :as-alias site]
+   [juxt.site.alpha.code :as code])
   (:import
    (com.auth0.jwt.exceptions JWTVerificationException)
    (com.auth0.jwt JWT)
@@ -32,9 +34,17 @@
 
 (defn login
   "Redirect to an authorization endpoint"
-  [{::site/keys [resource xt-node db] :as req}]
+  [{::site/keys [resource xt-node db]
+    :ring.request/keys [query]
+    :as req}]
+
+;;  (def req req)
+
   (let [{::pass/keys [oauth2-client]} resource
         {::pass/keys [oauth2-client-id redirect-uri openid-issuer-id]} (xt/entity db oauth2-client)
+
+        query-params (some-> req :ring.request/query (codec/form-decode "US-ASCII") )
+        return-to (get query-params "return-to")
 
         _ (when-not oauth2-client-id
             (return req 500 "No oauth2 client id found" {}))
@@ -58,7 +68,7 @@
          xt-node
          {::pass/state state
           ::pass/nonce nonce
-          ::pass/redirect "/index.html"})
+          ::pass/return-to return-to})
 
         query-string
         (codec/form-encode
@@ -206,13 +216,13 @@
 
   ;; Exchange code for JWT
   (let [{::pass/keys [oauth2-client]} resource
-        {::pass/keys [oauth2-client-id oauth2-client-secret redirect-uri openid-provider]}
+        {::pass/keys [oauth2-client-id oauth2-client-secret redirect-uri openid-issuer-id]}
         (xt/entity db oauth2-client)
 
-        openid-configuration (some-> openid-provider (lookup db) ::pass/openid-configuration)
+        openid-configuration (some-> openid-issuer-id (lookup db) ::pass/openid-configuration)
 
         _ (when-not openid-configuration
-            (return req 500 "No openid configuration found" {:openid-provider openid-provider}))
+            (return req 500 "No openid configuration found" {:openid-issuer-id openid-issuer-id}))
 
         token-endpoint (get openid-configuration "token_endpoint")
 
@@ -285,7 +295,7 @@
     ;; the redirect URI stored in the original session.
 
     (-> req
-        (redirect 303 (::pass/redirect session))
+        (redirect 303 (::pass/return-to session))
         (session/escalate-session
          #(assoc %
                  ::pass/claims (:claims id-token)
