@@ -150,6 +150,21 @@
      ;; end::create-hello-world-resource![]
      ))))
 
+(defn demo-create-hello-world-html-representation! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-hello-world-html-representation![]
+     (do-action
+      "https://site.test/actions/put-immutable-public-resource"
+      {:xt/id "https://site.test/hello.html" ; <1>
+       :juxt.http.alpha/content-type "text/html;charset=utf-8" ; <2>
+       :juxt.http.alpha/content "<h1>Hello World!</h1>\r\n" ; <3>
+       :juxt.site.alpha/variant-of "https://site.test/hello" ; <4>
+       })
+     ;; end::create-hello-world-html-representation![]
+     ))))
+
 
 
 

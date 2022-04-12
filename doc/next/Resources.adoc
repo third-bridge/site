@@ -136,6 +136,7 @@ include::../../dev/demo.clj[tag=grant-permission-to-call-get-public-resource!,in
 ----
 ====
 
+[[hello-world]]
 === Hello World!
 
 To demonstrate our new `put-immutable-public-resource` action, let's publish a
