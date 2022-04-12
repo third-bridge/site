@@ -6,8 +6,8 @@ Here are Site's values.
 [[vision]]
 == Vision
 
-Site is a long-term project with a long-term vision to become a standards-based
-general back-end resource-server that you can rely on.
+Site is a long-term project with a vision to become a standards-based general
+back-end resource-server that you can rely on.
 
 It has taken many years for us to design Site, and we expect the project to be a
 work-in-progress for some years to come. However, are striving hard to ensure
