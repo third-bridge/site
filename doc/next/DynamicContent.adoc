@@ -1,0 +1,10 @@
+= Dynamic Content
+:toc: left
+
+== Introduction
+
+NOTE: TODO
+
+== Templates
+
+NOTE: TODO Modify the HTML variant to use a template

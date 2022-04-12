@@ -63,7 +63,7 @@ base:
 # FIXME vertical-rhythm is weird; we should think in terms of ems
 #vertical-rhythm: $base-line-height-length * 2 / 3
 # correct line height for Noto Serif metrics (comes with built-in line height)
-vertical-rhythm: $base-line-height-length
+vertical-rhythm: $base-line-height-length * 2 / 4
 horizontal-rhythm: $base-line-height-length
 # QUESTION should vertical-spacing be block-spacing instead?
 vertical-spacing: $vertical-rhythm

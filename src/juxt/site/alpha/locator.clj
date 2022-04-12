@@ -7,11 +7,10 @@
    [juxt.site.alpha.debug :as debug]
    [juxt.site.alpha.static :as static]
    [juxt.site.alpha.cache :as cache]
-   [xtdb.api :as x]))
-
-(alias 'site (create-ns 'juxt.site.alpha))
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
+   [xtdb.api :as x]
+   [juxt.site.alpha :as-alias site]
+   [juxt.http.alpha :as-alias http]
+   [juxt.pass.alpha :as-alias pass]))
 
 (defn locate-with-locators [db req]
   (let [uri (::site/uri req)]
@@ -129,6 +128,7 @@
 
    ;; Return a back-stop resource
    ;; TODO: I think this needs to be nil
-   {::site/resource-provider ::default-empty-resource
+   nil
+   #_{::site/resource-provider ::default-empty-resource
     ::http/methods {:get {} :head {} :options {} :put {} :post {}}
     ::site/put-fn static/put-static-resource}))

@@ -150,6 +150,15 @@
      ;; end::create-hello-world-resource![]
      ))))
 
+
+
+
+
+
+
+
+;; Private resources and authentication
+
 (defn demo-create-action-put-immutable-private-resource! []
   (eval
    (substitute-actual-base-uri
@@ -330,12 +339,20 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::put-unauthorized-error-representation-for-html-2![]
-     (do-action
-      "https://site.test/actions/put-immutable-public-resource"
-      {:xt/id "https://site.test/_site/errors/unauthorized.html"
-       :juxt.site.alpha/variant-of "https://site.test/_site/errors/unauthorized"
-       :juxt.http.alpha/content-type "text/html;charset=utf-8"
-       :juxt.http.alpha/content "<!DOCTYPE html><html><head><meta http-equiv='Refresh' content='0; url='https://site.test/_site/openid/auth0-site-test/login'/></head><body><h1>Unauthorized</h1></body></html>"})
+     (do
+       (do-action
+        "https://site.test/actions/put-immutable-public-resource"
+        {:xt/id "https://site.test/_site/errors/unauthorized.html"
+         :juxt.site.alpha/variant-of "https://site.test/_site/errors/unauthorized"
+         :juxt.http.alpha/content-type "text/html;charset=utf-8"
+         :juxt.http.alpha/content "<!DOCTYPE html><html><head><meta http-equiv='Refresh' content='0; url='https://site.test/_site/openid/auth0-site-test/login'/></head><body><h1>Unauthorized</h1></body></html>"})
+
+       (do-action
+        "https://site.test/actions/put-immutable-public-resource"
+        {:xt/id "https://site.test/_site/errors/unauthorized.html"
+         :juxt.site.alpha/variant-of "https://site.test/_site/errors/unauthorized"
+         :juxt.http.alpha/content-type "text/html;charset=utf-8"
+         :juxt.http.alpha/content "<!DOCTYPE html><html><head><meta http-equiv='Refresh' content='0; url='https://site.test/_site/openid/auth0-site-test/login'/></head><body><h1>Unauthorized</h1></body></html>"}))
      ;; end::put-unauthorized-error-representation-for-html-2![]
      )))
   )
