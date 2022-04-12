@@ -166,7 +166,75 @@
      ))))
 
 
+;; Templating
 
+(defn demo-create-put-template-action! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-put-template-action![]
+     (create-action!
+      {:xt/id "https://site.test/actions/put-template"
+       :juxt.pass.alpha/scope "write:resource"
+
+       :juxt.pass.alpha.malli/args-schema
+       [:tuple
+        [:map
+         [:xt/id [:re "https://site.test/templates/.*"]]]]
+
+       :juxt.pass.alpha/process
+       [
+        [:juxt.pass.alpha.process/update-in
+         [0] 'merge
+         {::http/methods {}}]
+        [:juxt.pass.alpha.malli/validate]
+        [:xtdb.api/put]]
+
+       :juxt.pass.alpha/rules
+       '[
+         [(allowed? permission subject action resource)
+          [permission :juxt.pass.alpha/subject subject]]]})
+     ;; end::create-put-template-action![]
+     ))))
+
+(defn demo-grant-permission-to-call-action-put-template! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-to-call-action-put-template![]
+     (grant-permission!
+      {:xt/id "https://site.test/permissions/repl/put-template"
+       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/action #{"https://site.test/actions/put-template"}
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-to-call-action-put-template![]
+     ))))
+
+(defn demo-create-hello-world-html-template! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-hello-world-html-template![]
+     (do-action
+      "https://site.test/actions/put-template"
+      {:xt/id "https://site.test/templates/hello.html"
+       :juxt.http.alpha/content-type "text/html;charset=utf-8"
+       :juxt.http.alpha/content "<h1>Hello {audience}!</h1>\r\n"})
+     ;; end::create-hello-world-html-template![]
+     ))))
+
+(defn demo-create-hello-world-with-html-template! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-hello-world-with-html-template![]
+     (do-action
+      "https://site.test/actions/put-immutable-public-resource"
+      {:xt/id "https://site.test/hello-with-template.html"
+       :juxt.site.alpha/template "https://site.test/templates/hello.html"
+       })
+     ;; end::create-hello-world-with-html-template![]
+     ))))
 
 
 
