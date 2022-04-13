@@ -1,5 +1,7 @@
 ;; Copyright © 2021, JUXT LTD.
 
+;; Almost all DEPRECATED in favor of session.clj
+
 (ns juxt.pass.alpha.authentication
   (:require
    [jsonista.core :as json]
@@ -239,10 +241,7 @@
   authentication scheme(s) for accessing the resource."
   [{::site/keys [db] :as req}]
   ;; TODO: This might be where we also add the 'on-behalf-of' info
-  (let [
-
-
-        ;; Deprecated
+  (let [ ;; Deprecated
         {access-token "access_token"}
         (some-> req
                 ((fn [req] (assoc req :headers (get req :ring.request/headers))))

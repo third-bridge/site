@@ -21,7 +21,8 @@
    [juxt.pass.jwt :as-alias jwt]
    [ring.middleware.params :as params]
    [juxt.site.alpha :as-alias site]
-   [juxt.site.alpha.code :as code])
+   [juxt.site.alpha.code :as code]
+   [clojure.string :as str])
   (:import
    (com.auth0.jwt.exceptions JWTVerificationException)
    (com.auth0.jwt JWT)
@@ -201,6 +202,22 @@
           (xt/submit-tx xt-node [[:xtdb.api/put result]])
           (::pass/jwks result))))))
 
+(defn new-subject-urn []
+  (format "urn:site:subjects:%s" (random-uuid)))
+
+;; See https://openid.net/specs/openid-connect-core-1_0.html
+(defn extract-standard-claims [claims]
+  (let [standard-claims ["iss" "sub" "aud" "exp" "iat" "auth_time" "nonce" "acr" "amr" "azp"
+                         "name" "given_name" "family_name" "middle_name" "nickname" "preferred_username"
+                         "profile" "picture" "website" "email" "email_verified" "gender" "birthdate"
+                         "zoneinfo" "locale" "phone_number" "phone_number_verified" "address" "updated_at"]]
+    (->>
+     (for [c standard-claims
+           :let [v (get claims c)]
+           :when v]
+       [(keyword "juxt.pass.jwt" (str/replace c "_" "-")) v])
+     (into {}))))
+
 (defn callback
   "OAuth2 callback"
   [{::site/keys [resource db xt-node]
@@ -289,7 +306,28 @@
 
         _ (when-not (=  claimed-nonce original-nonce)
             ;; This is possibly an attack, we should log an alert
-            (return req 500 "Nonce received does not match expected"))]
+            (return req 500 "Nonce received does not match expected"))
+
+        subject (new-subject-urn)]
+
+    ;; Put the subject as a new entity
+    (xt/submit-tx
+     xt-node
+     [[::xt/put
+       (into
+        {:xt/id subject
+         ::site/type "Subject"
+         ::pass/id-token-claims (:claims id-token)
+         ;; We need to index some of the common known claims in order to
+         ;; use them in our Datalog rules.
+;;         ::jwt/iss (get-in id-token [:claims "iss"])
+;;         ::jwt/sub (get-in id-token [:claims "sub"])
+;;         ::jwt/aud (get-in id-token [:claims "aud"])
+;;         ::jwt/exp (get-in id-token [:claims "exp"])
+;;         ::jwt/iat (get-in id-token [:claims "iat"])
+         ::jwt/email (get-in id-token [:claims "email"])
+         }
+        (extract-standard-claims (get id-token :claims)))]])
 
     ;; Put the ID_TOKEN into the session, cycle the session id and redirect to
     ;; the redirect URI stored in the original session.
@@ -297,9 +335,4 @@
     (-> req
         (redirect 303 (::pass/return-to session))
         (session/escalate-session
-         #(assoc %
-                 ::pass/claims (:claims id-token)
-                 ;; We need to index some of the common known claims in order to
-                 ;; use them in our Datalog rules.
-                 ::jwt/sub (get-in id-token [:claims "sub"])
-                 ::jwt/iss (get-in id-token [:claims "iss"]))))))
+         #(assoc % ::pass/subject subject)))))

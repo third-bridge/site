@@ -26,6 +26,7 @@ include::ProtectingResources.adoc[leveloffset=+1]
 [[authentication]]
 include::Authentication.adoc[leveloffset=+1]
 
+[[authorization]]
 include::Authorization.adoc[leveloffset=+1]
 
 include::NextSteps.adoc[leveloffset=+1]

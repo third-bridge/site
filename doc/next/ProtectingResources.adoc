@@ -2,7 +2,7 @@
 :toc: left
 
 [[publishing-private-resources]]
-== Publishing a private resource
+== Creating a private resource
 
 Now let's publish an immutable private resource which can only be seen by an
 authenticated user.
@@ -32,11 +32,24 @@ mandate that a permission has been granted on a specific resource and the
 subject is not nil.
 
 [source,clojure]
+.Creating the `get-private-resource` action
 ----
 include::../../dev/demo.clj[tag=create-action-get-private-resource,indent=0]
 ----
 
-Now to create the private resource.
+The `get-private-resource` action's rules state that a single 'global'
+permission (referencing the action) is sufficient for _any_ authenticated
+end-user (subject) to access the action.
+
+But we must rememeber to create that single global permission:
+
+[source,clojure]
+.Creating the global grant on `get-private-resource` to authenticated users
+----
+include::../../dev/demo.clj[tag=grant-permission-to-get-private-resource!,indent=0]
+----
+
+Now to create a private resource.
 
 [source,clojure]
 ----

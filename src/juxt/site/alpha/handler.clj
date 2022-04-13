@@ -543,7 +543,7 @@
           (authz/check-permissions
            db
            actions
-           (cond-> {:subject subject}
+           (cond-> {:subject (:xt/id subject)}
              ;; When the resource is in the database, we can add it to the
              ;; permission checking in case there's a specific permission for
              ;; this resource.

@@ -46,7 +46,8 @@
                 (allowed? permission subject action resource)
 
                 ;; Only permissions that match our purpose
-                [permission ::pass/purpose purpose]]
+                [permission ::pass/purpose purpose]
+                ]
 
               :rules rules
 

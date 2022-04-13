@@ -165,8 +165,6 @@
     (java.time.ZoneId/systemDefault))
    (java.time.Instant/now)))
 
-;; Start import at 00:35
-
 (defn resources-from-stream [in]
   (let [record (try
                  (edn/read
@@ -273,7 +271,7 @@
      (printf "Dumped %d resources\n" (count resources)))))
 
 
-(defn cat-type
+#_(defn cat-type
   [t]
   (->> (q '{:find [(pull e [*])]
             :where [[e :xt/id]
@@ -282,13 +280,13 @@
        (map first)
        (sort-by str)))
 
-(defn rules []
+#_(defn rules []
   (sort-by
    str
    (map first
         (q '{:find [(pull e [*])] :where [[e ::site/type "Rule"]]}))))
 
-(defn uuid
+#_(defn uuid
   ([] (str (java.util.UUID/randomUUID)))
   ([s]
    (cond
@@ -327,14 +325,14 @@
        (println "Evicting" (count batch) "records")
        (println (apply evict! batch))))))
 
-(defn sessions []
+#_(defn sessions []
   (authn/expire-sessions! (java.util.Date.))
   (deref authn/sessions-by-access-token))
 
-(defn clear-sessions []
+#_(defn clear-sessions []
   (reset! authn/sessions-by-access-token {}))
 
-(defn superusers
+#_(defn superusers
   ([] (superusers (config)))
   ([{::site/keys [base-uri]}]
    (map first
@@ -346,7 +344,7 @@
                      :in [superuser]}
               (str base-uri "/_site/roles/superuser")))))
 
-(defn admin-access-tokens
+#_(defn admin-access-tokens
   ([] (admin-access-tokens (db) (base-uri)))
   ([db base-uri]
    (map
@@ -355,7 +353,7 @@
               :where [['e ::pass/client (str base-uri "/_site/apps/admin")]
                       ['e ::site/type "AccessToken"]]}))))
 
-(defn steps
+#_(defn steps
   ([] (steps (config)))
   ([opts]
    (let [{::site/keys [base-uri]} opts
@@ -401,7 +399,7 @@
 
       ])))
 
-(defn status
+#_(defn status
   ([] (status (steps (config))))
   ([steps]
    (println)
@@ -415,7 +413,7 @@
    (println)
    (if (every? :complete? steps) :ok :incomplete)))
 
-(defn put-site-api! []
+#_(defn put-site-api! []
   (let [config (config)
         xt-node (xt-node)]
     (init/put-site-api! xt-node config)
@@ -470,7 +468,7 @@
         config)
        (status (steps config)))))
 
-(defn update-site-graphql
+#_(defn update-site-graphql
   []
   (init/put-graphql-schema-endpoint! (xt-node) (config)))
 
@@ -487,18 +485,18 @@
       (init/put-graphql-schema-endpoint! xt-node config)
       (init/put-request-template! xt-node config)))
 
-(defn allow-public-access-to-public-resources! []
+#_(defn allow-public-access-to-public-resources! []
   (let [config (config)
         xt-node (xt-node)]
     (init/allow-public-access-to-public-resources! xt-node config)))
 
-(defn put-site-txfns! []
+#_(defn put-site-txfns! []
   (let [config (config)
         xt-node (xt-node)]
     (init/put-site-txfns! xt-node config)
     (status)))
 
-(defn reset-password! [username password]
+#_(defn reset-password! [username password]
   (let [user (str (::site/base-uri (config)) "/_site/users/" username)]
     (put!
      {:xt/id (str user "/password")
@@ -508,10 +506,10 @@
       ::pass/password-hash (password/encrypt password)
       ::pass/classification "RESTRICTED"})))
 
-(defn user [username]
+#_(defn user [username]
   (e (format "%s/_site/users/%s" (::site/base-uri (config)) username)))
 
-(defn user-apps [username]
+#_(defn user-apps [username]
   (q '{:find [(pull application [*])]
        :keys [app]
        :where [[grant :juxt.site.alpha/type "Grant"]
@@ -523,7 +521,7 @@
        :in [username]}
      username))
 
-(defn introspect-graphql []
+#_(defn introspect-graphql []
   (let [config (config)
         schema (:juxt.grab.alpha/schema (e (format "%s/_site/graphql" (::site/base-uri config))))
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
@@ -571,60 +569,6 @@
 (comment
   (install-openid-provider! "https://juxt.eu.auth0.com/.well-known/openid-configuration"))
 
-#_(defn install-put-immutable-public-resource-action! []
-  ;; TODO: make this idempotent? (ensure these resources exist)
-  (init/install-put-immutable-public-resource-action! (xt-node) (config)))
-
-#_(defn install-put-immutable-private-resource-action! []
-  ;; TODO: make this idempotent? (ensure these resources exist)
-  (init/install-put-immutable-private-resource-action! (xt-node) (config)))
-
-#_(defn install-put-immutable-private-resource-action!
-  [xt-node {::site/keys [base-uri] :as config}]
-  (create-action!
-   {:xt/id "https://site.test/actions/put-immutable-private-resource"
-    :juxt.pass.alpha/scope "write:resource"
-
-    :juxt.pass.alpha.malli/args-schema
-    [:tuple
-     [:map
-      [:xt/id [:re "https://site.test/.*"]]]]
-
-    :juxt.pass.alpha/process
-    [
-     [:juxt.pass.alpha.process/update-in
-      [0] 'merge
-      {::http/methods
-       {:get {::pass/actions #{"https://site.test/actions/get-private-resource"}}
-        :head {::pass/actions #{"https://site.test/actions/get-private-resource"}}
-        :options {::pass/actions #{"https://site.test/actions/get-options"}}}}]
-
-     [:juxt.pass.alpha.malli/validate]
-     [:xtdb.api/put]]
-
-    :juxt.pass.alpha/rules
-    '[
-      [(allowed? permission subject action resource)
-       [permission :juxt.pass.alpha/subject subject]]]})
-
-  (grant-permission!
-   {:xt/id "https://site.test/permissions/repl/put-immutable-private-resource"
-    :juxt.pass.alpha/subject "urn:site:subjects:repl"
-    :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-private-resource"}
-    :juxt.pass.alpha/purpose nil})
-
-  ;; Create the action in order to read the resource
-  (create-action!
-   {:xt/id (str base-uri "https://site.test/actions/get-private-resource")
-    :juxt.pass.alpha/scope "read:resource"
-
-    :juxt.pass.alpha/rules
-    [
-     ['(allowed? permission subject action resource)
-      '[permission :juxt.pass.alpha/resource resource]
-      ['permission :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"]
-      ['subject :xt/id]]]}))
-
 (defn bootstrap-actions! []
   (install-do-action-fn!)
   (put! {:xt/id (me)})
@@ -632,15 +576,6 @@
   (permit-create-action!)
   (install-grant-permission-action!)
   (permit-grant-permission-action!))
-
-#_(defn example-hello-world []
-  (install-put-immutable-public-resource-action!)
-
-  (do-action
-   (str (base-uri) "/actions/put-immutable-public-resource")
-   {:xt/id (str (base-uri) "/hello")
-    :juxt.http.alpha/content-type "text/plain"
-    :juxt.http.alpha/content "Hello World!\r\n"}))
 
 #_(defn example-bootstrap! []
   (bootstrap-actions!)
@@ -719,3 +654,35 @@
                           :where [[e :xt/id]]})
                      (map first)
                      (map :xt/id))))
+
+(defn sessions []
+  (let [db (db)]
+    (for [tok (->> (q '{:find [e]
+                        :where [[e :xt/id]
+                                [e ::site/type "SessionToken"]]
+                        :in [t]} t)
+                   (map first)
+                   )
+          :let [session-id (::pass/session (xt/entity db tok))
+                session (xt/entity db session-id)
+                subject-id (::pass/subject session)
+                subject (xt/entity db subject-id)]]
+      {:session-token tok
+       :session session
+       :subject subject})))
+
+(defn evict-sessions! []
+  (let [db (db)]
+    (->>
+     (for [tok (->> (q '{:find [e]
+                         :where [[e :xt/id]
+                                 [e ::site/type "SessionToken"]]
+                         :in [t]} t)
+                    (map first)
+                    )
+           :let [session-id (::pass/session (xt/entity db tok))
+                 session (xt/entity db session-id)
+                 subject (::pass/subject session)]]
+       [tok session-id subject])
+     (mapcat seq)
+     (apply evict!))))

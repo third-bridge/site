@@ -92,9 +92,12 @@
             xt-node
             [[::xt/match (:xt/id session) session]
              [::xt/put new-session]
-             ;; TODO: Mark this token as stale and have a separate eviction
-             ;; process
+
+             ;; TODO: Replace evict with a strategy that marks this token as
+             ;; invalid/stale and have a separate eviction process, since evicts
+             ;; are expensive here. (as suggested by @jms)
              [::xt/evict (session-token-id->urn session-token-id!)]
+
              [::xt/put session-token]])
 
         _ (xt/await-tx xt-node tx)]
@@ -114,11 +117,14 @@
           session (when session-token-id!
                     (lookup-session db session-token-id!))
 
+          subject (xt/entity db (::pass/subject session))
+
           req (cond-> req
                 ;; The purpose of the trailing exclamation mark (!) is to
                 ;; indicate sensitivity. Avoid logging sensitive data.
                 session-token-id! (assoc ::pass/session-token-id! session-token-id!)
-                session (assoc ::pass/session session))]
+                session (assoc ::pass/session session)
+                subject (assoc ::pass/subject subject))]
 
       (h req))))
 

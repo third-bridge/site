@@ -300,10 +300,21 @@
        :juxt.pass.alpha/rules
        [
         ['(allowed? permission subject action resource)
-         '[permission :juxt.pass.alpha/resource resource]
          ['permission :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"]
          ['subject :xt/id]]]})
      ;; end::create-action-get-private-resource[]
+     ))))
+
+(defn demo-grant-permission-to-get-private-resource! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-to-get-private-resource![]
+     (grant-permission!
+      {:xt/id "https://site.test/permissions/any-subject/get-private-resource"
+       :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-to-get-private-resource![]
      ))))
 
 (defn demo-create-immutable-private-resource! []
@@ -413,21 +424,18 @@
   (demo-create-action-put-error-resource!)
   (demo-grant-permission-to-put-error-resource!)
   (demo-put-unauthorized-error-resource!)
-  (demo-put-unauthorized-error-representation-for-html!)
+  (demo-put-unauthorized-error-representation-for-html!))
 
-  )
-
-(defn demo-put-unauthorized-error-representation-for-html-2! []
+(defn demo-put-unauthorized-error-representation-for-html-with-login-link! []
   (eval
    (substitute-actual-base-uri
     (quote
-     ;; tag::put-unauthorized-error-representation-for-html-2![]
+     ;; tag::put-unauthorized-error-representation-for-html-with-login-link![]
      (do-action
       "https://site.test/actions/put-immutable-public-resource"
       {:xt/id "https://site.test/_site/errors/unauthorized.html"
        :juxt.site.alpha/variant-of "https://site.test/_site/errors/unauthorized"
        :juxt.http.alpha/content-type "text/html;charset=utf-8"
        :juxt.http.alpha/content (slurp "dev/unauthorized.html")})
-     ;; end::put-unauthorized-error-representation-for-html-2![]
-     )))
-  )
+     ;; end::put-unauthorized-error-representation-for-html-with-login-link![]
+     ))))

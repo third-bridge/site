@@ -3,7 +3,23 @@
 
 == Introduction
 
-== Setup actions
+Site adds the concept of *actions* to XTDB.
+
+Actions make up the layer which mediates, authorizes and records read and write
+access to the database.
+
+* Actions run in transaction functions to ensure atomicity and consistency.
+* Actions can provide involve input validation.
+* Actions leave an audit trail and may trigger alerts.
+* Actions can be grouped into OAuth2 scopes.
+* Actions are used to build higher-level services, such as OpenAPI and GraphQL operations.
+
+== Permissions
+
+* Permissions are what restrict actions to specific users and applications via permissions.
+* An action has rules which specify how permissions determine the outcome of authorization decisions.
+
+== Setting up actions
 
 ////
 (old text)
@@ -30,17 +46,7 @@ to create those too.
 But first, we need to install some preliminary resources into our REPL.
 ////
 
-Site adds the concept of *actions* to XTDB.
 
-Actions make up the layer which mediates, authorizes and records read and write
-access to the database.
-
-* Actions are restricted to authorized users and applications.
-* Actions run in transaction functions to ensure atomicity and consistency.
-* Actions can provide involve input validation.
-* Actions leave an audit trail and may trigger alerts.
-* Actions can be grouped into OAuth2 scopes.
-* Actions are used to build higher-level services, such as OpenAPI and GraphQL operations.
 
 === Install the `do-action` function
 
