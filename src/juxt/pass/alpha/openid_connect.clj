@@ -39,7 +39,7 @@
     :ring.request/keys [query]
     :as req}]
 
-;;  (def req req)
+  ;;  (def req req)
 
   (let [{::pass/keys [oauth2-client]} resource
         {::pass/keys [oauth2-client-id redirect-uri openid-issuer-id]} (xt/entity db oauth2-client)
@@ -67,9 +67,8 @@
         session-token-id!
         (session/create-session
          xt-node
-         {::pass/state state
-          ::pass/nonce nonce
-          ::pass/return-to return-to})
+         (cond-> {::pass/state state ::pass/nonce nonce}
+           return-to (assoc ::pass/return-to return-to)))
 
         query-string
         (codec/form-encode
@@ -234,9 +233,35 @@
         (extract-standard-claims (get id-token :claims)))]])
     subject))
 
-(defn match-identity [db id-token-claims]
+#_(xt/q db '{:find [i]
+                        :where [[i ::site/type "Identity"]
+                                [i :juxt.pass.jwt/iss iss]
+                                [i :juxt.pass.jwt/sub sub]
+                                ]
+                        :in [iss sub]}
+                   (get id-token-claims "iss")
+                   (get id-token-claims "sub"))
 
-  )
+(defn match-identity [db id-token-claims]
+  (let [identities
+        (map first
+             (xt/q db '{:find [i]
+                        :where [[i ::site/type "Identity"]
+                                [i :juxt.pass.jwt/iss iss]
+                                [i :juxt.pass.jwt/sub sub]
+                                ]
+                        :in [iss sub]}
+                   (get id-token-claims "iss")
+                   (get id-token-claims "sub")))]
+    (cond
+      (= (count identities) 1) (first identities)
+
+      (> (count identities) 1)
+      (do
+        (log/warnf "Multiple identities match id-token-claims: %s" (pr-str id-token-claims))
+        nil)
+
+      :else nil)))
 
 (defn callback
   "OAuth2 callback"
@@ -338,12 +363,14 @@
 
     (if subject
 
-      (-> req
-          (redirect 303 (::pass/return-to session))
-          (session/escalate-session
-           #(assoc % ::pass/subject subject)))
+      (do
+        (log/warnf "Successful login! %s" (pr-str (select-keys (:claims id-token) ["iss" "sub"])))
+        (-> req
+            (redirect 303 (get session ::pass/return-to "/login-succeeded"))
+            (session/escalate-session
+             #(assoc % ::pass/subject subject))))
 
       ;; Login unsuccessful.
       (do
         (log/warnf "Unsuccessful login, no known identity match for claims %s" (pr-str (select-keys (:claims id-token) ["iss" "sub"])))
-        (redirect req 303 (::pass/return-to session))))))
+        (redirect req 303 "/login-failed")))))

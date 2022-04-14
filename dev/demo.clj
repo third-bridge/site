@@ -237,7 +237,77 @@
      ))))
 
 
+;; Identities
 
+(defn demo-create-action-put-identity! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-action-put-identity![]
+     (create-action!
+      {:xt/id "https://site.test/actions/put-identity"
+       :juxt.pass.alpha/scope "write:identity"
+
+       :juxt.pass.alpha.malli/args-schema
+       [:tuple
+        [:map
+         [:xt/id [:re "https://site.test/.*"]]
+         [:juxt.site.alpha/type [:= "Identity"]]]]
+
+       :juxt.pass.alpha/process
+       [
+        [:juxt.pass.alpha.process/update-in
+         [0] 'merge
+         {:juxt.site.alpha/type "Identity"}]
+        [:juxt.pass.alpha.malli/validate]
+        [:xtdb.api/put]]
+
+       :juxt.pass.alpha/rules
+       '[
+         [(allowed? permission subject action resource)
+          [permission :juxt.pass.alpha/subject subject]]]})
+     ;; end::create-action-put-identity![]
+     ))))
+
+(defn demo-grant-permission-to-call-action-put-identity! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-to-call-action-put-identity![]
+     (grant-permission!
+      {:xt/id "https://site.test/permissions/repl/put-identity"
+       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/action #{"https://site.test/actions/put-identity"}
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-to-call-action-put-identity![]
+     ))))
+
+(defn demo-create-identity! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-identity![]
+     (do-action
+      "https://site.test/actions/put-identity"
+      {:xt/id "https://site.test/~mal"
+       :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
+       :juxt.pass.jwt/sub "github|163131"})
+     ;; end::create-identity![]
+     ))))
+
+;; We don't need to show the login page
+#_(defn demo-put-login-page! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::put-login-page![]
+     (do-action
+      "https://site.test/actions/put-immutable-public-resource"
+      {:xt/id "https://site.test/login"
+       :juxt.http.alpha/content-type "text/html;charset=utf-8"
+       :juxt.http.alpha/content (slurp "dev/login.html")}))
+    ;; end::put-login-page![]
+    )))
 
 
 ;; Private resources and authentication

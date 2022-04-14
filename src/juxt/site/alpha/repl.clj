@@ -684,6 +684,6 @@
            :let [session-id (::pass/session (xt/entity db tok))
                  session (xt/entity db session-id)
                  subject (::pass/subject session)]]
-       [tok session-id subject])
+       (remove nil? [tok session-id subject]))
      (mapcat seq)
      (apply evict!))))
