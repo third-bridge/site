@@ -23,7 +23,7 @@
 ;; the domain. So in this example we define our users without any keywords that
 ;; would be recognisable to site/pass.
 
-;; Note: if you're not familiar with the Alice and Bob characters, see
+;; Note: if you're unfamiliar with the Alice and Bob characters, see
 ;; https://en.wikipedia.org/wiki/Alice_and_Bob#Cast_of_characters
 
 (def ALICE

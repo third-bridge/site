@@ -181,7 +181,6 @@ We created the required web resources for the application by calling the
 :client-secret "zb86gDUf_rEnwENYJBeih-cAzICjjPvvumThTw6qIqCVvtP83vYFtjuHni_m2ndt")
 ----
 
-
 Calling the `install-openid-resources!` function returned a map:
 
 [source,clojure]
@@ -204,6 +203,10 @@ We entered in the application URIs as shown below:
 image::Auth0-Application-URIs.png[]
 
 ====
+
+== Adding an identity
+
+We create an action
 
 == Improving the 401 error
 

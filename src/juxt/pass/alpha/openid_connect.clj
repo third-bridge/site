@@ -218,6 +218,26 @@
        [(keyword "juxt.pass.jwt" (str/replace c "_" "-")) v])
      (into {}))))
 
+(defn create-subject! [xt-node matched-identity id-token]
+  (let [subject (new-subject-urn)]
+    (xt/submit-tx
+     xt-node
+     [[::xt/put
+       (into
+        {:xt/id subject
+         ::site/type "Subject"
+         ::pass/id-token-claims (:claims id-token)
+         ::pass/identity matched-identity
+         }
+        ;; We need to index some of the common known claims in order to
+        ;; use them in our Datalog rules.
+        (extract-standard-claims (get id-token :claims)))]])
+    subject))
+
+(defn match-identity [db id-token-claims]
+
+  )
+
 (defn callback
   "OAuth2 callback"
   [{::site/keys [resource db xt-node]
@@ -308,31 +328,22 @@
             ;; This is possibly an attack, we should log an alert
             (return req 500 "Nonce received does not match expected"))
 
-        subject (new-subject-urn)]
-
-    ;; Put the subject as a new entity
-    (xt/submit-tx
-     xt-node
-     [[::xt/put
-       (into
-        {:xt/id subject
-         ::site/type "Subject"
-         ::pass/id-token-claims (:claims id-token)
-         ;; We need to index some of the common known claims in order to
-         ;; use them in our Datalog rules.
-;;         ::jwt/iss (get-in id-token [:claims "iss"])
-;;         ::jwt/sub (get-in id-token [:claims "sub"])
-;;         ::jwt/aud (get-in id-token [:claims "aud"])
-;;         ::jwt/exp (get-in id-token [:claims "exp"])
-;;         ::jwt/iat (get-in id-token [:claims "iat"])
-         ::jwt/email (get-in id-token [:claims "email"])
-         }
-        (extract-standard-claims (get id-token :claims)))]])
+        ;; Does the id-token match any identities in our database? If so, we create
+        ;; a subject.
+        subject (when-let [matched-identity (match-identity db (:claims id-token))]
+                  (create-subject! xt-node matched-identity id-token))]
 
     ;; Put the ID_TOKEN into the session, cycle the session id and redirect to
     ;; the redirect URI stored in the original session.
 
-    (-> req
-        (redirect 303 (::pass/return-to session))
-        (session/escalate-session
-         #(assoc % ::pass/subject subject)))))
+    (if subject
+
+      (-> req
+          (redirect 303 (::pass/return-to session))
+          (session/escalate-session
+           #(assoc % ::pass/subject subject)))
+
+      ;; Login unsuccessful.
+      (do
+        (log/warnf "Unsuccessful login, no known identity match for claims %s" (pr-str (select-keys (:claims id-token) ["iss" "sub"])))
+        (redirect req 303 (::pass/return-to session))))))
