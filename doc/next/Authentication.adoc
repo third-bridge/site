@@ -74,21 +74,52 @@ callback -> XT: Add identity to session
 callback -> browser: Upgrade session cookie
 ....
 
-NOTE: Describe the flow here
+NOTE: Describe the flow in more details here.
 
+For this flow to be possible, we need the following:
+
+. An OpenID Provider must be selected.
+. An account with the OpenID Provider must be created.
+. Site needs to know about the OpenID Provider, including which endpoints to call.
+. An OAuth 2.0 Client application needs to be created with the OpenID Provider.
+. Site needs to know some details about the OAuth 2.0 Client application's id and secret.
+. The OAuth 2.0 Client application needs to know some details about Site, such as the callback URI.
+. There needs to be at least one identity in the database that matches the ID_TOKEN.
+
+These steps will be described in more detail in subsequent sections.
 
 === Identities
 
+When an ID Token is received by Site, the database is queried for a matching
+identity.
 
+An identity is a document in XTDB containing `juxt.pass.jwt/iss` and
+`juxt.pass.jwt/sub` attributes which exactly match the corresponding `iss` and
+`sub` properties in the ID Token. The document must also have a
+`juxt.site.alpha/type` attribute with the value `"Identity"`.
 
-When an ID Token is received by Site it queries the
+These are the only constraints. The `Identity` document may have other
+attributes required by the domain.
 
-the "iss" and "sub" properties are matched
+For example, it may be that the `Identity` document references a particular
+individual, such that an individual can have multiple identities.
 
-<<identity-model>> shows how identities are modelled in Site.
+The schema chosen for the `Identity` documents is important, because it will be
+coupled to the rules defined on each action. An action's rules might use facts
+in the documents referenced by the Identity document to make decisions, for
+example, to determine if the individual belongs to a particular group or has
+been assigned a particular role.
+
+If a matching identity is found, Site will create a new `Subject` entity with a
+`juxt.pass.alpha/identity` attribute referencing the `Identity` entity.
+
+<<identity-model>> shows an example relationship between a `Subject`, `Identity`
+and a `Person` document.
 
 .Identity model
 [[identity-model]]
+====
+
 [plantuml,identity-model,png]
 ....
 skinparam monochrome true
@@ -96,8 +127,9 @@ skinparam monochrome true
 include::identity.json[]
 @endjson
 ....
+====
 
-
+[[selecting-openid-provider]]
 == Selecting an OpenID Provider
 
 How the OpenID Provider establishes trust in the user's claims is up to the
