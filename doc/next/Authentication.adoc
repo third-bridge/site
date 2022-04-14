@@ -43,6 +43,10 @@ It's possible to register multiple OpenID Providers with Site, and there are
 situations where there might be a need for more than one OAuth 2.0 Client
 application to exist for a given OpenID Provider.
 
+== Identities
+
+// A subject is an identity
+
 == Selecting an OpenID Provider
 
 How the OpenID Provider establishes trust in the user's claims is up to the

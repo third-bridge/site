@@ -252,7 +252,9 @@
        [:tuple
         [:map
          [:xt/id [:re "https://site.test/.*"]]
-         [:juxt.site.alpha/type [:= "Identity"]]]]
+         [:juxt.site.alpha/type [:= "Identity"]]
+         [:juxt.pass.jwt/iss [:re "https://.+"]]
+         [:juxt.pass.jwt/sub [:string {:min 1}]]]]
 
        :juxt.pass.alpha/process
        [
@@ -290,6 +292,7 @@
      (do-action
       "https://site.test/actions/put-identity"
       {:xt/id "https://site.test/~mal"
+       :code "mal"
        :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
        :juxt.pass.jwt/sub "github|163131"})
      ;; end::create-identity![]

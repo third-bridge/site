@@ -9,15 +9,33 @@ Actions make up the layer which mediates, authorizes and records read and write
 access to the database.
 
 * Actions run in transaction functions to ensure atomicity and consistency.
+
 * Actions can provide involve input validation.
+
+* Actions define their access control in rules, which are sufficient powerful to
+  model any access control policy (RBAC, ABAC, PBAC, etc.)
+
 * Actions leave an audit trail and may trigger alerts.
+
 * Actions can be grouped into OAuth2 scopes.
-* Actions are used to build higher-level services, such as OpenAPI and GraphQL operations.
+
+* Actions can be exposed to the network, using OpenAPI and/or GraphQL operations.
+
+* Actions decouple network APIs from lower-level effects. For example, an API
+  implementation can use a 'send-email', without having to know the
+  implementation details of sending emails.
 
 == Permissions
 
-* Permissions are what restrict actions to specific users and applications via permissions.
-* An action has rules which specify how permissions determine the outcome of authorization decisions.
+* Permissions are what restrict actions to specific users and applications via
+  permissions.
+
+* An action's rules specify how permissions determine the outcome of
+  authorization decisions.
+
+* Permissions are straight-forward to grant and revoke, as they are represented
+  as XT documents, so granting and revoking a permission can be done with XTDB's
+  respective `:xtdb.api/put` and `:xtdb.api/delete` operations.
 
 == Setting up actions
 
