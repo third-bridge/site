@@ -13,6 +13,8 @@ authenticating an end-user and providing claims about them.
 If Site trusts the OpenID Provider, and the OpenID Provider trusts the claims
 made by the user, then Site can trust those user claims too.
 
+=== Authentication with an OpenID Provider
+
 When communicating with an OpenID Provider, Site assumes the role of a *Relying
 Party*.
 
@@ -24,28 +26,77 @@ Site can verify.
 TIP: Terminology for OpenID Connect can be found at
 https://openid.net/specs/openid-connect-core-1_0.html#Terminology
 
-Typically, the process of integrating an OpenID Provider comprises three steps.
+////
+Understanding how the ID_TOKEN is acquired is helpful in diagnosing any
+authentication issues, perhaps due to misconfiguration.
+////
 
-. The first step is to register an account with the OpenID Provider and let Site
-fetch the OpenID Provider's configuration. This is described in
-<<registering-the-openid-provider>>.
+<<authentication-flow>> shows the interactions between a user (Alice), Site and an OpenID Provider.
 
-. The second step is to create an OAuth 2.0 Client application which is what Site
-will use to acquire an ID Token containing information (claims) about the
-end-user we want to authenticate. This step is described in
-<<creating-the-client-application>>.
+.Authentication flow
+[[authentication-flow]]
+[plantuml,authentication-flow,png]
+....
+skinparam monochrome true
+autonumber
 
-. The third step is to add documents into Site that match the identities of
-known users. This might be done ahead of time, or as part of a sign-up
-process. This step is explained in <<creating-identities>>.
+actor Alice as user
+participant browser
 
-It's possible to register multiple OpenID Providers with Site, and there are
-situations where there might be a need for more than one OAuth 2.0 Client
-application to exist for a given OpenID Provider.
+box Site
+participant "/.../login" as login
+participant "/.../callback" as callback
+database XT
+end box
 
-== Identities
+box "OpenID Provider"
+participant "/authorize" as auth
+participant "/token" as token
+End box
 
-// A subject is an identity
+browser -> login: GET
+login <- XT: Look up config of\nOpenID Provider
+login -> XT: Create temporary session\ncookie, with state value
+login -> browser: Set session cookie,\nredirect to /authorize
+note over login: We are asking Alice to authorize Site's access to her details
+browser -> auth: GET /authorize
+auth -> browser: Do you want to authorize Site?
+user -> browser: Yes please!
+browser -> auth: Yes
+auth -> browser: Redirect to Site with this code
+browser -> callback: Here is the code and state
+callback <- XT: Check state\nvalue matches
+callback -> token: POST code
+token -> callback: ID_TOKEN containing\nAlice's details
+callback -> XT: Find matching identity
+XT -> callback: Matching identity
+callback -> XT: Add identity to session
+callback -> browser: Upgrade session cookie
+....
+
+NOTE: Describe the flow here
+
+
+=== Identities
+
+
+
+When an ID Token is received by Site it queries the
+
+the "iss" and "sub" properties are matched
+
+<<identity-model>> shows how identities are modelled in Site.
+
+.Identity model
+[[identity-model]]
+[plantuml,identity-model,png]
+....
+skinparam monochrome true
+@startjson
+include::identity.json[]
+@endjson
+....
+
 
 == Selecting an OpenID Provider
 
@@ -67,8 +118,43 @@ Examples include:
 * https://www.keycloak.org/[Keycloak]
 * https://www.ory.sh/kratos[Ory Kratos]
 
+== Integrating the OpenID Provider and Site
+
+Before authentication can be accomplished, the OpenID Provider and Site need to
+know about each other.
+
+NOTE: It's possible to register multiple OpenID Providers with Site, and there are
+situations where there might be a need for more than one OAuth 2.0 Client
+application to exist for a given OpenID Provider.
+
+For each OpenID Provider, you will need to do the following:
+
+. Register an account with the OpenID Provider.
+
+. Let Site know about the OpenID Provider, such that it will fetch
+the OpenID Provider's configuration.
+
+These steps are described in <<registering-the-openid-provider>>.
+
+Additionally, for each OpenID Provider, you will need to configure at least one
+OAuth 2.0 Client application.
+
+. Create an OAuth 2.0 Client application with the OpenID Provider.
+
+The second step is to tell Site about the
+
+This step is described in
+<<creating-the-client-application>>.
+
+
+. The second step is to
+
+. The third step is to add documents into Site that match the identities of
+known users. This might be done ahead of time, or as part of a sign-up
+process. This step is explained in <<creating-identities>>.
+
 [[registering-the-openid-provider]]
-== Registering the OpenID Provider
+=== Registering the OpenID Provider
 
 The examples in this section explain how to configure a particular OpenID
 Provider (Auth0) but the process is similar for other providers.
@@ -107,7 +193,7 @@ remember this when following the examples in this section.
 ====
 
 [[creating-the-client-application]]
-== Creating the OAuth 2.0 Client Application
+=== Creating the OAuth 2.0 Client Application
 
 OpenID is built open OAuth 2.0, so we must create an OAuth 2.0 Client
 application which can represent Site in the OAuth 2.0 protocol.
@@ -228,7 +314,7 @@ include::../../dev/demo.clj[tag=put-login-page!,indent=0]
 ////
 
 [[creating-identities]]
-== Creating an identity
+=== Creating an identity
 
 We create an action to create an identity.
 
@@ -283,59 +369,3 @@ to our original resource.
 
 The session now contains the information contained in the ID_TOKEN, and we can
 move on to <<authorization>>.
-
-== Understanding the authentication flow
-
-Understanding how the ID_TOKEN is acquired is helpful in diagnosing any
-authentication issues, perhaps due to misconfiguration.
-
-<<authentication-flow>> illustrates the process.
-
-.How Site acquires an ID_TOKEN
-[[authentication-flow]]
-[plantuml,authentication-flow,png]
-....
-skinparam monochrome true
-autonumber
-
-actor Alice as user
-participant browser
-
-box Site
-participant Client as site
-database XT
-end box
-
-box "OpenID Provider"
-participant "/authorize" as auth
-participant "/login" as login
-participant "/token" as token
-End box
-
-browser -> site: GET /private.html
-site <- XT: Look up config of\nOpenID Provider
-site -> XT: Create session cookie,\nwith state value
-site -> browser: Set session cookie,\nredirect to /authorize
-browser -> auth: GET /authorize, no session cookie
-note over site: We are asking Alice to authorize Site's access to her details
-note over auth: Who is this?
-auth -> browser: Redirect to /login
-browser -> login: GET /login
-login -> browser: login page HTML
-user -> browser: Enter password
-browser -> login: POST
-note over login: OK, it's Alice
-login -> browser: Set session cookie, redirect to /authorize
-browser -> auth: GET /authorize, this time with cookie
-auth -> browser: Do you want to authorize Site?
-user -> browser: Yes please!
-browser -> auth: Yes
-auth -> browser: Redirect to Site with this code
-browser -> site: Here is the code and state
-site <- XT: Check state value
-site -> token: POST code
-token -> site: ID_TOKEN containing\nAlice's details
-site -> XT: Add ID_TOKEN to session
-site -> browser: Upgrade session cookie
-
-....
