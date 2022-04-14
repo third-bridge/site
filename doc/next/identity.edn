@@ -12,6 +12,9 @@
    :name "Malcolm Sparks"
    :company "JUXT"
    :position "CTO"
+   :role [{:type "Developer"}
+          {:type "User"}
+          {:type "Administrator"}]
    }
   }
  }

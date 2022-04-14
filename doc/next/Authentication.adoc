@@ -31,7 +31,9 @@ Understanding how the ID_TOKEN is acquired is helpful in diagnosing any
 authentication issues, perhaps due to misconfiguration.
 ////
 
-<<authentication-flow>> shows the interactions between a user (Alice), Site and an OpenID Provider.
+<<authentication-flow>> shows the interactions between a user (Alice), Site and
+an OpenID Provider. Some of the details have been left out, to simplify the
+diagram.
 
 .Authentication flow
 [[authentication-flow]]
@@ -86,12 +88,21 @@ For this flow to be possible, we need the following:
 . The OAuth 2.0 Client application needs to know some details about Site, such as the callback URI.
 . There needs to be at least one identity in the database that matches the ID_TOKEN.
 
-These steps will be described in more detail in subsequent sections.
+These steps will be described in more detail in subsequent sections. But before
+we get to them, we should first explain about how the identity of an end-user is
+represented in Site.
 
 === Identities
 
-When an ID Token is received by Site, the database is queried for a matching
-identity.
+Site stores details of the identity (or identities) of each user that might be
+allowed to perform privileged actions on resources.
+
+When an ID Token is received by Site, a matching identity must be located in the
+database otherwise the end-user isn't known.
+
+If a matching identity is found, Site will create a new `Subject` entity with a
+`juxt.pass.alpha/identity` attribute referencing the `Identity` entity. This
+`Subject` entity is then associated with the user's session.
 
 An identity is a document in XTDB containing `juxt.pass.jwt/iss` and
 `juxt.pass.jwt/sub` attributes which exactly match the corresponding `iss` and
@@ -99,24 +110,32 @@ An identity is a document in XTDB containing `juxt.pass.jwt/iss` and
 `juxt.site.alpha/type` attribute with the value `"Identity"`.
 
 These are the only constraints. The `Identity` document may have other
-attributes required by the domain.
-
-For example, it may be that the `Identity` document references a particular
-individual, such that an individual can have multiple identities.
+attributes required by the domain. For example, it may be that the `Identity`
+document references a particular individual, such that an individual can have
+multiple identities.
 
 The schema chosen for the `Identity` documents is important, because it will be
-coupled to the rules defined on each action. An action's rules might use facts
-in the documents referenced by the Identity document to make decisions, for
-example, to determine if the individual belongs to a particular group or has
-been assigned a particular role.
+coupled to the rules defined on each action.
 
-If a matching identity is found, Site will create a new `Subject` entity with a
-`juxt.pass.alpha/identity` attribute referencing the `Identity` entity.
+An action's rules might use facts in the documents referenced by the Identity
+document to make decisions, for example, to determine if the individual belongs
+to a particular group or has been assigned a particular role.
+
+Also, an action's rules might use facts in the `Subject` document directly, such
+as the 'strength' of the login (whether the end-user used a second factor, or
+whether their email address was verified).
+
+For example, a particularly sensitive
+action might require that the end-user used a second-factor when they
+authenticated, or otherwise deny the action to the end-user.
+
+TIP: Information about the 'strength' of a user's login can be encoded in the
+`acr` property of an ID Token, which is copied into the `Subject` document.
 
 <<identity-model>> shows an example relationship between a `Subject`, `Identity`
-and a `Person` document.
+and other domain-specific documents.
 
-.Identity model
+.Possible relationships between documents
 [[identity-model]]
 ====
 
@@ -128,6 +147,17 @@ include::identity.json[]
 @endjson
 ....
 ====
+
+In summary:
+
+* a `Subject` is a document containing known facts about the end-user, including
+  their identity, but also other facts about how they were authenticated.
+
+* an `Identity` is a document that matches the `iss` and `sub` properties of a
+  standard ID Token, and typically contains many more attributes (data values
+  and references to other documents).
+
+
 
 [[selecting-openid-provider]]
 == Selecting an OpenID Provider
