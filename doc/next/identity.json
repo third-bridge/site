@@ -1,1 +1,0 @@
-{"juxt.site.alpha/type":"Subject","juxt.pass.jwt/acr":"urn:openbanking:psd2:sca","juxt.pass.alpha/identity":{"juxt.site.alpha/type":"Identity","juxt.pass.jwt/iss":"https://juxt.eu.auth0.com/","juxt.pass.jwt/sub":"github|163131","person":{"type":"Person","name":"Malcolm Sparks","company":"JUXT","position":"CTO"}}}
