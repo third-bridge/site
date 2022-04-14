@@ -1,5 +1,11 @@
 = Authorization
 
+[NOTE]
+--
+Deprecated, replaced by doc/next/Site.adoc but remains here until Site.adoc
+fully explains permissions.
+--
+
 Authorization in Site is designed to be both flexible and tractable.
 
 It is flexible because it allows Site adopters to provide their own
