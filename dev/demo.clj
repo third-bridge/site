@@ -312,7 +312,41 @@
     ;; end::put-login-page![]
     )))
 
+;; APIs
 
+(defn demo-create-action-list-identities! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-action-list-identities![]
+     (create-action!
+      {:xt/id "https://site.test/actions/list-identities"
+       :juxt.pass.alpha/scope "read:identity"
+
+       :juxt.pass.alpha/pull '[*]
+
+       :juxt.pass.alpha/rules
+       '[
+         [(allowed? permission subject action resource)
+          [action :xt/id "https://site.test/actions/list-identities"]
+          [resource :juxt.site.alpha/type "Identity"]
+          [permission :juxt.pass.alpha/subject subject]
+          [permission :juxt.pass.alpha/action action]]]})
+     ;; end::create-action-list-identities![]
+     ))))
+
+(defn demo-grant-permission-to-list-identities! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-to-list-identities![]
+     (grant-permission!
+      {:xt/id "https://site.test/permissions/repl/list-identities"
+       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/action "https://site.test/actions/list-identities"
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-to-list-identities![]
+     ))))
 ;; Private resources and authentication
 
 (defn demo-create-action-put-immutable-private-resource! []

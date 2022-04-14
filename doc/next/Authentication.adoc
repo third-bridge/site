@@ -26,14 +26,12 @@ Site can verify.
 TIP: Terminology for OpenID Connect can be found at
 https://openid.net/specs/openid-connect-core-1_0.html#Terminology
 
-////
+<<authentication-flow>> shows the interactions between a Alice, Site and an
+OpenID Provider. Some of the details have been left out, to simplify the
+diagram.
+
 Understanding how the ID_TOKEN is acquired is helpful in diagnosing any
 authentication issues, perhaps due to misconfiguration.
-////
-
-<<authentication-flow>> shows the interactions between a user (Alice), Site and
-an OpenID Provider. Some of the details have been left out, to simplify the
-diagram.
 
 .Authentication flow
 [[authentication-flow]]
@@ -78,6 +76,8 @@ callback -> browser: Upgrade session cookie
 
 NOTE: Describe the flow in more details here.
 
+=== Requirements for authenticating with OpenID
+
 For this flow to be possible, we need the following:
 
 . An OpenID Provider must be selected.
@@ -92,6 +92,7 @@ These steps will be described in more detail in subsequent sections. But before
 we get to them, we should first explain about how the identity of an end-user is
 represented in Site.
 
+[[identities]]
 === Identities
 
 Site stores details of the identity (or identities) of each user that might be
@@ -157,7 +158,33 @@ In summary:
   standard ID Token, and typically contains many more attributes (data values
   and references to other documents).
 
+== Preparing to create identities
 
+To allow the REPL to create the identities we require, we'll need to create an
+action to create an identity and grant permission for the REPL user to call it.
+
+This action should enforce the `juxt.site.alpha/type`, `juxt.pass.jwt/iss` and
+`juxt.pass.jwt/sub` attributes that we discussed in <<identities>>. But of
+course we are free to amend this action to more closely reflect our domain. For
+example, we might want to ensure that it has a reference to an individual.
+
+.Creating the `put-identity` action
+[[create-put-identity-action]]
+====
+First we create the action:
+
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-put-identity!,indent=0]
+----
+
+Next, we grant the permission:
+
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=grant-permission-to-call-action-put-identity!,indent=0]
+----
+====
 
 [[selecting-openid-provider]]
 == Selecting an OpenID Provider
@@ -180,43 +207,12 @@ Examples include:
 * https://www.keycloak.org/[Keycloak]
 * https://www.ory.sh/kratos[Ory Kratos]
 
-== Integrating the OpenID Provider and Site
-
-Before authentication can be accomplished, the OpenID Provider and Site need to
-know about each other.
-
 NOTE: It's possible to register multiple OpenID Providers with Site, and there are
 situations where there might be a need for more than one OAuth 2.0 Client
 application to exist for a given OpenID Provider.
 
-For each OpenID Provider, you will need to do the following:
-
-. Register an account with the OpenID Provider.
-
-. Let Site know about the OpenID Provider, such that it will fetch
-the OpenID Provider's configuration.
-
-These steps are described in <<registering-the-openid-provider>>.
-
-Additionally, for each OpenID Provider, you will need to configure at least one
-OAuth 2.0 Client application.
-
-. Create an OAuth 2.0 Client application with the OpenID Provider.
-
-The second step is to tell Site about the
-
-This step is described in
-<<creating-the-client-application>>.
-
-
-. The second step is to
-
-. The third step is to add documents into Site that match the identities of
-known users. This might be done ahead of time, or as part of a sign-up
-process. This step is explained in <<creating-identities>>.
-
 [[registering-the-openid-provider]]
-=== Registering the OpenID Provider
+== Registering the OpenID Provider
 
 The examples in this section explain how to configure a particular OpenID
 Provider (Auth0) but the process is similar for other providers.
@@ -255,7 +251,7 @@ remember this when following the examples in this section.
 ====
 
 [[creating-the-client-application]]
-=== Creating the OAuth 2.0 Client Application
+== Creating the OAuth 2.0 Client Application
 
 OpenID is built open OAuth 2.0, so we must create an OAuth 2.0 Client
 application which can represent Site in the OAuth 2.0 protocol.
@@ -376,22 +372,7 @@ include::../../dev/demo.clj[tag=put-login-page!,indent=0]
 ////
 
 [[creating-identities]]
-=== Creating an identity
-
-We create an action to create an identity.
-
-.Creating the `put-identity` action
-[[create-put-identity-action]]
-====
-[source,clojure]
-----
-include::../../dev/demo.clj[tag=create-action-put-identity!,indent=0]
-----
-[source,clojure]
-----
-include::../../dev/demo.clj[tag=grant-permission-to-call-action-put-identity!,indent=0]
-----
-====
+== Creating identities
 
 ====
 Now we can create an identity:
