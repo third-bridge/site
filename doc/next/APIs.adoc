@@ -1,0 +1,87 @@
+= APIs
+:toc: left
+
+== Creating an action to install an API resource
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-put-api-resource!,indent=0]
+----
+
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=grant-permission-to-call-action-put-api-resource!,indent=0]
+----
+====
+
+== Creating an action to list identities
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-list-identities!,indent=0]
+----
+
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=grant-permission-to-list-identities!,indent=0]
+----
+====
+
+== Exposing list-identities as an API
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-list-users-api!,indent=0]
+----
+====
+
+
+
+.Why always a _set_ of actions?
+****
+
+The reason why multiple actions are useful is that you might have a situation
+where you want /users to return different results or behaviour based on whether
+the subject is nil, a user or a manager.
+
+****
+
+
+== Development Notes
+
+Should we call a `api-get` action?
+
+The action `api-get` might be required to have a permission which uses scopes?
+
+The https://spec.openapis.org/oas/latest.html#security-requirement-object[OpenAPI operation can have a security scope].
+
+A policy may link the operation's scope.
+If the subject has a given scope then the permission exists.
+If a permission exists linking the subject to the scope.
+
+The resource (operation?) can declare a scope, that's
+The `api-get` action may require a permission that the
+
+=== Forget scopes
+
+The resource's :get contains actions.
+If the subject is allowed to call the action, the they are allowed
+
+[WARNING]
+--
+Can't remember the reason why we unlinked permissions from actions. This seems too dangerous as it may cause overlaps.
+--
+
+
+== More development notes
+
+There must be a separate action created for calling an API operation, even if it's public.
+
+The action that calls the API function can be tied to API operation, or the API as a whole.
+
+How does Site know which action(s) to use when calling an operation?
+
+For now, it calls the generic call-api function

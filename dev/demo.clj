@@ -81,9 +81,9 @@
         [:juxt.pass.alpha.process/update-in
          [0] 'merge
          {::http/methods                 ; <2>
-          {:get {::pass/actions #{"https://site.test/actions/get-public-resource"}}
-           :head {::pass/actions #{"https://site.test/actions/get-public-resource"}}
-           :options {::pass/actions #{"https://site.test/actions/get-options"}}}}]
+          {:get {::pass/required-actions #{"https://site.test/actions/get-public-resource"}}
+           :head {::pass/required-actions #{"https://site.test/actions/get-public-resource"}}
+           :options {::pass/required-actions #{"https://site.test/actions/get-options"}}}}]
 
         [:juxt.pass.alpha.malli/validate]
         [:xtdb.api/put]]
@@ -314,6 +314,52 @@
 
 ;; APIs
 
+(defn demo-create-action-put-api-resource! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-action-put-api-resource![]
+     (create-action!
+      {:xt/id "https://site.test/actions/put-api-resource"
+       :juxt.pass.alpha/scope "write:api"
+
+       :juxt.pass.alpha.malli/args-schema
+       [:tuple
+        [:map
+         [:xt/id [:re "https://site.test/.*"]]
+         [:juxt.http.alpha/methods
+          [:map-of
+           :keyword
+           [:map
+            [:juxt.pass.alpha/actions [:set [:string]]]]]]]]
+
+       :juxt.pass.alpha/process
+       [
+        [:juxt.pass.alpha.malli/validate]
+        [:xtdb.api/put]]
+
+       :juxt.pass.alpha/rules
+       '[
+         [(allowed? permission subject action resource)
+          [permission :juxt.pass.alpha/subject subject]]]})
+     ;; end::create-action-put-api-resource![]
+     ))))
+
+(defn demo-grant-permission-to-call-action-put-api-resource! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-to-call-action-put-api-resource![]
+     (grant-permission!
+      {:xt/id "https://site.test/permissions/repl/put-api-resource"
+       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/action #{"https://site.test/actions/put-api-resource"}
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-to-call-action-put-api-resource![]
+     ))))
+
+;; API example
+
 (defn demo-create-action-list-identities! []
   (eval
    (substitute-actual-base-uri
@@ -330,7 +376,8 @@
          [(allowed? permission subject action resource)
           [action :xt/id "https://site.test/actions/list-identities"]
           [resource :juxt.site.alpha/type "Identity"]
-          [permission :juxt.pass.alpha/subject subject]
+          ;; Comment out just to make public
+          #_[permission :juxt.pass.alpha/subject subject]
           [permission :juxt.pass.alpha/action action]]]})
      ;; end::create-action-list-identities![]
      ))))
@@ -342,11 +389,72 @@
      ;; tag::grant-permission-to-list-identities![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/list-identities"
-       :juxt.pass.alpha/subject "urn:site:subjects:repl"
-       :juxt.pass.alpha/action "https://site.test/actions/list-identities"
+       ;; Comment out just to make public
+       ;;:juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/action #{"https://site.test/actions/list-identities"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-list-identities![]
      ))))
+
+;; Create an action to invoke a 'read' API
+
+(defn demo-create-action-invoke-read-api! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-action-invoke-read-api![]
+     (create-action!
+      {:xt/id "https://site.test/actions/invoke-read-api"
+       :juxt.pass.alpha/scope "read:resource"
+       :juxt.pass.alpha/rules
+       '[
+         [(allowed? permission subject action resource)
+          [action :xt/id "https://site.test/actions/invoke-read-api"]
+          [permission :juxt.pass.alpha/action action]]]})
+     ;; end::create-action-invoke-read-api![]
+     ))))
+
+;; Grant everyone permission to call an API
+
+(defn demo-grant-permission-to-invoke-read-api! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-to-invoke-read-api![]
+     (grant-permission!
+      {:xt/id "https://site.test/permissions/invoke-read-api"
+       :juxt.pass.alpha/action #{"https://site.test/actions/invoke-read-api"}
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-to-invoke-read-api![]
+     ))))
+
+;; Connect up an API
+
+(defn demo-create-list-users-api! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-list-users-api![]
+     (do-action
+      "https://site.test/actions/put-api-resource"
+      {:xt/id "https://site.test/users"
+       :juxt.http.alpha/content-type "text/plain"
+       :juxt.http.alpha/methods
+       {:get
+        {:juxt.pass.alpha/required-actions
+         #{"https://site.test/actions/invoke-api"}
+         :juxt.pass.alpha/actions
+         #{"https://site.test/actions/list-identities"}}}})
+     ;; end::create-list-users-api![]
+     ))))
+
+;; Why 401? where is this coming from? perhaps if we gave permission to everyone to list-identities?
+
+;; Perhaps do private resources and authentication first
+
+;; github|163131 needs
+
+
 ;; Private resources and authentication
 
 (defn demo-create-action-put-immutable-private-resource! []
@@ -368,9 +476,9 @@
         [:juxt.pass.alpha.process/update-in
          [0] 'merge
          {::http/methods
-          {:get {::pass/actions #{"https://site.test/actions/get-private-resource"}}
-           :head {::pass/actions #{"https://site.test/actions/get-private-resource"}}
-           :options {::pass/actions #{"https://site.test/actions/get-options"}}}}]
+          {:get {::pass/required-actions #{"https://site.test/actions/get-private-resource"}}
+           :head {::pass/required-actions #{"https://site.test/actions/get-private-resource"}}
+           :options {::pass/required-actions #{"https://site.test/actions/get-options"}}}}]
 
         [:juxt.pass.alpha.malli/validate]
         [:xtdb.api/put]]
