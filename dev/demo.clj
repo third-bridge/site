@@ -81,9 +81,9 @@
         [:juxt.pass.alpha.process/update-in
          [0] 'merge
          {::http/methods                 ; <2>
-          {:get {::pass/required-actions #{"https://site.test/actions/get-public-resource"}}
-           :head {::pass/required-actions #{"https://site.test/actions/get-public-resource"}}
-           :options {::pass/required-actions #{"https://site.test/actions/get-options"}}}}]
+          {:get {::pass/actions #{"https://site.test/actions/get-public-resource"}}
+           :head {::pass/actions #{"https://site.test/actions/get-public-resource"}}
+           :options {::pass/actions #{"https://site.test/actions/get-options"}}}}]
 
         [:juxt.pass.alpha.malli/validate]
         [:xtdb.api/put]]
@@ -441,7 +441,7 @@
        :juxt.http.alpha/content-type "text/plain"
        :juxt.http.alpha/methods
        {:get
-        {:juxt.pass.alpha/required-actions
+        {:juxt.pass.alpha/actions
          #{"https://site.test/actions/invoke-api"}
          :juxt.pass.alpha/actions
          #{"https://site.test/actions/list-identities"}}}})
@@ -476,9 +476,9 @@
         [:juxt.pass.alpha.process/update-in
          [0] 'merge
          {::http/methods
-          {:get {::pass/required-actions #{"https://site.test/actions/get-private-resource"}}
-           :head {::pass/required-actions #{"https://site.test/actions/get-private-resource"}}
-           :options {::pass/required-actions #{"https://site.test/actions/get-options"}}}}]
+          {:get {::pass/actions #{"https://site.test/actions/get-private-resource"}}
+           :head {::pass/actions #{"https://site.test/actions/get-private-resource"}}
+           :options {::pass/actions #{"https://site.test/actions/get-options"}}}}]
 
         [:juxt.pass.alpha.malli/validate]
         [:xtdb.api/put]]

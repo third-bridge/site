@@ -538,7 +538,7 @@
         :ring.request/keys [method]
         :as req}]
 
-    (let [actions (get-in resource [::http/methods method ::pass/required-actions])
+    (let [actions (get-in resource [::http/methods method ::pass/actions])
           permissions
           (authz/check-permissions
            db
