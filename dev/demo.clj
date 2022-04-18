@@ -260,7 +260,11 @@
        [
         [:juxt.pass.alpha.process/update-in
          [0] 'merge
-         {:juxt.site.alpha/type "Identity"}]
+         {:juxt.site.alpha/type "Identity"
+          #_:juxt.http.alpha/methods
+          #_{:get {:juxt.pass.alpha/actions #{"https://site.test/actions/get-identity"}}
+           :head {:juxt.pass.alpha/actions #{"https://site.test/actions/get-identity"}}
+           :options {}}}]
         [:juxt.pass.alpha.malli/validate]
         [:xtdb.api/put]]
 
@@ -442,9 +446,9 @@
        :juxt.http.alpha/methods
        {:get
         {:juxt.pass.alpha/actions
-         #{"https://site.test/actions/invoke-api"}
-         :juxt.pass.alpha/actions
-         #{"https://site.test/actions/list-identities"}}}})
+         #{"https://site.test/actions/invoke-read-api"}
+         #_:juxt.pass.alpha/actions
+         #_#{"https://site.test/actions/list-identities"}}}})
      ;; end::create-list-users-api![]
      ))))
 

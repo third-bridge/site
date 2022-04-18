@@ -27,8 +27,7 @@ TIP: Terminology for OpenID Connect can be found at
 https://openid.net/specs/openid-connect-core-1_0.html#Terminology
 
 <<authentication-flow>> shows the interactions between a Alice, Site and an
-OpenID Provider. Some of the details have been left out, to simplify the
-diagram.
+OpenID Provider. Some of the details have been left out to simplify the diagram.
 
 Understanding how the ID_TOKEN is acquired is helpful in diagnosing any
 authentication issues, perhaps due to misconfiguration.
