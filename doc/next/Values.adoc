@@ -71,3 +71,14 @@ which work together harmoniously.
 It is built in Clojure, a language that helps avoid many pitfalls when building
 large systems and keeps the code-base healthy, agile and free from getting
 'knotted up'.
+
+Site is designed to be https://www.youtube.com/watch?v=SxdOUGdseq4[simple,
+rather than easy]. If Site is too difficult, then that is resolvable by spending
+more time learning Site, trying things out and maybe getting help from experts
+in JUXT and the wider community. That said, we do strive to make things as easy
+as possible and 'developer experience' is important.
+
+But if Site is too complex, that is a much harder problem to fix!
+
+Much of the simplicity of Site comes from its emphasis on using _data_ to define
+web resources and security policies, rather than _code_.
