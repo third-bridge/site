@@ -68,20 +68,10 @@ The `api-get` action may require a permission that the
 === Forget scopes
 
 The resource's :get contains actions.
-If the subject is allowed to call the action, the they are allowed
-
-[WARNING]
---
-Can't remember the reason why we unlinked permissions from actions. This seems too dangerous as it may cause overlaps.
---
-
+If the subject is allowed to call the action, then they are allowed
 
 == More development notes
 
 There must be a separate action created for calling an API operation, even if it's public.
 
 The action that calls the API function can be tied to API operation, or the API as a whole.
-
-How does Site know which action(s) to use when calling an operation?
-
-For now, it calls the generic call-api function

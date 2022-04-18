@@ -538,6 +538,8 @@
         :ring.request/keys [method]
         :as req}]
 
+    (log/info "AUTHORIZE")
+
     (let [actions (get-in resource [::http/methods method ::pass/actions])
           permissions
           (authz/check-permissions
@@ -1256,6 +1258,9 @@
    wrap-locate-resource
    wrap-redirect
 
+   ;; We authorize the resource, prior to finding representations.
+   wrap-authorize-with-actions
+
    ;; Find representations and possibly do content negotiation
    wrap-find-current-representations
    wrap-negotiate-representation
@@ -1263,9 +1268,6 @@
    ;; Authorize - deprecated
    #_wrap-authorize-with-acls
    #_wrap-authorize-with-pdp
-   ;; This is more recent than the above but we should do authorization via
-   ;; actions to avoid race-conditions
-   wrap-authorize-with-actions
 
    ;; 405
    wrap-method-not-allowed?

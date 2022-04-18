@@ -261,8 +261,8 @@
         [:juxt.pass.alpha.process/update-in
          [0] 'merge
          {:juxt.site.alpha/type "Identity"
-          #_:juxt.http.alpha/methods
-          #_{:get {:juxt.pass.alpha/actions #{"https://site.test/actions/get-identity"}}
+          :juxt.http.alpha/methods
+          {:get {:juxt.pass.alpha/actions #{"https://site.test/actions/get-identity"}}
            :head {:juxt.pass.alpha/actions #{"https://site.test/actions/get-identity"}}
            :options {}}}]
         [:juxt.pass.alpha.malli/validate]
