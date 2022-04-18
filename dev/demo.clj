@@ -17,9 +17,9 @@
   )
 
 (defn demo-put-repl-user! []
-  ;; tag::put-repl-user![]
-  (put! {:xt/id (me)})
-  ;; end::put-repl-user![]
+  ;; tag::install-repl-user![]
+  (install-repl-user!)
+  ;; end::install-repl-user![]
   )
 
 (defn demo-install-create-action! []
@@ -91,7 +91,8 @@
        :juxt.pass.alpha/rules
        '[
          [(allowed? permission subject action resource) ; <3>
-          [permission :juxt.pass.alpha/subject subject]]]})
+          [permission :juxt.pass.alpha/identity i]
+          [subject :juxt.pass.alpha/identity i]]]})
      ;; end::create-action-put-immutable-public-resource![]
      ))))
 
@@ -102,7 +103,7 @@
      ;; tag::grant-permission-to-call-action-put-immutable-public-resource![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/put-immutable-public-resource"
-       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/identity "urn:site:identities:repl"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-public-resource"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-call-action-put-immutable-public-resource![]
@@ -193,7 +194,8 @@
        :juxt.pass.alpha/rules
        '[
          [(allowed? permission subject action resource)
-          [permission :juxt.pass.alpha/subject subject]]]})
+          [permission :juxt.pass.alpha/identity i]
+          [subject :juxt.pass.alpha/identity i]]]})
      ;; end::create-put-template-action![]
      ))))
 
@@ -204,7 +206,7 @@
      ;; tag::grant-permission-to-call-action-put-template![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/put-template"
-       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/identity "urn:site:identities:repl"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-template"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-call-action-put-template![]
@@ -271,7 +273,8 @@
        :juxt.pass.alpha/rules
        '[
          [(allowed? permission subject action resource)
-          [permission :juxt.pass.alpha/subject subject]]]})
+          [permission :juxt.pass.alpha/identity i]
+          [subject :juxt.pass.alpha/identity i]]]})
      ;; end::create-action-put-identity![]
      ))))
 
@@ -282,10 +285,28 @@
      ;; tag::grant-permission-to-call-action-put-identity![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/put-identity"
-       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/identity "urn:site:identities:repl"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-identity"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-call-action-put-identity![]
+     ))))
+
+(defn demo-create-action-get-identity! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-action-get-identity![]
+     (create-action!
+      {:xt/id "https://site.test/actions/get-identity"
+       :juxt.pass.alpha/scope "read:identity"
+
+       :juxt.pass.alpha/rules
+       '[
+         [(allowed? permission subject action resource)
+          [permission :juxt.pass.alpha/identity i]
+          [subject :juxt.pass.alpha/identity i]
+          ]]})
+     ;; end::create-action-get-identity![]
      ))))
 
 (defn demo-create-identity! []
@@ -298,9 +319,25 @@
       {:xt/id "https://site.test/~mal"
        :code "mal"
        :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
-       :juxt.pass.jwt/sub "github|163131"})
+       :juxt.pass.jwt/sub "github|163131"
+       :juxt.http.alpha/content "Malcolm Sparks"
+       :juxt.http.alpha/content-type "text/plain"})
      ;; end::create-identity![]
      ))))
+
+(defn demo-grant-permission-for-mal-to-get-mal! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-for-mal-to-get-mal![]
+     (grant-permission!
+      {:xt/id "https://site.test/permissions/mal/get-identity"
+       :juxt.pass.alpha/identity "https://site.test/~mal"
+       :juxt.pass.alpha/action #{"https://site.test/actions/get-identity"}
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-for-mal-to-get-mal![]
+     )))
+  )
 
 ;; We don't need to show the login page
 #_(defn demo-put-login-page! []
@@ -345,7 +382,8 @@
        :juxt.pass.alpha/rules
        '[
          [(allowed? permission subject action resource)
-          [permission :juxt.pass.alpha/subject subject]]]})
+          [permission :juxt.pass.alpha/identity i]
+          [subject :juxt.pass.alpha/identity i]]]})
      ;; end::create-action-put-api-resource![]
      ))))
 
@@ -356,7 +394,7 @@
      ;; tag::grant-permission-to-call-action-put-api-resource![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/put-api-resource"
-       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/identity "urn:site:identities:repl"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-api-resource"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-call-action-put-api-resource![]
@@ -380,8 +418,6 @@
          [(allowed? permission subject action resource)
           [action :xt/id "https://site.test/actions/list-identities"]
           [resource :juxt.site.alpha/type "Identity"]
-          ;; Comment out just to make public
-          #_[permission :juxt.pass.alpha/subject subject]
           [permission :juxt.pass.alpha/action action]]]})
      ;; end::create-action-list-identities![]
      ))))
@@ -490,7 +526,8 @@
        :juxt.pass.alpha/rules
        '[
          [(allowed? permission subject action resource)
-          [permission :juxt.pass.alpha/subject subject]]]})
+          [permission :juxt.pass.alpha/identity i]
+          [subject :juxt.pass.alpha/identity i]]]})
      ;; end::create-action-put-immutable-private-resource![]
      ))))
 
@@ -501,7 +538,7 @@
      ;; tag::grant-permission-to-put-immutable-private-resource![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/put-immutable-private-resource"
-       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/identity "urn:site:identities:repl"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-private-resource"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-put-immutable-private-resource![]
@@ -520,7 +557,7 @@
        [
         ['(allowed? permission subject action resource)
          ['permission :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"]
-         ['subject :xt/id]]]})
+         ['subject :juxt.pass.alpha/identity]]]})
      ;; end::create-action-get-private-resource[]
      ))))
 
@@ -573,7 +610,8 @@
        :juxt.pass.alpha/rules
        '[
          [(allowed? permission subject action resource)
-          [permission :juxt.pass.alpha/subject subject]]]})
+          [permission :juxt.pass.alpha/identity i]
+          [subject :juxt.pass.alpha/identity i]]]})
      ;; end::create-action-put-error-resource![]
      ))))
 
@@ -584,7 +622,7 @@
      ;; tag::grant-permission-to-put-error-resource![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/put-error-resource"
-       :juxt.pass.alpha/subject "urn:site:subjects:repl"
+       :juxt.pass.alpha/identity "urn:site:identities:repl"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-error-resource"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-put-error-resource![]

@@ -183,6 +183,13 @@ Next, we grant the permission:
 ----
 include::../../dev/demo.clj[tag=grant-permission-to-call-action-put-identity!,indent=0]
 ----
+
+Finally, we create an action to get the identity.
+
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-get-identity!,indent=0]
+----
 ====
 
 [[selecting-openid-provider]]
@@ -380,6 +387,15 @@ Now we can create an identity:
 ----
 include::../../dev/demo.clj[tag=create-identity!,indent=0]
 ----
+
+We shall also grant this identity the permission to read itself.
+
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=grant-permission-for-mal-to-get-mal!,indent=0]
+----
+
+We can now test this in a browser. Navigate to https://site.test/~mal
 ====
 
 == Authenticating an end-user

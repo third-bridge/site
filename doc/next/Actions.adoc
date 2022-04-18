@@ -102,7 +102,7 @@ REPL subject.
 [source,clojure]
 .Add the REPL subject
 ----
-include::../../dev/demo.clj[tag=put-repl-user!,indent=0]
+include::../../dev/demo.clj[tag=install-repl-user!,indent=0]
 ----
 
 NOTE: In future we might allow different users using the same REPL to identify

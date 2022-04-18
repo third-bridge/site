@@ -218,7 +218,8 @@
      (json/write-value-as-string %))
    config))
 
-(defn me [] "urn:site:subjects:repl")
+(defn repl-subject [] "urn:site:subjects:repl")
+(defn repl-identity [] "urn:site:identities:repl")
 
 (defn install-create-action! [xt-node {::site/keys [base-uri] :as config}]
   (put!
@@ -243,7 +244,8 @@
       ;; The permission to create actions may be granted through role
       ;; membership, so perhaps make this configurable.
       [(allowed? permission subject action resource)
-       [permission ::pass/subject subject]]]}
+       [permission ::pass/identity i]
+       [subject ::pass/identity i]]]}
 
    ))
 
@@ -252,18 +254,18 @@
    xt-node
    {:xt/id (str base-uri "/permissions/repl/create-action")
     ::site/type "Permission"
-    ::pass/subject (me)
+    ::pass/identity (repl-identity)
     ::pass/action (str base-uri "/actions/create-action")
     ::pass/purpose nil}))
 
 (defn do-action [xt-node action & args]
-  (apply authz/do-action xt-node {::pass/subject (me)} action args))
+  (apply authz/do-action xt-node {::pass/subject (repl-subject)} action args))
 
 (defn do-action-with-purpose [xt-node action purpose & args]
   (apply
    authz/do-action
    xt-node
-   {::pass/subject (me)
+   {::pass/subject (repl-subject)
     ::pass/purpose purpose}
    action args))
 
@@ -297,7 +299,8 @@
     '[
       ;; See related comment above
       [(allowed? permission subject action resource)
-       [permission ::pass/subject subject]]]}))
+       [permission ::pass/identity i]
+       [subject ::pass/identity i]]]}))
 
 ;; As a bootstrap, we need to grant the REPL permission to grant permissions!
 ;; This should be the last time we need to explicitly put anything in XTDB.
@@ -307,7 +310,7 @@
    xt-node
    {:xt/id (str base-uri "/permissions/repl/grant-permission")
     ::site/type "Permission"
-    ::pass/subject (me)
+    ::pass/identity (repl-identity)
     ::pass/action (str base-uri "/actions/grant-permission")
     ::pass/purpose nil}))
 
@@ -480,7 +483,8 @@
     :juxt.pass.alpha/rules
     '[
       [(allowed? permission subject action resource)
-       [permission :juxt.pass.alpha/subject subject]]]})
+       [permission :juxt.pass.alpha/identity i]
+       [subject :juxt.pass.alpha/identity i]]]})
 
   (grant-permission!
    xt-node
