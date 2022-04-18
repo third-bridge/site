@@ -161,6 +161,7 @@
 
                     ;; Only consider allowed permssions
                     [permission ::site/type "Permission"]
+                    [permission ::pass/action action]
                     (allowed? permission subject action resource)
 
                     ;; Only permissions that match our purpose
