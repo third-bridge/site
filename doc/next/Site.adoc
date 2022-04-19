@@ -22,7 +22,7 @@ include::Resources.adoc[leveloffset=+1]
 include::Representations.adoc[leveloffset=+1]
 
 [[authentication]]
-include::Authentication.adoc[leveloffset=+1]
+include::AuthenticationWithOpenID.adoc[leveloffset=+1]
 
 // Create an action to list-identities
 // Create a resource at /users that is attached to list-identities
