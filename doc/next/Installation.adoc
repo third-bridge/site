@@ -3,14 +3,6 @@
 
 == Introduction
 
-This is the long-winded installation guide to explain how to bootstrap a Site
-instance.
-
-This is partly for pedagogical purposes. It is a good idea to learn in depth how
-Site's builds up its secure foundation. But if you are in a hurry, there are (or will be)
-quicker 'install packs' and Docker images that provide shortcuts to setting up a
-Site instance.
-
 === Requirements
 
 Before you start, you'll need to have the following installed:

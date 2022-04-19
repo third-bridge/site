@@ -17,3 +17,13 @@ Site can protect resources from unauthorized access, and log access to records
 when required.
 
 Site retains a full history.
+
+== This book
+
+This book teaches Site from 'the ground up'.
+
+This is partly for pedagogical purposes. It is a good idea to learn in depth how
+Site's builds up its secure foundation.
+
+But if you are in a hurry, there are (or will be) quicker 'install packs' and
+Docker images that provide shortcuts to setting up a Site instance.
