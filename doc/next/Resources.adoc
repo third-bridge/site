@@ -86,7 +86,7 @@ how to do so.
 We'll do the following steps:
 
 . Create an action
-. Grant permission to call the action
+. Grant permission to invoke the action
 . Call the action
 
 The action contains both the validation rules to ensure that only GET, HEAD and
@@ -104,7 +104,7 @@ Now we must grant permission for our REPL user to use this action:
 
 [source,clojure]
 ----
-include::../../dev/demo.clj[tag=grant-permission-to-call-action-put-immutable-public-resource!,indent=0]
+include::../../dev/demo.clj[tag=grant-permission-to-invoke-action-put-immutable-public-resource!,indent=0]
 ----
 
 When Site receives a web request for a resource it will look for a `juxt.site.alpha/methods`
@@ -130,7 +130,7 @@ The rule of the `http://site.test/actions/get-public-resource` requires a specif
 
 [source,clojure]
 ----
-include::../../dev/demo.clj[tag=grant-permission-to-call-get-public-resource!,indent=0]
+include::../../dev/demo.clj[tag=grant-permission-to-invoke-get-public-resource!,indent=0]
 ----
 ====
 

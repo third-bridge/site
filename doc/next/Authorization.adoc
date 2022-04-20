@@ -75,10 +75,10 @@ First, we'll need to create an action which will create our person entity.
 <2> Actions are grouped into OAuth2 scopes
 <3> Arguments must conform to this schema
 <4> The processing pipeline which transforms arguments into XT transaction operations
-<5> An action declares the rules as to who is authorized to call it
+<5> An action declares the rules as to who is authorized to invoke it
 ====
 
-==== Permit the REPL to call the create-person action
+==== Permit the REPL to invoke the create-person action
 
 .Adding the permission for the REPL to create a person
 ====
@@ -151,7 +151,7 @@ location or from a different country.
 ----
 ====
 
-==== Permit the REPL to call the create-identity action
+==== Permit the REPL to invoke the create-identity action
 
 .Adding a permission on the create-identity action
 ====
@@ -192,7 +192,7 @@ TODO
 
 TODO
 
-==== Permit the REPL to call the register-application action
+==== Permit the REPL to invoke the register-application action
 
 TODO
 

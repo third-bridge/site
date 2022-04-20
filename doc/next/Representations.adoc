@@ -86,7 +86,7 @@ include::../../dev/demo.clj[tag=create-put-template-action!,indent=0]
 
 [source,clojure]
 ----
-include::../../dev/demo.clj[tag=grant-permission-to-call-action-put-template!,indent=0]
+include::../../dev/demo.clj[tag=grant-permission-to-invoke-action-put-template!,indent=0]
 ----
 
 .Creating a template

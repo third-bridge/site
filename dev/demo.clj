@@ -57,21 +57,17 @@
      ))))
 
 (defn demo-put-repl-user! []
-  (eval
-   (substitute-actual-base-uri
-    (quote
-     (do
-     ;; tag::install-repl-user![]
-       (put! {:xt/id "https://site.test/subjects/repl"
-              :juxt.site.alpha/type "Subject"
-              :juxt.pass.alpha/identity "https://site.test/identities/repl"})
-       (put! {:xt/id "https://site.test/identities/repl"
-              :juxt.site.alpha/type "Identity"
-              :juxt.pass.alpha/user "https://site.test/users/repl"})
-       (put! {:xt/id "https://site.test/users/repl"
-              :juxt.site.alpha/type "User"})
-       ;; end::install-repl-user![]
-       )))))
+  ;; tag::install-repl-user![]
+  (put! {:xt/id "https://site.test/subjects/repl"
+         :juxt.site.alpha/type "Subject"
+         :juxt.pass.alpha/identity "https://site.test/identities/repl"})
+  (put! {:xt/id "https://site.test/identities/repl"
+         :juxt.site.alpha/type "Identity"
+         :juxt.pass.alpha/user "https://site.test/users/repl"})
+  (put! {:xt/id "https://site.test/users/repl"
+         :juxt.site.alpha/type "User"})
+  ;; end::install-repl-user![]
+  )
 
 (defn demo-permit-create-action! []
   (eval
@@ -142,17 +138,17 @@
      ;; end::create-action-put-immutable-public-resource![]
      ))))
 
-(defn demo-grant-permission-to-call-action-put-immutable-public-resource! []
+(defn demo-grant-permission-to-invoke-action-put-immutable-public-resource! []
   (eval
    (substitute-actual-base-uri
     (quote
-     ;; tag::grant-permission-to-call-action-put-immutable-public-resource![]
+     ;; tag::grant-permission-to-invoke-action-put-immutable-public-resource![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/put-immutable-public-resource"
        :juxt.pass.alpha/identity "urn:site:identities:repl"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-public-resource"}
        :juxt.pass.alpha/purpose nil})
-     ;; end::grant-permission-to-call-action-put-immutable-public-resource![]
+     ;; end::grant-permission-to-invoke-action-put-immutable-public-resource![]
      ))))
 
 (defn demo-create-action-get-public-resource! []
@@ -172,16 +168,16 @@
      ;; end::create-action-get-public-resource![]
      ))))
 
-(defn demo-grant-permission-to-call-get-public-resource! []
+(defn demo-grant-permission-to-invoke-get-public-resource! []
   (eval
    (substitute-actual-base-uri
     (quote
-     ;; tag::grant-permission-to-call-get-public-resource![]
+     ;; tag::grant-permission-to-invoke-get-public-resource![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/public-resources-to-all"
        :juxt.pass.alpha/action #{"https://site.test/actions/get-public-resource"}
        :juxt.pass.alpha/purpose nil})
-     ;; end::grant-permission-to-call-get-public-resource![]
+     ;; end::grant-permission-to-invoke-get-public-resource![]
      ))))
 
 (defn demo-create-hello-world-resource! []
@@ -245,17 +241,17 @@
      ;; end::create-put-template-action![]
      ))))
 
-(defn demo-grant-permission-to-call-action-put-template! []
+(defn demo-grant-permission-to-invoke-action-put-template! []
   (eval
    (substitute-actual-base-uri
     (quote
-     ;; tag::grant-permission-to-call-action-put-template![]
+     ;; tag::grant-permission-to-invoke-action-put-template![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/put-template"
        :juxt.pass.alpha/identity "urn:site:identities:repl"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-template"}
        :juxt.pass.alpha/purpose nil})
-     ;; end::grant-permission-to-call-action-put-template![]
+     ;; end::grant-permission-to-invoke-action-put-template![]
      ))))
 
 (defn demo-create-hello-world-html-template! []
@@ -324,17 +320,17 @@
      ;; end::create-action-put-identity![]
      ))))
 
-(defn demo-grant-permission-to-call-action-put-identity! []
+(defn demo-grant-permission-to-invoke-action-put-identity! []
   (eval
    (substitute-actual-base-uri
     (quote
-     ;; tag::grant-permission-to-call-action-put-identity![]
+     ;; tag::grant-permission-to-invoke-action-put-identity![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/put-identity"
        :juxt.pass.alpha/identity "urn:site:identities:repl"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-identity"}
        :juxt.pass.alpha/purpose nil})
-     ;; end::grant-permission-to-call-action-put-identity![]
+     ;; end::grant-permission-to-invoke-action-put-identity![]
      ))))
 
 (defn demo-create-action-get-identity! []
@@ -433,17 +429,17 @@
      ;; end::create-action-put-api-resource![]
      ))))
 
-(defn demo-grant-permission-to-call-action-put-api-resource! []
+(defn demo-grant-permission-to-invoke-action-put-api-resource! []
   (eval
    (substitute-actual-base-uri
     (quote
-     ;; tag::grant-permission-to-call-action-put-api-resource![]
+     ;; tag::grant-permission-to-invoke-action-put-api-resource![]
      (grant-permission!
       {:xt/id "https://site.test/permissions/repl/put-api-resource"
        :juxt.pass.alpha/identity "urn:site:identities:repl"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-api-resource"}
        :juxt.pass.alpha/purpose nil})
-     ;; end::grant-permission-to-call-action-put-api-resource![]
+     ;; end::grant-permission-to-invoke-action-put-api-resource![]
      ))))
 
 ;; API example
@@ -500,7 +496,7 @@
      ;; end::create-action-invoke-read-api![]
      ))))
 
-;; Grant everyone permission to call an API
+;; Grant everyone permission to invoke an API
 
 (defn demo-grant-permission-to-invoke-read-api! []
   (eval
@@ -712,9 +708,9 @@
 
 (defn demo-bootstrap-resources! []
   (demo-create-action-put-immutable-public-resource!)
-  (demo-grant-permission-to-call-action-put-immutable-public-resource!)
+  (demo-grant-permission-to-invoke-action-put-immutable-public-resource!)
   (demo-create-action-get-public-resource!)
-  (demo-grant-permission-to-call-get-public-resource!)
+  (demo-grant-permission-to-invoke-get-public-resource!)
 
   (demo-create-action-put-immutable-private-resource!)
   (demo-grant-permission-to-put-immutable-private-resource!)

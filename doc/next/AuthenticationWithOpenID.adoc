@@ -79,7 +79,7 @@ For this flow to be possible, we need the following:
 
 . An OpenID Provider must be selected.
 . An account with the OpenID Provider must be created.
-. Site needs to know about the OpenID Provider, including which endpoints to call.
+. Site needs to know about the OpenID Provider, including which endpoints to contact.
 . An OAuth 2.0 Client application needs to be created with the OpenID Provider.
 . Site needs to know some details about the OAuth 2.0 Client application's id and secret.
 . The OAuth 2.0 Client application needs to know some details about Site, such as the callback URI.
@@ -158,7 +158,8 @@ In summary:
 == Preparing to create identities
 
 To allow the REPL to create the identities we require, we'll need to create an
-action to create an identity and grant permission for the REPL user to call it.
+Action to create an identity and grant permission for the REPL user to invoke
+it.
 
 This action should enforce the `juxt.site.alpha/type`, `juxt.pass.jwt/iss` and
 `juxt.pass.jwt/sub` attributes that we discussed in <<identities>>. But of
@@ -278,7 +279,7 @@ The `install-openid-resources!` function requires the following arguments:
 |client-secret|The OAuth 2.0 *Client Secret*
 |===
 
-If called successfully, the function will return the URIs of the various Site
+If invoked successfully, the function will return the URIs of the various Site
 resources created. These can be provided as OAuth 2.0 Client settings in the
 OpenID Provider, and some of these will be required.
 
@@ -324,7 +325,7 @@ following values:
 |:client-secret|zb86gDUf_rEnwENYJBeih-cAzICjjPvvumThTw6qIqCVvtP83vYFtjuHni_m2ndt
 |===
 
-We created the required web resources for the application by calling the
+We created the required web resources for the application by invoking the
 `install-openid-resources!` function.
 
 [source,clojure]

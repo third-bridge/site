@@ -26,9 +26,9 @@ for the transaction that created the grant-permission action.
 
 == Permit REPL access to the grant permission action
 
-We need to permit our REPL user to call this grant-permission action, and this permission too
-needs to be put directly into the database since we don't yet have a way of
-granting permissions!
+We need to permit our REPL user to invoke this grant-permission action, and this
+permission too needs to be put directly into the database since we don't yet
+have a way of granting permissions!
 
 .Granting the REPL user the permission to grant permssions.
 ----

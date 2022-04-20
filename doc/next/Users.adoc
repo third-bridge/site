@@ -4,7 +4,7 @@
 :experimental:
 
 (((user, definition)))
-An Action is performed by a *User*, who has authenticated with the system.
+An Action is performed by a *User*.
 
 (((user, document structure)))
 A User is a database document, with the `juxt.site.alpha/type` attribute value
@@ -119,12 +119,10 @@ include::user-model.json[]
 ....
 ====
 
-== Create a User to represent the REPL
+== Create a User
 
-To create and call actions from the REPL, we'll install a special User that can only be used
-from the REPL.
-
-The `(me)` function returns a special built-in identifier for the REPL user.
+Since an Action are performed by a *User*, we need to create a user to start
+invoking our actions.
 
 .Put a User to represent the REPL
 [[example-put-repl-subject]]
