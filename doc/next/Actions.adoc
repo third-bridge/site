@@ -160,6 +160,9 @@ We must install an Action which allows us to create other Actions.
 NOTE: This is the one Action that has to be put directly into the database because we
 don't have a way of creating actions yet!
 
+This gives us an opportunity to inspect the document structure of a real
+<<example-create-action,example>>.
+
 .Installing a `create-action` Action
 [[example-create-action]]
 ====
@@ -168,23 +171,34 @@ don't have a way of creating actions yet!
 include::../../dev/demo.clj[tag=install-create-action!,indent=0]
 ----
 ====
-<1> The Action arguments will be updated such that the first (0th) argument is updated so that it contains a `:juxt.site.alpha/type` attribute with the value string `Action`.
-<2> The arguments will then be validated according to the Malli schema in `:juxt.pass.alpha.malli/args-schema`. By this point it must be a map containing an `:xt/id` value prefixed with `https://site.test/actions/` and a `:juxt.site.alpha/type` with the constant `"Action"`.
-<3> then the arguments will be submitted, as documents, to the database.
-<4> This is a Datalog rule which says that the Action will only be allowed if there exists a permission allowing the user to call the Action. The terms `permission` and `subject` will be covered in <<ch-subjects>>.
+<1> The URI of the create-action Action. This may have to be modified if you have chosen a different base URI.
+<2> This Malli schema restricts the URIs of new Actions. Again, this should be modified if necessary to correspond to a different base URI.
+<3> The Action arguments will be updated such that the first (0th) argument is updated so that it contains a `:juxt.site.alpha/type` attribute with the value string "`Action`".
+<4> The arguments will then be validated according to the Malli schema in `:juxt.pass.alpha.malli/args-schema`. By this point it must be a map containing an `:xt/id` value prefixed with `https://site.test/actions/` and a `:juxt.site.alpha/type` with the constant `"Action"`.
+<5> then the arguments will be submitted, as documents, to the database.
+<6> This is a Rule. It ensures that the Action will be allowed only if there exists a Permission granting the User to call the Action. These concepts will be covered in <<ch-subjects>>. If you decide on a different data model for users, then this Rule will have to be modified to reflect that.
 
-IMPORTANT: Copy and paste the code in <<example-create-action>> into the REPL and evaluate it (with btn:[Enter]).
+[IMPORTANT]
+--
+. Copy the code in <<example-create-action>> into an editor.
+. Make any changes required (for example, to change the host in the URIs).
+. Copy into the REPL
+. Evaluate.
+--
 
 === Installing the transaction function
 
 Actions can be called at the REPL with `do-action`.
 
-This requires that a transaction function be registered with the database.
+This depends on a transaction function that must be first registered in the
+database.
 
+[IMPORTANT]
+--
+Type:
 [source,clojure]
-.Install the do-action transaction function
 ----
 include::../../dev/demo.clj[tag=install-do-action-fn!,indent=0]
 ----
-
-IMPORTANT: Install the transaction function with `(install-do-action-fn!)`
+into the REPL and evaluate.
+--

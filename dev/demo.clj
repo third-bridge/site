@@ -30,29 +30,28 @@
     (quote
      ;; tag::install-create-action![]
      (put!
-      {:xt/id "https://site.test/actions/create-action"
+      {:xt/id "https://site.test/actions/create-action" ; <1>
        :juxt.site.alpha/type "Action"
        :juxt.pass.alpha/scope "write:admin"
        :juxt.pass.alpha.malli/args-schema
        [:tuple
         [:map
-         [:xt/id [:re "https://site.test/actions/(.+)"]]
+         [:xt/id [:re "https://site.test/actions/(.+)"]] ; <2>
          [:juxt.site.alpha/type [:= "Action"]]
          [:juxt.pass.alpha/rules :vector]]]
 
        :juxt.pass.alpha/process
        [
-        [:juxt.pass.alpha.process/update-in [0] ; <1>
+        [:juxt.pass.alpha.process/update-in [0] ; <3>
          'merge {:juxt.site.alpha/type "Action"}]
-        [:juxt.pass.alpha.malli/validate] ; <2>
-        [:xtdb.api/put]] ; <3>
+        [:juxt.pass.alpha.malli/validate] ; <4>
+        [:xtdb.api/put]] ; <5>
 
        :juxt.pass.alpha/rules
        '[
-         [(allowed? permission subject action resource) ; <4>
+         [(allowed? permission subject action resource) ; <6>
           [subject :juxt.pass.alpha/identity id]
           [id :juxt.pass.alpha/user user]
-
           [permission :juxt.pass.alpha/user user]]]})
      ;; end::install-create-action![]
      ))))
