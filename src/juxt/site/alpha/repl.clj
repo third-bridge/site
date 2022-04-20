@@ -527,10 +527,8 @@
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
 
-(defn my-subject [] (str (base-uri) "/subjects/repl-default"))
-
-(defn do-action [action & args]
-  (apply init/do-action (xt-node) (my-subject) action args))
+(defn do-action [subject action & args]
+  (apply init/do-action (xt-node) action args))
 
 #_(defn do-action-with-purpose [action purpose & args]
   (apply init/do-action-with-purpose (xt-node) action purpose args))

@@ -93,6 +93,7 @@
     (quote
      ;; tag::create-grant-permission-action![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/grant-permission"
        :juxt.site.alpha/type "Action"
@@ -223,6 +224,7 @@
     (quote
      ;; tag::create-hello-world-resource![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-immutable-public-resource"
       {:xt/id "https://site.test/hello"
        :juxt.http.alpha/content-type "text/plain"
@@ -236,6 +238,7 @@
     (quote
      ;; tag::create-hello-world-html-representation![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-immutable-public-resource"
       {:xt/id "https://site.test/hello.html" ; <1>
        :juxt.http.alpha/content-type "text/html;charset=utf-8" ; <2>
@@ -297,6 +300,7 @@
     (quote
      ;; tag::create-hello-world-html-template![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-template"
       {:xt/id "https://site.test/templates/hello.html"
        :juxt.http.alpha/content-type "text/html;charset=utf-8"
@@ -310,6 +314,7 @@
     (quote
      ;; tag::create-hello-world-with-html-template![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-immutable-public-resource"
       {:xt/id "https://site.test/hello-with-template.html"
        :juxt.site.alpha/template "https://site.test/templates/hello.html"
@@ -394,6 +399,7 @@
     (quote
      ;; tag::create-identity![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-identity"
       {:xt/id "https://site.test/~mal"
        :code "mal"
@@ -425,6 +431,7 @@
     (quote
      ;; tag::put-login-page![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-immutable-public-resource"
       {:xt/id "https://site.test/login"
        :juxt.http.alpha/content-type "text/html;charset=utf-8"
@@ -555,6 +562,7 @@
     (quote
      ;; tag::create-list-users-api![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-api-resource"
       {:xt/id "https://site.test/users"
        :juxt.http.alpha/content-type "text/plain"
@@ -658,6 +666,7 @@
     (quote
      ;; tag::create-immutable-private-resource![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-immutable-private-resource"
       {:xt/id "https://site.test/private.html"
        :juxt.http.alpha/content-type "text/html;charset=utf-8"
@@ -713,6 +722,7 @@
     (quote
      ;; tag::put-unauthorized-error-resource![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-error-resource"
       {:xt/id "https://site.test/_site/errors/unauthorized"
        :juxt.site.alpha/type "ErrorResource"
@@ -734,6 +744,7 @@
     (quote
      ;; tag::put-unauthorized-error-representation-for-html![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-immutable-public-resource"
       {:xt/id "https://site.test/_site/errors/unauthorized.html"
        :juxt.site.alpha/variant-of "https://site.test/_site/errors/unauthorized"
@@ -768,6 +779,7 @@
     (quote
      ;; tag::put-unauthorized-error-representation-for-html-with-login-link![]
      (do-action
+      "https://site.test/subjects/repl-default"
       "https://site.test/actions/put-immutable-public-resource"
       {:xt/id "https://site.test/_site/errors/unauthorized.html"
        :juxt.site.alpha/variant-of "https://site.test/_site/errors/unauthorized"

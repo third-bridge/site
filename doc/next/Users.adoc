@@ -137,7 +137,7 @@ include::../../dev/demo.clj[tag=install-user!,indent=0]
 
 [IMPORTANT]
 --
-Copy the code from <<example-put-user>> and paste it into an editor. Personalise
-it according to your own user details. Copy the result into a REPL and evaluate
-it.
+. Copy the code from <<example-put-user>> and paste it into an editor.
+. Personalise it according to your own user details.
+. Copy the result into a REPL and evaluate it.
 --
