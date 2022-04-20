@@ -7,6 +7,7 @@ Site.pdf:	$(wildcard *.adoc) identity-model.json subject-model.json
 
 %.pdf:	%.adoc
 	asciidoctor-pdf \
+	-a toc=macro \
 	-r asciidoctor-diagram \
 	-a icons=font \
 	-a media=prepress \

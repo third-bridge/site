@@ -1,7 +1,13 @@
+[colophon]
 = Colophon
+
+Copyright © 2022, JUXT LTD.
+
+Published by JUXT Text.
 
 This book is written in Asciidoctor.
 
+////
 == Alternative choices rejected
 
 === Org Mode
@@ -17,3 +23,4 @@ but rejected for the following reasons:
 * JUXT's current standard is AsciiDoctor for documentation
 
 In the future, we can get to texinfo by developing a custom Asciidoctor backend.
+////

@@ -24,43 +24,43 @@
   ;; end::install-do-action-fn![]
   )
 
-(defn demo-put-repl-user! []
-  ;; tag::install-repl-user![]
-  (install-repl-user!)
-  ;; end::install-repl-user![]
-  )
-
 (defn demo-install-create-action! []
   (eval
    (substitute-actual-base-uri
     (quote
      ;; tag::install-create-action![]
      (put!
-      xt-node
-      {:xt/id (str base-uri "https://site.test/actions/create-action")
+      {:xt/id "https://site.test/actions/create-action"
        :juxt.site.alpha/type "Action"
        :juxt.pass.alpha/scope "write:admin"
        :juxt.pass.alpha.malli/args-schema
        [:tuple
-        [:map ; <1>
+        [:map
          [:xt/id [:re "https://site.test/actions/(.+)"]]
          [:juxt.site.alpha/type [:= "Action"]]
          [:juxt.pass.alpha/rules :vector]]]
 
        :juxt.pass.alpha/process
        [
-        [:juxt.pass.alpha.process/update-in [0] ; <2>
+        [:juxt.pass.alpha.process/update-in [0] ; <1>
          'merge {:juxt.site.alpha/type "Action"}]
-        [:juxt.pass.alpha.malli/validate] ; <3>
-        [:xtdb.api/put]] ; <4>
+        [:juxt.pass.alpha.malli/validate] ; <2>
+        [:xtdb.api/put]] ; <3>
 
        :juxt.pass.alpha/rules
        '[
-         [(allowed? permission subject action resource) ; <5>
+         [(allowed? permission subject action resource) ; <4>
           [subject :juxt.pass.alpha/identity id]
           [id :juxt.pass.alpha/user user]
-          [permission :juxt.pass.alpha/user user]]]}))))
-  ;; end::install-create-action![]
+
+          [permission :juxt.pass.alpha/user user]]]})
+     ;; end::install-create-action![]
+     ))))
+
+(defn demo-put-repl-user! []
+  ;; tag::install-repl-user![]
+  (install-repl-user!)
+  ;; end::install-repl-user![]
   )
 
 (defn demo-permit-create-action! []

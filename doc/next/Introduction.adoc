@@ -27,3 +27,14 @@ Site's builds up its secure foundation.
 
 But if you are in a hurry, there are (or will be) quicker 'install packs' and
 Docker images that provide shortcuts to setting up a Site instance.
+
+== Conventions used in this book
+
+We use an admonition with an exclamation mark to indicate where we require that
+you act, and do something. In code, the exclamation mark is commonly used to
+indicate a side-effect. In this book, the side-effect is carried out by the
+reader!
+
+====
+IMPORTANT: Make tea!
+====

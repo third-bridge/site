@@ -16,24 +16,24 @@ that these set of items can become a launchpad for diving into the
 documentation.
 ////
 
-* Actions run in transaction functions to ensure atomicity and consistency.
+Actions run in transaction functions to ensure atomicity and consistency.
 
-* Actions can provide involve input validation.
+Actions can provide involve input validation.
 
-* Actions define their access control in rules, which are sufficient powerful to
-  model any access control policy (RBAC, ABAC, PBAC, etc.)
+Actions define their access control in rules, which are sufficient powerful to
+model any access control policy (RBAC, ABAC, PBAC, etc.)
 
-* Actions leave an audit trail and may trigger alerts.
+Actions leave an audit trail and may trigger alerts.
 
-* Actions can be grouped into OAuth2 scopes.
+Actions can be grouped into OAuth2 scopes.
 
-* Actions can be exposed to the network, using OpenAPI and/or GraphQL operations.
+Actions can be exposed to the network, using OpenAPI and/or GraphQL operations.
 
-* Actions can cause side-effects (e.g. lambda functions).
+Actions can cause side-effects (e.g. lambda functions).
 
-* Actions decouple network APIs from lower-level effects. For example, an API
-  implementation can use a 'send-email', without having to know the
-  implementation details of sending emails.
+Actions decouple network APIs from lower-level effects. For example, an API
+implementation can use a 'send-email', without having to know the implementation
+details of sending emails.
 
 ////
 (old text)
@@ -113,6 +113,11 @@ A copy of the transaction metadata record is returned as a result of the
 [%header,cols="2l,3d,1"]
 |===
 |Attribute|Value|Required?
+
+|:xt/id
+|Actions are resources, so this is a URI. Callers of actions use this id.
+s|Required
+
 |:juxt.site.alpha/type
 l|"Action"
 s|Required
@@ -148,7 +153,7 @@ See this talk segment by Stuart Halloway to explain the rationale for using name
 https://youtu.be/Qx0-pViyIDU?t=1464
 ****
 
-== Installing a `create-action` Action
+== Installing a 'create-action' Action
 
 We must install an Action which allows us to create other Actions.
 
@@ -163,21 +168,23 @@ don't have a way of creating actions yet!
 include::../../dev/demo.clj[tag=install-create-action!,indent=0]
 ----
 ====
-<1> The Action takes a single argument which must be a map containing (at least) an `:xt/id` value prefixed with `https://site.test/actions/` and a `:juxt.site.alpha/type` with the constant `"Action"`.
-<2> The arguments will be updated such that the first (0th) argument is updated such that it contains the correct value for the `:juxt.site.alpha/type` attribute.
-<3> The arguments will then be validated,
-<4> then the arguments will be put as documents into the database.
-<5> This is a Datalog rule which says that the Action will only be allowed if there exists a permission allowing the user to call the Action. The terms `permission` and `subject` will be covered in <<ch-subjects>>.
+<1> The Action arguments will be updated such that the first (0th) argument is updated so that it contains a `:juxt.site.alpha/type` attribute with the value string `Action`.
+<2> The arguments will then be validated according to the Malli schema in `:juxt.pass.alpha.malli/args-schema`. By this point it must be a map containing an `:xt/id` value prefixed with `https://site.test/actions/` and a `:juxt.site.alpha/type` with the constant `"Action"`.
+<3> then the arguments will be submitted, as documents, to the database.
+<4> This is a Datalog rule which says that the Action will only be allowed if there exists a permission allowing the user to call the Action. The terms `permission` and `subject` will be covered in <<ch-subjects>>.
 
-TIP: Copy and paste the code in <<example-create-action>> into the REPL and evaluate it (with btn:[Enter]).
+IMPORTANT: Copy and paste the code in <<example-create-action>> into the REPL and evaluate it (with btn:[Enter]).
 
-=== Installing the `do-action` function
+=== Installing the transaction function
 
-We must first install the transaction function into the database, so that we can
-call actions we create.
+Actions can be called at the REPL with `do-action`.
+
+This requires that a transaction function be registered with the database.
 
 [source,clojure]
 .Install the do-action transaction function
 ----
 include::../../dev/demo.clj[tag=install-do-action-fn!,indent=0]
 ----
+
+IMPORTANT: Install the transaction function with `(install-do-action-fn!)`

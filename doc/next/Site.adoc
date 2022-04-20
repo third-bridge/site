@@ -7,6 +7,17 @@ Malcolm Sparks <mal@juxt.pro>
 :sectnumlevels: 4
 :xrefstyle: short
 
+[colophon]
+--
+Copyright © 2022, JUXT LTD.
+
+Published by JUXT Text.
+
+This book is written in Asciidoctor.
+--
+
+toc::[]
+
 include::Introduction.adoc[leveloffset=+1]
 
 include::Values.adoc[leveloffset=+2]
@@ -42,7 +53,5 @@ include::Authorization.adoc[leveloffset=+1]
 include::NextSteps.adoc[leveloffset=+1]
 
 include::AppDevelopment.adoc[leveloffset=+1]
-
-include::Colophon.adoc[leveloffset=+1]
 
 include::Glossary.adoc[leveloffset=+1]
