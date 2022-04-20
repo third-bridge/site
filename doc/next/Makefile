@@ -1,6 +1,6 @@
 .PHONY: watch
 
-Site.pdf:	$(wildcard *.adoc) identity-model.json subject-model.json
+Site.pdf:	$(wildcard *.adoc) identity-model.json user-model.json
 
 %.json: %.edn
 	bb -o edn2json $< > $@

@@ -62,7 +62,10 @@
          ::site/type "Subject"
          ::pass/identity "urn:site:identities:repl"})
   (put! {:xt/id "urn:site:identities:repl"
-         ::site/type "Identity"})
+         ::site/type "Identity"
+         ::pass/identity "urn:site:users:repl"})
+  (put! {:xt/id "urn:site:users:repl"
+         ::site/type "User"})
   ;; end::install-repl-user![]
   )
 

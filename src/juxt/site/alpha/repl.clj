@@ -527,8 +527,9 @@
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
 
-(defn me [] (init/repl-subject))
-(defn repl-identity [] (init/repl-identity))
+(defn me [] "urn:site:users:repl")
+(defn my-identity [] (init/repl-identity))
+(defn my-subject [] (init/repl-subject))
 
 (defn do-action [action & args]
   (apply init/do-action (xt-node) action args))
