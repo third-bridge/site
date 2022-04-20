@@ -218,10 +218,7 @@
      (json/write-value-as-string %))
    config))
 
-(defn repl-subject [] "urn:site:subjects:repl")
-(defn repl-identity [] "urn:site:identities:repl")
-
-(defn permit-create-action! [xt-node {::site/keys [base-uri] :as config}]
+#_(defn permit-create-action! [xt-node {::site/keys [base-uri] :as config}]
   (put!
    xt-node
    {:xt/id (str base-uri "/permissions/repl/create-action")
@@ -230,10 +227,10 @@
     ::pass/action (str base-uri "/actions/create-action")
     ::pass/purpose nil}))
 
-(defn do-action [xt-node action & args]
-  (apply authz/do-action xt-node {::pass/subject (repl-subject)} action args))
+(defn do-action [xt-node subject action & args]
+  (apply authz/do-action xt-node {::pass/subject subject} action args))
 
-(defn do-action-with-purpose [xt-node action purpose & args]
+#_(defn do-action-with-purpose [xt-node action purpose & args]
   (apply
    authz/do-action
    xt-node
@@ -247,8 +244,8 @@
    (str base-uri "/actions/create-action")
    action))
 
-(defn install-grant-permission-action! [xt-node {::site/keys [base-uri] :as config}]
-  (create-action!
+#_(defn install-grant-permission-action! [xt-node {::site/keys [base-uri] :as config}]
+    (create-action!
    xt-node
    config
    {:xt/id (str base-uri "/actions/grant-permission")
@@ -276,7 +273,7 @@
 
 ;; As a bootstrap, we need to grant the REPL permission to grant permissions!
 ;; This should be the last time we need to explicitly put anything in XTDB.
-(defn permit-grant-permission-action!
+#_(defn permit-grant-permission-action!
   [xt-node {::site/keys [base-uri] :as config}]
   (put!
    xt-node

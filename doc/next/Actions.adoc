@@ -168,10 +168,10 @@ We must install an Action which allows us to create other Actions.
 NOTE: This is the one Action that has to be put directly into the database because we
 don't have a way of creating actions yet!
 
-This gives us an opportunity to inspect the document structure of a real
-<<example-create-action,example>>.
+This gives us an opportunity to inspect the document structure of a real Action
+(see <<example-create-action>>).
 
-.Installing a `create-action` Action
+.Installing a create-action Action
 [[example-create-action]]
 ====
 [source,clojure]

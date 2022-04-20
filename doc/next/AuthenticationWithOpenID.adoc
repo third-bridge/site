@@ -180,7 +180,7 @@ Next, we grant the permission:
 
 [source,clojure]
 ----
-include::../../dev/demo.clj[tag=grant-permission-to-call-action-put-identity!,indent=0]
+include::../../dev/demo.clj[tag=grant-permission-to-invoke-action-put-identity!,indent=0]
 ----
 
 Finally, we create an action to get the identity.

@@ -527,14 +527,12 @@
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
 
-(defn me [] (str (base-uri) "/users/repl"))
-(defn my-identity [] (str (base-uri) "/identities/repl"))
-(defn my-subject [] (str (base-uri) "/subjects/repl"))
+(defn my-subject [] (str (base-uri) "/subjects/repl-default"))
 
 (defn do-action [action & args]
-  (apply init/do-action (xt-node) action args))
+  (apply init/do-action (xt-node) (my-subject) action args))
 
-(defn do-action-with-purpose [action purpose & args]
+#_(defn do-action-with-purpose [action purpose & args]
   (apply init/do-action-with-purpose (xt-node) action purpose args))
 
 (defn install-do-action-fn! []
@@ -553,13 +551,13 @@
 #_(defn install-create-action! []
   (init/install-create-action! (xt-node) (config)))
 
-(defn permit-create-action! []
+#_(defn permit-create-action! []
   (init/permit-create-action! (xt-node) (config)))
 
-(defn install-grant-permission-action! []
+#_(defn install-grant-permission-action! []
   (init/install-grant-permission-action! (xt-node) (config)))
 
-(defn permit-grant-permission-action! []
+#_(defn permit-grant-permission-action! []
   (init/permit-grant-permission-action! (xt-node) (config)))
 
 (defn create-action! [action]

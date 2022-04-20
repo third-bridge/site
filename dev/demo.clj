@@ -38,7 +38,7 @@
         [:map
          [:xt/id [:re "https://site.test/actions/(.+)"]] ; <2>
          [:juxt.site.alpha/type [:= "Action"]]
-         [:juxt.pass.alpha/rules :vector]]]
+         [:juxt.pass.alpha/rules [:vector [:vector :any]]]]]
 
        :juxt.pass.alpha/process
        [
@@ -56,17 +56,21 @@
      ;; end::install-create-action![]
      ))))
 
-(defn demo-put-repl-user! []
-  ;; tag::install-repl-user![]
-  (put! {:xt/id "https://site.test/subjects/repl"
-         :juxt.site.alpha/type "Subject"
-         :juxt.pass.alpha/identity "https://site.test/identities/repl"})
-  (put! {:xt/id "https://site.test/identities/repl"
+(defn demo-put-user! []
+  ;; tag::install-user![]
+  (put! {:xt/id "https://site.test/users/mal"
+         :juxt.site.alpha/type "User"
+         :juxtcode "mal"
+         :name "Malcolm Sparks"})
+  (put! {:xt/id "https://site.test/identities/mal"
          :juxt.site.alpha/type "Identity"
-         :juxt.pass.alpha/user "https://site.test/users/repl"})
-  (put! {:xt/id "https://site.test/users/repl"
-         :juxt.site.alpha/type "User"})
-  ;; end::install-repl-user![]
+         :juxt.pass.alpha/user "https://site.test/users/mal"
+         :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
+         :juxt.pass.jwt/sub "github|163131"})
+  (put! {:xt/id "https://site.test/subjects/repl-default"
+         :juxt.site.alpha/type "Subject"
+         :juxt.pass.alpha/identity "https://site.test/identities/mal"})
+  ;; end::install-user![]
   )
 
 (defn demo-permit-create-action! []
@@ -75,33 +79,66 @@
     (quote
      ;; tag::permit-create-action![]
      (put!
-      xt-node
-      {:xt/id "https://site.test/permissions/repl/create-action"
-       ::site/type "Permission"
-       ::pass/identity "urn:site:identities:repl"
-       ::pass/action (str base-uri "/actions/create-action")
-       ::pass/purpose nil})
+      {:xt/id "https://site.test/permissions/mal/create-action" ; <1>
+       :juxt.site.alpha/type "Permission" ; <2>
+       :juxt.pass.alpha/user "https://site.test/users/mal" ; <3>
+       :juxt.pass.alpha/action "https://site.test/actions/create-action" ; <4>
+       :juxt.pass.alpha/purpose nil}) ; <5>
      ;; end::permit-create-action![]
      ))))
 
-(defn demo-install-grant-permission-action! []
-  ;; tag::install-grant-permission-action![]
-  (install-grant-permission-action!)
-  ;; end::install-grant-permission-action![]
-  )
+(defn demo-create-grant-permission-action! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-grant-permission-action![]
+     (do-action
+      "https://site.test/actions/create-action"
+      {:xt/id "https://site.test/actions/grant-permission"
+       :juxt.site.alpha/type "Action"
+       :juxt.pass.alpha/scope "write:admin"
+
+       :juxt.pass.alpha.malli/args-schema
+       [:tuple
+        [:map
+         [:xt/id [:re "https://site.test/permissions/(.+)"]]
+         [:juxt.site.alpha/type [:= "Permission"]]
+         [:juxt.pass.alpha/action [:re "https://site.test/actions/(.+)"]]
+         [:juxt.pass.alpha/purpose [:maybe :string]]
+         ]]
+
+       :juxt.pass.alpha/process
+       [
+        [:juxt.pass.alpha.process/update-in [0] 'merge {:juxt.site.alpha/type "Permission"}]
+        [:juxt.pass.alpha.malli/validate]
+        [:xtdb.api/put]]
+
+       :juxt.pass.alpha/rules
+       '[
+         [(allowed? permission subject action resource)
+          [permission :juxt.pass.alpha/identity id]
+          [id :juxt.pass.alpha/user user]
+          [permission :juxt.pass.alpha/user user]]]})
+     ;; end::create-grant-permission-action![]
+     ))))
 
 (defn demo-permit-grant-permission-action! []
   ;; tag::permit-grant-permission-action![]
-  (permit-grant-permission-action!)
+  (put!
+   {:xt/id (str base-uri "/permissions/repl/grant-permission")
+    :juxt.site.alpha/type "Permission"
+    :juxt.pass.alpha/user "https://site.test/users/mal"
+    :juxt.pass.alpha/action "https://site.test/actions/grant-permission"
+    :juxt.pass.alpha/purpose nil})
   ;; end::permit-grant-permission-action![]
   )
 
-(defn demo-bootstrap-actions! []
+#_(defn demo-bootstrap-actions! []
   (demo-install-do-action-fn!)
   (demo-put-repl-user!)
   (demo-install-create-action!)
   (demo-permit-create-action!)
-  (demo-install-grant-permission-action!)
+  (demo-create-grant-permission-action!)
   (demo-permit-grant-permission-action!))
 
 (defn demo-create-action-put-immutable-public-resource! []

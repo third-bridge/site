@@ -124,27 +124,20 @@ include::user-model.json[]
 Since an Action are performed by a *User*, we need to create a user to start
 invoking our actions.
 
-.Put a User to represent the REPL
-[[example-put-repl-subject]]
+<<example-put-user>> demonstrates how to create a user called "Malcolm Sparks", with an associated identity.
+
+.Create your own User
+[[example-put-user]]
 ====
 [source,clojure]
 ----
-include::../../dev/demo.clj[tag=install-repl-user!,indent=0]
+include::../../dev/demo.clj[tag=install-user!,indent=0]
 ----
 ====
 
 [IMPORTANT]
 --
-Copy the code from <<example-put-repl-subject>> and paste it into the REPL. Evalute it.
+Copy the code from <<example-put-user>> and paste it into an editor. Personalise
+it according to your own user details. Copy the result into a REPL and evaluate
+it.
 --
-
-[source,clojure]
-.Permit the create-action action
-----
-include::../../dev/demo.clj[tag=permit-create-action!,indent=0]
-----
-
-NOTE: In future we might allow different users using the same REPL to identify
-themselves. Of course, REPL users have no restrictions to what they can do, so
-this is just for audit purposes among trusted users. Access to the REPL must be
-restricted to a very limited set of authorized users.
