@@ -2,7 +2,8 @@
 :toc: left
 :experimental:
 
-Site introduces the concept of *Actions* which are the foundational primitives
+(((action, definition)))
+Site introduces the concept of Actions which are the foundational primitives
 on which everything else in Site is built.
 
 == Introduction
@@ -62,6 +63,7 @@ But first, we need to install some preliminary resources into our REPL.
 
 === Data consistency
 
+((data consistency))
 Actions that modify the database are run in a transaction function. This ensures
 that the authorization check is made at the latest possible point, just before
 the database is potentially modified. This avoids any potential for
@@ -70,6 +72,8 @@ revoked just before the Action is called.
 
 === Audit logging
 
+((audit logging))
+((do-action))
 Whenever an Action is called, the `do-action` transaction function is executed
 which results in a *transaction metadata record* being created in the
 database.
@@ -78,6 +82,7 @@ This makes it possible to find out when an Action was called, by whom, which
 entities were affected and, potentially, other details such as the 'business
 justification'.
 
+(((transaction, metadata)))
 If the Action is denied, or if errors occur when the Action is executed, details
 will be recorded in the transaction metadata.
 
@@ -106,6 +111,7 @@ A copy of the transaction metadata record is returned as a result of the
 
 == Document structure of an Action
 
+(((action, document structure)))
 <<action-doc-structure>> lists the attributes found in Action documents.
 
 .Document structure of an Action
@@ -141,15 +147,17 @@ s|Required
 
 .Mixing Site attributes with your application's attributes
 ****
-All documents in the database can contain any additional attributes you need.
+All documents in Site can contain any additional attributes you need.
 
 The `juxt.site`, `juxt.pass`, `juxt.http`, `xtdb.api` and `xt` namespaces are
 reserved to avoid the potential for attribute clashes.
 
+(((property graph)))
 This flexibility to compose documents from different attributes is one of the
 strengths of using a property-graph database such as XTDB under the hood.
 
-See this talk segment by Stuart Halloway to explain the rationale for using namespaces in attribute keywords:
+((("Halloway, Stuart")))
+See this talk segment by Stu Halloway to explain the rationale for using namespaces in attribute keywords:
 https://youtu.be/Qx0-pViyIDU?t=1464
 ****
 
@@ -186,8 +194,9 @@ include::../../dev/demo.clj[tag=install-create-action!,indent=0]
 . Evaluate.
 --
 
-=== Installing the transaction function
+== Installing the transaction function
 
+(((transaction, function registration)))
 Actions can be called at the REPL with `do-action`.
 
 This depends on a transaction function that must be first registered in the

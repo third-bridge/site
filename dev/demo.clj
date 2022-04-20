@@ -58,7 +58,11 @@
 
 (defn demo-put-repl-user! []
   ;; tag::install-repl-user![]
-  (install-repl-user!)
+  (put! {:xt/id "urn:site:subjects:repl"
+         ::site/type "Subject"
+         ::pass/identity "urn:site:identities:repl"})
+  (put! {:xt/id "urn:site:identities:repl"
+         ::site/type "Identity"})
   ;; end::install-repl-user![]
   )
 

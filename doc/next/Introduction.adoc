@@ -5,11 +5,8 @@
 
 Site is a place to keep records.
 
-Records are documents, or other media such as pictures and videos.
-
-Site provides access to records over HTTPS. Each record is therefore uniquely
-identified by a Uniform Resource Identifier (URIs) and accessible, as web
-resources, to user applications over the HTTPS protocol.
+Site provides access to records over HTTPS. To supoprt this, each record is
+identified with a Uniform Resource Identifier (URIs) and becomes a web resource.
 
 Site allows applications to manage these resources, via user-defined APIs.
 
@@ -30,6 +27,8 @@ Docker images that provide shortcuts to setting up a Site instance.
 
 == Conventions used in this book
 
+=== Reader interventions
+
 We use an admonition with an exclamation mark to indicate where we require that
 you act, and do something. In code, the exclamation mark is commonly used to
 indicate a side-effect. In this book, the side-effect is carried out by the
@@ -38,3 +37,10 @@ reader!
 ====
 IMPORTANT: Make tea!
 ====
+
+=== Proper nouns
+
+Where nouns are well specified and appear in a glossary, we write them as proper
+nouns rather than common nouns. Whenever such a noun is capitalised, it has the
+formal meaning as defined in the <<glossary>> rather than its common
+meaning. This allows us to use common nouns with less risk of confusion.

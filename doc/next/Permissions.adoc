@@ -1,8 +1,10 @@
 = Permissions
 
+(((permission, definition)))
 Permissions are what restrict actions to specific users and applications.
 
-An action's rules specify how permissions determine the outcome of authorization decisions.
+An Action's Rules specify how permissions determine the outcome of authorization
+decisions.
 
 Permissions are straight-forward to grant and revoke, as they are represented as
 XT documents, so granting and revoking a permission can be done with XTDB's

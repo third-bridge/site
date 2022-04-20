@@ -3,29 +3,34 @@
 :toc: left
 :experimental:
 
-An action is performed by a **subject**. A subject represents the _who_.
+(((subject, definition)))
+An Action is performed by a *Subject*. A Subject represents the _who_ of a
+transaction, a Permission or a decision.
 
-In Site, the subject is a database document automatically created when the user
-authenticates and represents a *user login*. This document has the `juxt.site.alpha/type` attribute value set to `Subject`.
+In Site, the Subject is a database document automatically created when the user
+authenticates and represents a *user login*. This document has the
+`juxt.site.alpha/type` attribute value set to "`Subject`".
 
-A subject document always references an *identity* document, via the
-`juxt.pass.alpha/identity` attribute, which can tell us _who_ the user is. But a
-subject might also include information such as:
+(((identity, defintiion)))
+A Subject always references an *Identity*, with the `juxt.pass.alpha/identity`
+attribute. The Identity tells us _who_ the user is. But a Subject might also
+include information such as:
 
-* when the user logged in
-* which authentication factors were used
-* where the user logged in from
+* When the user logged in
+* Where the user logged in from
+* The number and type of authentication factors which were used
+* Whether the user's claimed email address has been verified
 
-An *identity* document contains information about the user's login
-credentials. It might contain the user's company username, email address or a
-reference to an external identity.
+An Identity contains information that can uniquely identify a User, such as the
+user's login credentials, company-wide username, email address, Twitter handle
+or a reference to an external identity issued by another authority.
 
-The *identity* document _can_ contain information about the individual user, but
-since user's often have multiple identities, it is advisable to use an attribute
-to reference another document representing the user. Any choices here will be
-reflected in the rules contained in the actions.
+The Identity _can_ contain information about the individual user, but since
+user's often have multiple identities, it is a good idea to use an attribute to
+reference another document representing the User. Any choices here will be
+reflected in the Rules contained in the Actions.
 
-<<subject-model>> shows how these various documents relate to each other.
+<<subject-model>> shows how these documents relate.
 
 .Subjects and Identities
 [[subject-model]]
@@ -37,17 +42,27 @@ include::subject-model.json[]
 @endjson
 ....
 
-== Create a subject and identity to represent the REPL user
+== Create a Subject to represent the REPL
 
-To call actions from the REPL, we'll install a subject that can only be used
-from the REPL. The `(me)` function returns a special built-in identifier for the
-REPL subject.
+To create and call actions from the REPL, we'll install a special Subject that can only be used
+from the REPL.
 
+The `(me)` function returns a special built-in identifier for the REPL subject.
+
+.Put a Subject to represent the REPL user
+[[example-put-repl-subject]]
+====
 [source,clojure]
-.Add the REPL subject
 ----
 include::../../dev/demo.clj[tag=install-repl-user!,indent=0]
 ----
+====
+
+[IMPORTANT]
+--
+Copy the code from <<example-put-repl-subject>> and paste it into the REPL. Evalute it.
+--
+
 
 [source,clojure]
 .Permit the create-action action
