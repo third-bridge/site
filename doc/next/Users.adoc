@@ -27,7 +27,7 @@ s|Required
 
 == Identities
 
-(((identity, defintiion)))
+(((identity, definition)))
 An Identity contains information that can uniquely identify a User, such as the
 user's login credentials, company-wide username, email address, Twitter handle
 or a reference to an external identity issued by another authority.
