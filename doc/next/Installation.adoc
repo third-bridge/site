@@ -237,5 +237,6 @@ There are a few useful Site REPL commands you should be familiar with:
 (ls):: List all resources
 (ls <pat>):: List all resources whose URIs match the pattern
 (evict! <uri>+):: Kill resource(s) across time
+(put! xt-node <doc>+)):: Put one or more resources into the database
 (apply evict! (ls)):: Start over. (Delete everything in the database!)
 --

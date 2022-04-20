@@ -263,7 +263,7 @@
 
     :juxt.pass.alpha/process
     [
-     [::pass.process/update-in [0] 'merge {::site/type "Permission"}]
+     [:juxt.pass.alpha.process/update-in [0] 'merge {::site/type "Permission"}]
      [:juxt.pass.alpha.malli/validate]
      [:xtdb.api/put]]
 

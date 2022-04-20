@@ -1,3 +1,4 @@
+[[ch-subjects]]
 = Subjects
 :toc: left
 :experimental:

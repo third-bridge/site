@@ -8,12 +8,12 @@ Site is a place to keep records.
 Records are documents, or other media such as pictures and videos.
 
 Site provides access to records over HTTPS. Each record is therefore uniquely
-identified by a Uniform Resource Identifier (URIs) and accessible to user
-applications over the HTTPS protocol.
+identified by a Uniform Resource Identifier (URIs) and accessible, as web
+resources, to user applications over the HTTPS protocol.
 
-Site allows applications to manage these records, via user-defined APIs.
+Site allows applications to manage these resources, via user-defined APIs.
 
-Site can protect resources from unauthorized access, and log access to records
+Site can protect resources from unauthorized access, and log access to resources
 when required.
 
 Site retains a full history.

@@ -549,7 +549,7 @@
 (defn check-permissions [actions options]
   (authz/check-permissions (db) actions options))
 
-(defn install-create-action! []
+#_(defn install-create-action! []
   (init/install-create-action! (xt-node) (config)))
 
 (defn permit-create-action! []
@@ -574,13 +574,11 @@
   [& options]
   (apply init/install-openid-resources! (xt-node) (config) options))
 
-(comment
-  (install-openid-provider! "https://juxt.eu.auth0.com/.well-known/openid-configuration"))
-
-(defn bootstrap-actions! []
+;; Needs a review
+#_(defn bootstrap-actions! []
   (install-do-action-fn!)
   (install-repl-user!)
-  (install-create-action!)
+  ;;(install-create-action!)
   (permit-create-action!)
   (install-grant-permission-action!)
   (permit-grant-permission-action!))

@@ -1,0 +1,8 @@
+[[glossary]]
+[glossary]
+= Glossary
+
+[glossary]
+resource:: A web resource
+document:: A record in the XTDB database, physically a Clojure map
+entity:: All the versions of a document over time

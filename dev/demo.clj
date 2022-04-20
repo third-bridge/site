@@ -42,23 +42,23 @@
        :juxt.pass.alpha/scope "write:admin"
        :juxt.pass.alpha.malli/args-schema
        [:tuple
-        [:map
-         [:xt/id [:re (str base-uri "/(.+)")]]
-         [::site/type [:= "Action"]]]]
+        [:map ; <1>
+         [:xt/id [:re "https://site.test/actions/(.+)"]]
+         [:juxt.site.alpha/type [:= "Action"]]
+         [:juxt.pass.alpha/rules :vector]]]
 
        :juxt.pass.alpha/process
        [
-        [:juxt.pass.alpha.process/update-in [0] 'merge {::site/type "Action"}]
-        [:juxt.pass.alpha.malli/validate]
-        [:xtdb.api/put]]
+        [:juxt.pass.alpha.process/update-in [0] ; <2>
+         'merge {:juxt.site.alpha/type "Action"}]
+        [:juxt.pass.alpha.malli/validate] ; <3>
+        [:xtdb.api/put]] ; <4>
 
        :juxt.pass.alpha/rules
        '[
-         ;; The permission to create actions may be granted through role
-         ;; membership, so perhaps make this configurable.
-         [(allowed? permission subject action resource)
-          [subject :juxt.pass.alpha/identity i]
-          [i :juxt.pass.alpha/user user]
+         [(allowed? permission subject action resource) ; <5>
+          [subject :juxt.pass.alpha/identity id]
+          [id :juxt.pass.alpha/user user]
           [permission :juxt.pass.alpha/user user]]]}))))
   ;; end::install-create-action![]
   )

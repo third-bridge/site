@@ -1,7 +1,8 @@
 = Actions
 :toc: left
+:experimental:
 
-Site introduces the concept of *actions* which are the foundational primitives
+Site introduces the concept of *Actions* which are the foundational primitives
 on which everything else in Site is built.
 
 == Introduction
@@ -64,25 +65,25 @@ But first, we need to install some preliminary resources into our REPL.
 Actions that modify the database are run in a transaction function. This ensures
 that the authorization check is made at the latest possible point, just before
 the database is potentially modified. This avoids any potential for
-race-conditions, for example, if the authorization to perform an action is
-revoked just before the action is called.
+race-conditions, for example, if the authorization to perform an Action is
+revoked just before the Action is called.
 
 === Audit logging
 
-Whenever an action is called, the `do-action` transaction function is executed
+Whenever an Action is called, the `do-action` transaction function is executed
 which results in a *transaction metadata record* being created in the
 database.
 
-This makes it possible to find out when an action was called, by whom, which
+This makes it possible to find out when an Action was called, by whom, which
 entities were affected and, potentially, other details such as the 'business
 justification'.
 
-If the action is denied, or if errors occur when the action is executed, details
+If the Action is denied, or if errors occur when the Action is executed, details
 will be recorded in the transaction metadata.
 
-This allows us later to answer questions as to whether an action was allowed or
+This allows us later to answer questions as to whether an Action was allowed or
 denied, with an explanation. We will also be able to answer questions regarding
-the who, when, why and how for each document in the database.
+the who, when, why and how for each resource in the database.
 
 A copy of the transaction metadata record is returned as a result of the
 `do-action` function, as shown in <<transaction-metadata-record-example>>.
@@ -103,27 +104,72 @@ A copy of the transaction metadata record is returned as a result of the
 ----
 ====
 
-== Installation steps
+== Document structure of an Action
 
-We must first install some entities into Site.
+<<action-doc-structure>> lists the attributes found in Action documents.
 
-The first is an action called `create-action`. This action will allow us to
-create more actions.
+.Document structure of an Action
+[[action-doc-structure]]
+[%header,cols="2l,3d,1"]
+|===
+|Attribute|Value|Required?
+|:juxt.site.alpha/type
+l|"Action"
+s|Required
 
-== Defining the create-action action
+|:juxt.pass.alpha/rules
+|A collection of Datalog rules that determine whether the action is allowed.
+s|Required
 
-We install the `create-action` action. This is the one action that has to be put
-directly into the database because we don't have a way of creating actions yet!
+|:juxt.pass.alpha.malli/args-schema
+|A Malli tuple schema that the action's arguments must conform to.
+|Optional
 
-.Install the create-action action
-[[install-create-action-action]]
---
+|:juxt.pass.alpha/process
+|A vector of processing steps which are executed when the action is called.
+|Optional
+
+|:juxt.pass.alpha/scope
+|A _String_ representing the OAuth 2.0 scope containing the action.
+|Optional
+|===
+
+.Mixing Site attributes with your application's attributes
+****
+All documents in the database can contain any additional attributes you need.
+
+The `juxt.site`, `juxt.pass`, `juxt.http`, `xtdb.api` and `xt` namespaces are
+reserved to avoid the potential for attribute clashes.
+
+This flexibility to compose documents from different attributes is one of the
+strengths of using a property-graph database such as XTDB under the hood.
+
+See this talk segment by Stuart Halloway to explain the rationale for using namespaces in attribute keywords:
+https://youtu.be/Qx0-pViyIDU?t=1464
+****
+
+== Installing a `create-action` Action
+
+We must install an Action which allows us to create other Actions.
+
+NOTE: This is the one Action that has to be put directly into the database because we
+don't have a way of creating actions yet!
+
+.Installing a `create-action` Action
+[[example-create-action]]
+====
 [source,clojure]
 ----
 include::../../dev/demo.clj[tag=install-create-action!,indent=0]
 ----
-<1> foo
---
+====
+<1> The Action takes a single argument which must be a map containing (at least) an `:xt/id` value prefixed with `https://site.test/actions/` and a `:juxt.site.alpha/type` with the constant `"Action"`.
+<2> The arguments will be updated such that the first (0th) argument is updated such that it contains the correct value for the `:juxt.site.alpha/type` attribute.
+<3> The arguments will then be validated,
+<4> then the arguments will be put as documents into the database.
+<5> This is a Datalog rule which says that the Action will only be allowed if there exists a permission allowing the user to call the Action. The terms `permission` and `subject` will be covered in <<ch-subjects>>.
+
+TIP: Copy and paste the code in <<example-create-action>> into the REPL and evaluate it (with btn:[Enter]).
 
 === Installing the `do-action` function
 
