@@ -1,9 +1,7 @@
 = Installation
 :toc: left
 
-== Introduction
-
-=== Requirements
+== Requirements
 
 Before you start, you'll need to have the following installed:
 
@@ -11,7 +9,7 @@ Before you start, you'll need to have the following installed:
 * https://clojure.org/guides/getting_started[Clojure]
 * https://github.com/babashka/babashka[Babashka]
 
-=== Before you start
+== Before you start
 
 * All these instructions are for Arch Linux, please amend accordingly for your own
 platform, if different.

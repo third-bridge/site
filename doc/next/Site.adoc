@@ -17,6 +17,10 @@ include::Installation.adoc[leveloffset=+1]
 
 include::Actions.adoc[leveloffset=+1]
 
+include::Subjects.adoc[leveloffset=+1]
+
+include::Permissions.adoc[leveloffset=+1]
+
 include::Resources.adoc[leveloffset=+1]
 
 include::Representations.adoc[leveloffset=+1]

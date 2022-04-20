@@ -1,0 +1,34 @@
+= Permissions
+
+Permissions are what restrict actions to specific users and applications.
+
+An action's rules specify how permissions determine the outcome of authorization decisions.
+
+Permissions are straight-forward to grant and revoke, as they are represented as
+XT documents, so granting and revoking a permission can be done with XTDB's
+respective `:xtdb.api/put` and `:xtdb.api/delete` operations.
+
+== Define the grant-permission action
+
+Now that we have our `create-action` function installed we can use it to create
+an action that will grant permissions.
+
+[source,clojure]
+.Install the action to grant permissions
+----
+include::../../dev/demo.clj[tag=install-grant-permission-action!,indent=0]
+----
+
+Note that this function will return a copy of the *transaction metadata record*
+for the transaction that created the grant-permission action.
+
+== Permit REPL access to the grant permission action
+
+We need to permit our REPL user to call this grant-permission action, and this permission too
+needs to be put directly into the database since we don't yet have a way of
+granting permissions!
+
+.Granting the REPL user the permission to grant permssions.
+----
+include::../../dev/demo.clj[tag=permit-grant-permission-action!,indent=0]
+----

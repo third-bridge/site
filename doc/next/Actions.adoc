@@ -1,12 +1,19 @@
 = Actions
 :toc: left
 
+Site introduces the concept of *actions* which are the foundational primitives
+on which everything else in Site is built.
+
 == Introduction
 
-Site adds the concept of *actions* to XTDB.
+Actions authorize all reads and writes to the database. Actions also record all
+writes, and some reads from the database.
 
-Actions make up the layer which mediates, authorizes and records read and write
-access to the database.
+////
+TODO: Use xrefs from these bullet-points to more detailed explanations, such
+that these set of items can become a launchpad for diving into the
+documentation.
+////
 
 * Actions run in transaction functions to ensure atomicity and consistency.
 
@@ -21,23 +28,11 @@ access to the database.
 
 * Actions can be exposed to the network, using OpenAPI and/or GraphQL operations.
 
+* Actions can cause side-effects (e.g. lambda functions).
+
 * Actions decouple network APIs from lower-level effects. For example, an API
   implementation can use a 'send-email', without having to know the
   implementation details of sending emails.
-
-== Permissions
-
-* Permissions are what restrict actions to specific users and applications via
-  permissions.
-
-* An action's rules specify how permissions determine the outcome of
-  authorization decisions.
-
-* Permissions are straight-forward to grant and revoke, as they are represented
-  as XT documents, so granting and revoking a permission can be done with XTDB's
-  respective `:xtdb.api/put` and `:xtdb.api/delete` operations.
-
-== Setting up actions
 
 ////
 (old text)
@@ -64,96 +59,33 @@ to create those too.
 But first, we need to install some preliminary resources into our REPL.
 ////
 
+=== Data consistency
 
+Actions that modify the database are run in a transaction function. This ensures
+that the authorization check is made at the latest possible point, just before
+the database is potentially modified. This avoids any potential for
+race-conditions, for example, if the authorization to perform an action is
+revoked just before the action is called.
 
-=== Install the `do-action` function
-
-Executing actions in an XTDB transaction function guarantees consistency,
-eliminating potential race-conditions. For example, it's important that any
-revocation of a permission is applied if it is submitted before a request that
-requires the permission.
-
-The transaction function also records every action call in an *audit-log*,
-detailing when the action was called, by whom, which entities were affected and,
-potentially, other details such as the 'business justification'.
-
-We must first install the transaction function into the database, so that we can
-call actions we create.
-
-[source,clojure]
-.Install the do-action transaction function
-----
-include::../../dev/demo.clj[tag=install-do-action-fn!,indent=0]
-----
-
-=== Create a subject representing the REPL user
-
-Actions are performed by **subject**s.
-
-A subject represents an authenticated person, which will include personal data
-as well as details about their login session (e.g. the device they are using,
-whether their email address has been verified, whether their login required use
-of a second factor, etc.).
-
-To call actions from the REPL, we'll install a subject that can only be used
-from the REPL. The `(me)` function returns a special built-in identifier for the
-REPL subject.
-
-[source,clojure]
-.Add the REPL subject
-----
-include::../../dev/demo.clj[tag=install-repl-user!,indent=0]
-----
-
-NOTE: In future we might allow different users using the same REPL to identify
-themselves. Of course, REPL users have no restrictions to what they can do, so
-this is just for audit purposes among trusted users. Access to the REPL must be
-restricted to a very limited set of authorized users.
-
-=== Define the create-action action
-
-We install the `create-action` action. This is the one action that has to be put
-directly into the database because we don't have a way of creating actions yet!
-
-[source,clojure]
-.Install the create-action action
-----
-include::../../dev/demo.clj[tag=install-create-action!,indent=0]
-----
-
-[source,clojure]
-.Permit the create-action action
-----
-include::../../dev/demo.clj[tag=permit-create-action!,indent=0]
-----
-
-=== Define the grant-permission action
-
-Now that we have our `create-action` function installed we can use it to create
-an action that will grant permissions.
-
-[source,clojure]
-.Install the action to grant permissions
-----
-include::../../dev/demo.clj[tag=install-grant-permission-action!,indent=0]
-----
-
-Note that this function will return a copy of the *transaction metadata record*
-for the transaction that created the grant-permission action.
-
-.Transaction Metadata Records
-****
+=== Audit logging
 
 Whenever an action is called, the `do-action` transaction function is executed
 which results in a *transaction metadata record* being created in the
-database. If the action is denied, or if errors occur when the action is
-executed, details will be recorded in the transaction metadata.
+database.
+
+This makes it possible to find out when an action was called, by whom, which
+entities were affected and, potentially, other details such as the 'business
+justification'.
+
+If the action is denied, or if errors occur when the action is executed, details
+will be recorded in the transaction metadata.
 
 This allows us later to answer questions as to whether an action was allowed or
 denied, with an explanation. We will also be able to answer questions regarding
 the who, when, why and how for each document in the database.
 
-A copy of the transaction metadata record is returned as a result of the `do-action` function, as shown in <<transaction-metadata-record-example>>.
+A copy of the transaction metadata record is returned as a result of the
+`do-action` function, as shown in <<transaction-metadata-record-example>>.
 
 [[transaction-metadata-record-example]]
 .A *transaction metadata record*
@@ -170,15 +102,36 @@ A copy of the transaction metadata record is returned as a result of the `do-act
  :juxt.pass.alpha/deletes []}
 ----
 ====
-****
 
-=== Permit REPL access to the grant permission action
+== Installation steps
 
-We need to permit our REPL user to call this grant-permission action, and this permission too
-needs to be put directly into the database since we don't yet have a way of
-granting permissions!
+We must first install some entities into Site.
 
-.Granting the REPL user the permission to grant permssions.
+The first is an action called `create-action`. This action will allow us to
+create more actions.
+
+== Defining the create-action action
+
+We install the `create-action` action. This is the one action that has to be put
+directly into the database because we don't have a way of creating actions yet!
+
+.Install the create-action action
+[[install-create-action-action]]
+--
+[source,clojure]
 ----
-include::../../dev/demo.clj[tag=permit-grant-permission-action!,indent=0]
+include::../../dev/demo.clj[tag=install-create-action!,indent=0]
+----
+<1> foo
+--
+
+=== Installing the `do-action` function
+
+We must first install the transaction function into the database, so that we can
+call actions we create.
+
+[source,clojure]
+.Install the do-action transaction function
+----
+include::../../dev/demo.clj[tag=install-do-action-fn!,indent=0]
 ----

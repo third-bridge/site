@@ -2,8 +2,6 @@
 :toc: left
 :experimental:
 
-== Introduction
-
 Authentication is the act of establishing the identity of a person or machine.
 
 Currently, Site does not provide its own authentication service but relies on a
@@ -13,7 +11,7 @@ authenticating an end-user and providing claims about them.
 If Site trusts the OpenID Provider, and the OpenID Provider trusts the claims
 made by the user, then Site can trust those user claims too.
 
-=== Authentication with an OpenID Provider
+== Authentication with an OpenID Provider
 
 When communicating with an OpenID Provider, Site assumes the role of a *Relying
 Party*.
@@ -75,7 +73,7 @@ callback -> browser: Upgrade session cookie
 
 NOTE: Describe the flow in more details here.
 
-=== Requirements for authenticating with OpenID
+== Requirements for authenticating with OpenID
 
 For this flow to be possible, we need the following:
 
@@ -92,7 +90,7 @@ we get to them, we should first explain about how the identity of an end-user is
 represented in Site.
 
 [[identities]]
-=== Identities
+== Identities
 
 Site stores details of the identity (or identities) of each user that might be
 allowed to perform privileged actions on resources.
@@ -143,7 +141,7 @@ and other domain-specific documents.
 ....
 skinparam monochrome true
 @startjson
-include::identity.json[]
+include::identity-model.json[]
 @endjson
 ....
 ====

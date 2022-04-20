@@ -221,34 +221,6 @@
 (defn repl-subject [] "urn:site:subjects:repl")
 (defn repl-identity [] "urn:site:identities:repl")
 
-(defn install-create-action! [xt-node {::site/keys [base-uri] :as config}]
-  (put!
-   xt-node
-   {:xt/id (str base-uri "/actions/create-action")
-    :juxt.site.alpha/type "Action"
-    :juxt.pass.alpha/scope "write:admin" ; make configurable?
-    :juxt.pass.alpha.malli/args-schema
-    [:tuple
-     [:map
-      [:xt/id [:re (str base-uri "/(.+)")]]
-      [::site/type [:= "Action"]]]]
-
-    ::pass/process
-    [
-     [::pass.process/update-in [0] 'merge {::site/type "Action"}]
-     [:juxt.pass.alpha.malli/validate]
-     [::xt/put]]
-
-    ::pass/rules
-    '[
-      ;; The permission to create actions may be granted through role
-      ;; membership, so perhaps make this configurable.
-      [(allowed? permission subject action resource)
-       [permission ::pass/identity i]
-       [subject ::pass/identity i]]]}
-
-   ))
-
 (defn permit-create-action! [xt-node {::site/keys [base-uri] :as config}]
   (put!
    xt-node

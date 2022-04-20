@@ -1,0 +1,60 @@
+= Subjects
+:toc: left
+:experimental:
+
+An action is performed by a **subject**. A subject represents the _who_.
+
+In Site, the subject is a database document automatically created when the user
+authenticates and represents a *user login*. This document has the `juxt.site.alpha/type` attribute value set to `Subject`.
+
+A subject document always references an *identity* document, via the
+`juxt.pass.alpha/identity` attribute, which can tell us _who_ the user is. But a
+subject might also include information such as:
+
+* when the user logged in
+* which authentication factors were used
+* where the user logged in from
+
+An *identity* document contains information about the user's login
+credentials. It might contain the user's company username, email address or a
+reference to an external identity.
+
+The *identity* document _can_ contain information about the individual user, but
+since user's often have multiple identities, it is advisable to use an attribute
+to reference another document representing the user. Any choices here will be
+reflected in the rules contained in the actions.
+
+<<subject-model>> shows how these various documents relate to each other.
+
+.Subjects and Identities
+[[subject-model]]
+[plantuml,subject-model,png]
+....
+skinparam monochrome true
+@startjson
+include::subject-model.json[]
+@endjson
+....
+
+== Create a subject and identity to represent the REPL user
+
+To call actions from the REPL, we'll install a subject that can only be used
+from the REPL. The `(me)` function returns a special built-in identifier for the
+REPL subject.
+
+[source,clojure]
+.Add the REPL subject
+----
+include::../../dev/demo.clj[tag=install-repl-user!,indent=0]
+----
+
+[source,clojure]
+.Permit the create-action action
+----
+include::../../dev/demo.clj[tag=permit-create-action!,indent=0]
+----
+
+NOTE: In future we might allow different users using the same REPL to identify
+themselves. Of course, REPL users have no restrictions to what they can do, so
+this is just for audit purposes among trusted users. Access to the REPL must be
+restricted to a very limited set of authorized users.

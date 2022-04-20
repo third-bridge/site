@@ -1,8 +1,6 @@
 = Resources
 :toc: left
 
-== Introduction
-
 Resources in Site are web resources, as per https://httpwg.org/specs/rfc7231.html#resources[RFC 7231].
 
 Resourse are identified by a URI. When resources are stored in XT, the
