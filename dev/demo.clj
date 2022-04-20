@@ -57,23 +57,36 @@
      ))))
 
 (defn demo-put-repl-user! []
-  ;; tag::install-repl-user![]
-  (put! {:xt/id "urn:site:subjects:repl"
-         ::site/type "Subject"
-         ::pass/identity "urn:site:identities:repl"})
-  (put! {:xt/id "urn:site:identities:repl"
-         ::site/type "Identity"
-         ::pass/identity "urn:site:users:repl"})
-  (put! {:xt/id "urn:site:users:repl"
-         ::site/type "User"})
-  ;; end::install-repl-user![]
-  )
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     (do
+     ;; tag::install-repl-user![]
+       (put! {:xt/id "https://site.test/subjects/repl"
+              :juxt.site.alpha/type "Subject"
+              :juxt.pass.alpha/identity "https://site.test/identities/repl"})
+       (put! {:xt/id "https://site.test/identities/repl"
+              :juxt.site.alpha/type "Identity"
+              :juxt.pass.alpha/user "https://site.test/users/repl"})
+       (put! {:xt/id "https://site.test/users/repl"
+              :juxt.site.alpha/type "User"})
+       ;; end::install-repl-user![]
+       )))))
 
 (defn demo-permit-create-action! []
-  ;; tag::permit-create-action![]
-  (permit-create-action!)
-  ;; end::permit-create-action![]
-  )
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::permit-create-action![]
+     (put!
+      xt-node
+      {:xt/id "https://site.test/permissions/repl/create-action"
+       ::site/type "Permission"
+       ::pass/identity "urn:site:identities:repl"
+       ::pass/action (str base-uri "/actions/create-action")
+       ::pass/purpose nil})
+     ;; end::permit-create-action![]
+     ))))
 
 (defn demo-install-grant-permission-action! []
   ;; tag::install-grant-permission-action![]

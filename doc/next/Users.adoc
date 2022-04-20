@@ -104,10 +104,8 @@ s|Required
 s|Required
 |===
 
-== Relationships
-
-<<user-model>> shows an example of how these documents might relate in the
-database.
+<<user-model>> shows an example of how a Subject may relate to an Identity, and
+how an Identity, in turn, may relate to a User.
 
 .A possible relationship between a Users Subject and Identity
 [[user-model]]
@@ -141,7 +139,6 @@ include::../../dev/demo.clj[tag=install-repl-user!,indent=0]
 --
 Copy the code from <<example-put-repl-subject>> and paste it into the REPL. Evalute it.
 --
-
 
 [source,clojure]
 .Permit the create-action action
