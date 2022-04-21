@@ -63,7 +63,7 @@ But first, we need to install some preliminary resources into our REPL.
 
 === Data consistency
 
-((data consistency))
+(((data consistency)))
 Actions that modify the database are run in a transaction function. This ensures
 that the authorization check is made at the latest possible point, just before
 the database is potentially modified. This avoids any potential for
@@ -72,8 +72,8 @@ revoked just before the Action is invoked.
 
 === Audit logging
 
-((audit logging))
-((do-action))
+(((audit logging)))
+(((do-action)))
 Whenever an Action is invoked, the `do-action` transaction function is executed
 which results in a *transaction metadata record* being created in the
 database.
@@ -163,6 +163,7 @@ https://youtu.be/Qx0-pViyIDU?t=1464
 
 == Installing a 'create-action' Action
 
+(((create-action)))
 We must install an Action which allows us to create other Actions.
 
 NOTE: This is the one Action that has to be put directly into the database because we
@@ -184,7 +185,7 @@ include::../../dev/demo.clj[tag=install-create-action!,indent=0]
 <3> The Action arguments will be updated such that the first (0th) argument is updated so that it contains a `:juxt.site.alpha/type` attribute with the value string "`Action`".
 <4> The arguments will then be validated according to the Malli schema in `:juxt.pass.alpha.malli/args-schema`. By this point it must be a map containing an `:xt/id` value prefixed with `https://site.test/actions/` and a `:juxt.site.alpha/type` with the constant `"Action"`.
 <5> then the arguments will be submitted, as documents, to the database.
-<6> This is a Rule. It ensures that the Action will be allowed only if there exists a Permission granting the User to invoke the Action. These concepts will be covered in <<ch-subjects>>. If you decide on a different data model for users, then this Rule will have to be modified to reflect that.
+<6> This is a Rule. It ensures that the Action will be allowed only if there exists a Permission granting the User to invoke the Action. These concepts will be covered in <<ch-users>>. If you decide on a different data model for users, then this Rule will have to be modified to reflect that.
 
 [IMPORTANT]
 --
@@ -196,7 +197,7 @@ include::../../dev/demo.clj[tag=install-create-action!,indent=0]
 
 == Installing the transaction function
 
-(((transaction, function registration)))
+(((do-action, transaction function, registration)))
 Actions can be invoked at the REPL with `do-action`.
 
 This depends on a transaction function that must be first registered in the

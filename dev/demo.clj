@@ -126,7 +126,7 @@
 (defn demo-permit-grant-permission-action! []
   ;; tag::permit-grant-permission-action![]
   (put!
-   {:xt/id (str base-uri "/permissions/repl/grant-permission")
+   {:xt/id "https://site.test/permissions/mal/grant-permission"
     :juxt.site.alpha/type "Permission"
     :juxt.pass.alpha/user "https://site.test/users/mal"
     :juxt.pass.alpha/action "https://site.test/actions/grant-permission"
@@ -147,7 +147,9 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::create-action-put-immutable-public-resource![]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/put-immutable-public-resource"
        :juxt.pass.alpha/scope "write:resource" ; <1>
 
@@ -181,9 +183,11 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::grant-permission-to-invoke-action-put-immutable-public-resource![]
-     (grant-permission!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/grant-permission"
       {:xt/id "https://site.test/permissions/repl/put-immutable-public-resource"
-       :juxt.pass.alpha/identity "urn:site:identities:repl"
+       :juxt.pass.alpha/user "https://site.test/users/mal"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-public-resource"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-invoke-action-put-immutable-public-resource![]
@@ -194,7 +198,9 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::create-action-get-public-resource![]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/get-public-resource"
        :juxt.pass.alpha/scope "read:resource" ; <1>
 
@@ -211,7 +217,9 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::grant-permission-to-invoke-get-public-resource![]
-     (grant-permission!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/grant-permission"
       {:xt/id "https://site.test/permissions/public-resources-to-all"
        :juxt.pass.alpha/action #{"https://site.test/actions/get-public-resource"}
        :juxt.pass.alpha/purpose nil})
@@ -256,7 +264,9 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::create-put-template-action![]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/put-template"
        :juxt.pass.alpha/scope "write:resource"
 
@@ -286,9 +296,11 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::grant-permission-to-invoke-action-put-template![]
-     (grant-permission!
-      {:xt/id "https://site.test/permissions/repl/put-template"
-       :juxt.pass.alpha/identity "urn:site:identities:repl"
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/grant-permission"
+      {:xt/id "https://site.test/permissions/mal/put-template"
+       :juxt.pass.alpha/user "https://site.test/users/mal"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-template"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-invoke-action-put-template![]
@@ -330,7 +342,9 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::create-action-put-identity![]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/put-identity"
        :juxt.pass.alpha/scope "write:identity"
 
@@ -362,7 +376,7 @@
      ;; end::create-action-put-identity![]
      ))))
 
-(defn demo-grant-permission-to-invoke-action-put-identity! []
+#_(defn demo-grant-permission-to-invoke-action-put-identity! []
   (eval
    (substitute-actual-base-uri
     (quote
@@ -375,12 +389,14 @@
      ;; end::grant-permission-to-invoke-action-put-identity![]
      ))))
 
-(defn demo-create-action-get-identity! []
+#_(defn demo-create-action-get-identity! []
   (eval
    (substitute-actual-base-uri
     (quote
      ;; tag::create-action-get-identity![]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/get-identity"
        :juxt.pass.alpha/scope "read:identity"
 
@@ -393,7 +409,7 @@
      ;; end::create-action-get-identity![]
      ))))
 
-(defn demo-create-identity! []
+#_(defn demo-create-identity! []
   (eval
    (substitute-actual-base-uri
     (quote
@@ -410,7 +426,7 @@
      ;; end::create-identity![]
      ))))
 
-(defn demo-grant-permission-for-mal-to-get-mal! []
+#_(defn demo-grant-permission-for-mal-to-get-mal! []
   (eval
    (substitute-actual-base-uri
     (quote
@@ -441,12 +457,14 @@
 
 ;; APIs
 
-(defn demo-create-action-put-api-resource! []
+#_(defn demo-create-action-put-api-resource! []
   (eval
    (substitute-actual-base-uri
     (quote
      ;; tag::create-action-put-api-resource![]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/put-api-resource"
        :juxt.pass.alpha/scope "write:api"
 
@@ -473,7 +491,7 @@
      ;; end::create-action-put-api-resource![]
      ))))
 
-(defn demo-grant-permission-to-invoke-action-put-api-resource! []
+#_(defn demo-grant-permission-to-invoke-action-put-api-resource! []
   (eval
    (substitute-actual-base-uri
     (quote
@@ -488,12 +506,14 @@
 
 ;; API example
 
-(defn demo-create-action-list-identities! []
+#_(defn demo-create-action-list-identities! []
   (eval
    (substitute-actual-base-uri
     (quote
      ;; tag::create-action-list-identities![]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/list-identities"
        :juxt.pass.alpha/scope "read:identity"
 
@@ -508,7 +528,7 @@
      ;; end::create-action-list-identities![]
      ))))
 
-(defn demo-grant-permission-to-list-identities! []
+#_(defn demo-grant-permission-to-list-identities! []
   (eval
    (substitute-actual-base-uri
     (quote
@@ -524,12 +544,14 @@
 
 ;; Create an action to invoke a 'read' API
 
-(defn demo-create-action-invoke-read-api! []
+#_(defn demo-create-action-invoke-read-api! []
   (eval
    (substitute-actual-base-uri
     (quote
      ;; tag::create-action-invoke-read-api![]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/invoke-read-api"
        :juxt.pass.alpha/scope "read:resource"
        :juxt.pass.alpha/rules
@@ -542,7 +564,7 @@
 
 ;; Grant everyone permission to invoke an API
 
-(defn demo-grant-permission-to-invoke-read-api! []
+#_(defn demo-grant-permission-to-invoke-read-api! []
   (eval
    (substitute-actual-base-uri
     (quote
@@ -556,7 +578,7 @@
 
 ;; Connect up an API
 
-(defn demo-create-list-users-api! []
+#_(defn demo-create-list-users-api! []
   (eval
    (substitute-actual-base-uri
     (quote
@@ -579,9 +601,6 @@
 
 ;; Perhaps do private resources and authentication first
 
-;; github|163131 needs
-
-
 ;; Private resources and authentication
 
 (defn demo-create-action-put-immutable-private-resource! []
@@ -589,7 +608,9 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::create-action-put-immutable-private-resource![]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/put-immutable-private-resource"
        :juxt.pass.alpha/scope "write:resource"
 
@@ -623,9 +644,11 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::grant-permission-to-put-immutable-private-resource![]
-     (grant-permission!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/grant-permission"
       {:xt/id "https://site.test/permissions/repl/put-immutable-private-resource"
-       :juxt.pass.alpha/identity "urn:site:identities:repl"
+       :juxt.pass.alpha/user "https://site.test/users/mal"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-private-resource"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-put-immutable-private-resource![]
@@ -636,7 +659,9 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::create-action-get-private-resource[]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/get-private-resource"
        :juxt.pass.alpha/scope "read:resource"
 
@@ -653,7 +678,9 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::grant-permission-to-get-private-resource![]
-     (grant-permission!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/grant-permission"
       {:xt/id "https://site.test/permissions/any-subject/get-private-resource"
        :juxt.pass.alpha/action "https://site.test/actions/get-private-resource"
        :juxt.pass.alpha/purpose nil})
@@ -679,7 +706,9 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::create-action-put-error-resource![]
-     (create-action!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/put-error-resource"
        :juxt.pass.alpha/scope "write:resource"
 
@@ -708,9 +737,11 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::grant-permission-to-put-error-resource![]
-     (grant-permission!
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/grant-permission"
       {:xt/id "https://site.test/permissions/repl/put-error-resource"
-       :juxt.pass.alpha/identity "urn:site:identities:repl"
+       :juxt.pass.alpha/user "https://site.test/users/mal"
        :juxt.pass.alpha/action #{"https://site.test/actions/put-error-resource"}
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-put-error-resource![]

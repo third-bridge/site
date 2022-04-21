@@ -145,3 +145,7 @@ Permit the grant-permission action by following these steps:
 . Copy into the REPL
 . Evaluate
 --
+
+Now that we have the ability to create actions, and grant permissions to invoke
+them, we have the building blocks we need to start creating
+<<ch-resources,Resources>>.

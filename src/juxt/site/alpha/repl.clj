@@ -558,10 +558,10 @@
 #_(defn permit-grant-permission-action! []
   (init/permit-grant-permission-action! (xt-node) (config)))
 
-(defn create-action! [action]
+#_(defn create-action! [action]
   (init/create-action! (xt-node) (config) action))
 
-(defn grant-permission! [permission]
+#_(defn grant-permission! [permission]
   (init/grant-permission! (xt-node) (config) permission))
 
 (defn install-openid-provider! [issuer]

@@ -1,4 +1,3 @@
-[[ch-users]]
 = Users
 :toc: left
 :experimental:
