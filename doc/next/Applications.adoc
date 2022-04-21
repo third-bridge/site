@@ -14,9 +14,17 @@
 . Use it from the console to access a private resource
 --
 
+=== Restricting permissions to sessions
+
 Currently there is the concern that we're granting permissions to the User,
 which doesn't give us information about the login, so we can't grant permissions
 conditional on certain login conditions being met.
 
 Could we put an additional rules invocation against the permission? (Nope, we
 can't dynamically load rules)
+
+Alternatively, we can add two rules: if the permission has a user attribute, the first rule applies.
+If the permission has a subject attribute, the second rule applies.
+
+But that still doesn't solve our problem, since we want to restrict an action in
+certain cases to, say, 2FA, which is only available on a Session.
