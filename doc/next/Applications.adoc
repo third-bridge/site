@@ -28,3 +28,6 @@ If the permission has a subject attribute, the second rule applies.
 
 But that still doesn't solve our problem, since we want to restrict an action in
 certain cases to, say, 2FA, which is only available on a Session.
+
+The only solution seems to have separate actions, or even use purpose, or go
+back to having a 'special' REPL user.
