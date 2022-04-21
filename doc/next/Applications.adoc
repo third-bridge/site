@@ -1,0 +1,22 @@
+= Applications
+:toc: left
+
+== Development Notes
+
+[NOTE]
+--
+. Create an Action to create an Application
+. Create an Application
+. Create an Action to Authorize an Application's use by a User
+. Authorize an Application's use by a Subject
+. Create an Action to generate an Access Token, given a User and Application, and possibly restricted scopes
+. Generate an Access Token
+. Use it from the console to access a private resource
+--
+
+Currently there is the concern that we're granting permissions to the User,
+which doesn't give us information about the login, so we can't grant permissions
+conditional on certain login conditions being met.
+
+Could we put an additional rules invocation against the permission? (Nope, we
+can't dynamically load rules)

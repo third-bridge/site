@@ -1,4 +1,5 @@
 = Permissions
+:toc: left
 
 With Actions and Users established, we've got everything we need to start
 creating other resources.
