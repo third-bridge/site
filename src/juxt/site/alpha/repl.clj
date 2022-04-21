@@ -528,7 +528,7 @@
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
 
 (defn do-action [subject action & args]
-  (apply init/do-action (xt-node) action args))
+  (apply init/do-action (xt-node) subject action args))
 
 #_(defn do-action-with-purpose [action purpose & args]
   (apply init/do-action-with-purpose (xt-node) action purpose args))
@@ -653,7 +653,7 @@
     :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
     :juxt.pass.jwt/sub "github|123456"}))
 
-(defn start-over! []
+(defn factory-reset! []
   (apply evict! (->> (q '{:find [(pull e [:xt/id ::site/type])]
                           :where [[e :xt/id]]})
                      (map first)

@@ -8,6 +8,9 @@ Before you start, you'll need to have the following installed:
 * Java 17+ (Site uses new Java APIs such as `java.util.HexFormat`)
 * https://clojure.org/guides/getting_started[Clojure]
 * https://github.com/babashka/babashka[Babashka]
+* https://github.com/babashka/babashka[Babashka]
+* https://curl.se/[curl]
+* A webserver such as Apache or Nginx
 
 == Before you start
 
@@ -238,5 +241,5 @@ There are a few useful Site REPL commands you should be familiar with:
 (ls <pat>):: List all resources whose URIs match the pattern
 (evict! <uri>+):: Kill resource(s) across time
 (put! <doc>+)):: Put one or more resources into the database
-(apply evict! (ls)):: Start over. (Delete everything in the database!)
+(factory-reset!):: Start over. (Delete everything in the database!)
 --

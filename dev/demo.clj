@@ -117,7 +117,7 @@
        :juxt.pass.alpha/rules
        '[
          [(allowed? permission subject action resource)
-          [permission :juxt.pass.alpha/identity id]
+          [subject :juxt.pass.alpha/identity id]
           [id :juxt.pass.alpha/user user]
           [permission :juxt.pass.alpha/user user]]]})
      ;; end::create-grant-permission-action![]
@@ -173,8 +173,9 @@
        :juxt.pass.alpha/rules
        '[
          [(allowed? permission subject action resource) ; <3>
-          [permission :juxt.pass.alpha/identity i]
-          [subject :juxt.pass.alpha/identity i]]]})
+          [subject :juxt.pass.alpha/identity id]
+          [id :juxt.pass.alpha/user user]
+          [permission :juxt.pass.alpha/user user]]]})
      ;; end::create-action-put-immutable-public-resource![]
      ))))
 
@@ -634,8 +635,9 @@
        :juxt.pass.alpha/rules
        '[
          [(allowed? permission subject action resource)
-          [permission :juxt.pass.alpha/identity i]
-          [subject :juxt.pass.alpha/identity i]]]})
+          [subject :juxt.pass.alpha/identity id]
+          [id :juxt.pass.alpha/user user]
+          [permission :juxt.pass.alpha/user user]]]})
      ;; end::create-action-put-immutable-private-resource![]
      ))))
 

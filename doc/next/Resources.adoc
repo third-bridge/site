@@ -81,7 +81,7 @@ restricted operation so <<create-action-put-immutable-public-resource>> shows
 how to do so.
 
 .Creating a public resource
-[[create-action-put-immutable-public-resource]]
+[[ex-create-public-resource]]
 ====
 We'll do the following steps:
 
@@ -99,7 +99,14 @@ include::../../dev/demo.clj[tag=create-action-put-immutable-public-resource!,ind
 <1> We'll put this action in the `write:resource` scope
 <2> We add (or override) the HTTP methods allowed on this resource. Each entry is a mapping from an allowed method to a set of actions. This restricts the search for permissions to a set of actions. The fact that we don't specify any methods such as PUT, POST or DELETE that will change the resource is the reason we've named this action as creating an immutable public resource.
 <3> This rule ensures this action must be specifically granted to someone.
+====
 
+[IMPORTANT]
+--
+Copy the code in the <<ex-create-public-resource>>, paste it into a REPL and evaluate.
+--
+
+====
 Now we must grant permission for our REPL user to use this action:
 
 [source,clojure]

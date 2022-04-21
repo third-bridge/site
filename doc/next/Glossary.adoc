@@ -11,3 +11,4 @@ Record:: The set of all versions of a given Document.
 Resource:: A web resource. Most Entities in Site are Resources. See RFC 7231 Chapter 2
 Subject:: A Document containing the login details of a User
 User:: An individual person with access to Site resources
+Resource Server:: "The server hosting the protected resources, capable of accepting and responding to protected resource requests using access tokens."
