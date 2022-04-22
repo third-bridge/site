@@ -114,6 +114,11 @@ Now we must grant permission for our REPL user to use this action:
 include::../../dev/demo.clj[tag=grant-permission-to-invoke-action-put-immutable-public-resource!,indent=0]
 ----
 
+[IMPORTANT]
+--
+Do it!
+--
+
 When Site receives a web request for a resource it will look for a `juxt.site.alpha/methods`
 entry which indicates which action or actions should be used when seeking
 permission.
@@ -132,6 +137,11 @@ include::../../dev/demo.clj[tag=create-action-get-public-resource!,indent=0]
 <1> We use a more appropriate scope that better reflects this action.
 <2> This is a very weak rule that matches a particular permission.
 
+[IMPORTANT]
+--
+Do it
+--
+
 A permission document _must_ exist for every case.
 The rule of the `http://site.test/actions/get-public-resource` requires a specific permission to exist, so we need to create that now.
 
@@ -139,6 +149,9 @@ The rule of the `http://site.test/actions/get-public-resource` requires a specif
 ----
 include::../../dev/demo.clj[tag=grant-permission-to-invoke-get-public-resource!,indent=0]
 ----
+
+IMPORTANT: Do it!
+
 ====
 
 [[hello-world]]
@@ -155,11 +168,21 @@ resource that will print `Hello World!` on a web page.
 include::../../dev/demo.clj[tag=create-hello-world-resource!,indent=0]
 ----
 
+[IMPORTANT]
+--
+Do it
+--
+
 Now we can test access with `curl`:
 
 ----
 curl -i https://site.test/hello
 ----
+
+[IMPORTANT]
+--
+Do it
+--
 
 You should get a `200` response similar to this:
 

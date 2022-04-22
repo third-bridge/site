@@ -64,6 +64,11 @@ include::../../dev/demo.clj[tag=create-hello-world-html-representation!,indent=0
 <3> The representation payload, as a string. The string must be encoded in the charset indicated by the content-type. Alternatively, use `:juxt.http.alpha/body` to provide a byte-array.
 <4> The `:juxt.site.alpha/variant-of` signifies that this resource is a representation of another resource.
 
+[IMPORTANT]
+--
+Do it
+--
+
 We can now test with curl
 
 ----

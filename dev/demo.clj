@@ -189,7 +189,7 @@
       "https://site.test/actions/grant-permission"
       {:xt/id "https://site.test/permissions/repl/put-immutable-public-resource"
        :juxt.pass.alpha/user "https://site.test/users/mal"
-       :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-public-resource"}
+       :juxt.pass.alpha/action "https://site.test/actions/put-immutable-public-resource"
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-invoke-action-put-immutable-public-resource![]
      ))))
@@ -222,7 +222,7 @@
       "https://site.test/subjects/repl-default"
       "https://site.test/actions/grant-permission"
       {:xt/id "https://site.test/permissions/public-resources-to-all"
-       :juxt.pass.alpha/action #{"https://site.test/actions/get-public-resource"}
+       :juxt.pass.alpha/action "https://site.test/actions/get-public-resource"
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-invoke-get-public-resource![]
      ))))
@@ -651,7 +651,7 @@
       "https://site.test/actions/grant-permission"
       {:xt/id "https://site.test/permissions/repl/put-immutable-private-resource"
        :juxt.pass.alpha/user "https://site.test/users/mal"
-       :juxt.pass.alpha/action #{"https://site.test/actions/put-immutable-private-resource"}
+       :juxt.pass.alpha/action "https://site.test/actions/put-immutable-private-resource"
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-put-immutable-private-resource![]
      ))))

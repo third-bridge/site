@@ -20,12 +20,22 @@ Again, let's complete the following steps:
 include::../../dev/demo.clj[tag=create-action-put-immutable-private-resource!,indent=0]
 ----
 
+[IMPORTANT]
+--
+Do it
+--
+
 We'll grant this permission to our REPL user.
 
 [source,clojure]
 ----
 include::../../dev/demo.clj[tag=grant-permission-to-put-immutable-private-resource!,indent=0]
 ----
+
+[IMPORTANT]
+--
+Do it
+--
 
 Now we'll create the action that is used to get a private resource. The rules
 mandate that a permission has been granted on a specific resource and the
@@ -36,6 +46,11 @@ subject is not nil.
 ----
 include::../../dev/demo.clj[tag=create-action-get-private-resource,indent=0]
 ----
+
+[IMPORTANT]
+--
+Do it
+--
 
 The `get-private-resource` action's rules state that a single 'global'
 permission (referencing the action) is sufficient for _any_ authenticated
@@ -49,12 +64,22 @@ But we must rememeber to create that single global permission:
 include::../../dev/demo.clj[tag=grant-permission-to-get-private-resource!,indent=0]
 ----
 
+[IMPORTANT]
+--
+Do it
+--
+
 Now to create a private resource.
 
 [source,clojure]
 ----
 include::../../dev/demo.clj[tag=create-immutable-private-resource!,indent=0]
 ----
+
+[IMPORTANT]
+--
+Do it
+--
 
 Let's try to access the private resource.
 
@@ -78,6 +103,8 @@ permissions-policy: interest-cohort=()
 Unauthorized
 ----
 ====
+
+NOTE: Move the rest of this chapter to a new chapter. Let's now introduce the idea of an application client (curl), and generate an access-token that contains the subject, application client and any further scope restrictions.
 
 == Error resources
 
