@@ -850,3 +850,18 @@
           [permission :juxt.pass.alpha/user user]]]})
      ;; end::create-action-put-application![]
      ))))
+
+(defn demo-grant-permission-to-invoke-action-put-application!! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-to-invoke-action-put-application![]
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/grant-permission"
+      {:xt/id "https://site.test/permissions/repl/put-application"
+       :juxt.pass.alpha/user "https://site.test/users/mal"
+       :juxt.pass.alpha/action "https://site.test/actions/put-application"
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-to-invoke-action-put-application![]
+     ))))

@@ -45,3 +45,16 @@ include::../../dev/demo.clj[tag=create-action-put-application!,indent=0]
 ====
 
 NOTE: Possibly demote this to Preliminaries
+
+== Grant permission to this action
+
+.Granting permission
+[[example-grant-permission-put-application]]
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=grant-permission-to-invoke-action-put-application!,indent=0]
+----
+====
+
+NOTE: Possibly demote this to Preliminaries
