@@ -8,7 +8,6 @@ Before you start, you'll need to have the following installed:
 * Java 17+ (Site uses new Java APIs such as `java.util.HexFormat`)
 * https://clojure.org/guides/getting_started[Clojure]
 * https://github.com/babashka/babashka[Babashka]
-* https://github.com/babashka/babashka[Babashka]
 * https://curl.se/[curl]
 * A webserver such as Apache or Nginx
 
