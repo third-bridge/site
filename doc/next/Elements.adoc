@@ -1,4 +1,10 @@
 = Elements
+:step:
+
+This chapter introduces various elements of Site.
+
+You should read this chapter in order to gain an overview before diving into the
+details and practical examples in subsequent chapters.
 
 == Documents
 
@@ -205,8 +211,8 @@ Each rule is a collection of clauses, the first clause is always:
 (allowed? permission subject action resource)
 ----
 
-Think of this as an equation where the 'permission' variable must be satisfied,
-in the same way as a mathematical equation might ask for a solution for 𝑥. If
+Think of this as an equation where the 'permission' variable must be found,
+in the same way as a mathematical equation might ask for solutions for latexmath:[2x + 6 = 16]. If
 there are no permissions which satisfy the logic, then the Action is disallowed.
 
 Rules are applied to queries as well as to mutating writes.

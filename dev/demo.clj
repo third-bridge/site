@@ -836,16 +836,17 @@
   (eval
    (substitute-actual-base-uri
     (quote
-     ;; tag::create-action-get-public-resource![]
+     ;; tag::create-action-put-application![]
      (do-action
       "https://site.test/subjects/repl-default"
       "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/put-application"
        :juxt.pass.alpha/scope "write:application"
+       :juxt.site.alpha/type "Action"
        :juxt.pass.alpha/rules
-       ''[[(allowed? permission subject action resource)
-           [i :juxt.pass.alpha/user user]
-           [subject :juxt.pass.alpha/identity i]
-           [permission :juxt.pass.alpha/user user]]]})
-     ;; end::create-action-get-public-resource![]
+       '[[(allowed? permission subject action resource)
+          [id :juxt.pass.alpha/user user]
+          [subject :juxt.pass.alpha/identity id]
+          [permission :juxt.pass.alpha/user user]]]})
+     ;; end::create-action-put-application![]
      ))))

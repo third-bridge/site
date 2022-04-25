@@ -31,3 +31,17 @@ certain cases to, say, 2FA, which is only available on a Session.
 
 The only solution seems to have separate actions, or even use purpose, or go
 back to having a 'special' REPL user.
+
+
+== Create the action to create an application
+
+.Creating the action
+[[example-create-action-put-application]]
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-put-application!,indent=0]
+----
+====
+
+NOTE: Possibly demote this to Preliminaries

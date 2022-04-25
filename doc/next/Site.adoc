@@ -6,6 +6,7 @@ Malcolm Sparks <mal@juxt.pro>
 :sectnums:
 :sectnumlevels: 4
 :xrefstyle: short
+:stem:
 
 [colophon]
 --

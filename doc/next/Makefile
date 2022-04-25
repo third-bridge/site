@@ -9,6 +9,7 @@ Site.pdf:	$(wildcard *.adoc) identity-model.json user-model.json cat.json
 	asciidoctor-pdf \
 	-a toc=macro \
 	-r asciidoctor-diagram \
+	-r asciidoctor-mathematical \
 	-a icons=font \
 	-a media=prepress \
 	-a pdf-style=juxt \
