@@ -10,6 +10,7 @@
    [jsonista.core :as json]
    [clojure.java.shell :as sh]
    [io.aviso.ansi :as ansi]
+   [juxt.pass.alpha.application :as application]
    [juxt.pass.alpha.authentication :as authn]
    [juxt.pass.alpha.v3.authorization :as authz]
    [juxt.site.alpha.graphql :as graphql]
@@ -26,7 +27,8 @@
    [juxt.dave.alpha :as-alias dave]
    [juxt.http.alpha :as-alias http]
    [juxt.pass.alpha :as-alias pass]
-   [juxt.site.alpha :as-alias site])
+   [juxt.site.alpha :as-alias site]
+   [juxt.site.alpha.util :as util])
   (:import (java.util Date)))
 
 (defn base64-reader [form]
@@ -690,3 +692,12 @@
        (remove nil? [tok session-id subject]))
      (mapcat seq)
      (apply evict!))))
+
+(defn make-application-doc [& options]
+  (apply application/make-application-doc options))
+
+(defn random-bytes [size]
+  (util/random-bytes size))
+
+(defn as-hex-str [bytes]
+  (util/as-hex-str bytes))

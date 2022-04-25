@@ -2,7 +2,6 @@
 
 (ns demo
   (:require
-   [juxt.site.alpha.util :refer [random-bytes as-hex-str]]
    [juxt.http.alpha :as-alias http]
    [juxt.pass.alpha :as-alias pass]
    [juxt.site.alpha :as-alias site]
@@ -883,14 +882,12 @@
    (substitute-actual-base-uri
     (quote
      ;; tag::invoke-put-application![]
-     (do
-       (require '[juxt.site.alpha.util :refer [random-bytes as-hex-str]])
-       (do-action
-        "https://site.test/subjects/repl-default"
-        "https://site.test/actions/put-application"
-        (juxt.pass.alpha.application/make-application-doc
-         :prefix "https://site.test/applications/"
-         :client-id (as-hex-str (random-bytes 12))
-         :client-secret (as-hex-str (random-bytes 20)))))
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/put-application"
+      (make-application-doc
+       :prefix "https://site.test/applications/"
+       :client-id (as-hex-str (random-bytes 12))
+       :client-secret (as-hex-str (random-bytes 20))))
      ;; end::invoke-put-application![]
      ))))
