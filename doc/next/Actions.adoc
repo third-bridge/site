@@ -3,8 +3,9 @@
 :experimental:
 
 (((action, definition)))
-Site introduces the concept of Actions which are the foundational primitives
-on which everything else in Site is built.
+Users could be permitted to query, create, update and/or delete certain Documents.
+
+Such activities are termed Actions.
 
 == Introduction
 

@@ -9,11 +9,18 @@ Malcolm Sparks <mal@juxt.pro>
 
 [colophon]
 --
-Copyright © 2022, JUXT LTD.
+First Edition.
+
+Copyright © 2022, JUXT LTD. All Rights Reserved.
 
 Published by JUXT Text.
 
-This book is written in Asciidoctor.
+This book is written with Asciidoctor.
+
+Available in PDF, ebook and HTML editions.
+
+HTML edition available at https://juxt.site/site-book.html
+
 --
 
 toc::[]
@@ -26,12 +33,28 @@ include::Principles.adoc[leveloffset=+2]
 
 include::Installation.adoc[leveloffset=+1]
 
-include::Actions.adoc[leveloffset=+1]
+= Preliminaries
+
+If you're in a hurry, or want to get started quickly with Site, you should skip
+these chapters and move onto <<ch-resources>>.
+
+However, in keeping with our value of <<understanding,Understanding>>, we
+recommended that you invest time in building up both your working and conceptual
+knowledge of Site. These chapters will help to build up your knowledge of Site
+'from scratch'. If you've chosen this course, welcome to the slow track!
+
+include::Elements.adoc[leveloffset=+1]
 
 [[ch-users]]
 include::Users.adoc[leveloffset=+1]
 
+[[ch-actions]]
+include::Actions.adoc[leveloffset=+1]
+
+[[ch-permissions]]
 include::Permissions.adoc[leveloffset=+1]
+
+= Essentials
 
 [[ch-resources]]
 include::Resources.adoc[leveloffset=+1]
@@ -39,6 +62,8 @@ include::Resources.adoc[leveloffset=+1]
 include::Representations.adoc[leveloffset=+1]
 
 include::ProtectingResources.adoc[leveloffset=+1]
+
+= Application Development with Site
 
 include::Applications.adoc[leveloffset=+1]
 

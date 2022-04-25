@@ -2,12 +2,13 @@
 :toc: left
 :experimental:
 
-(((user, definition)))
-An Action is performed by a *User*.
-
 (((user, document structure)))
 A User is a database document, with the `juxt.site.alpha/type` attribute value
 set to "`User`", as detailed in <<user-doc-structure>>.
+
+NOTE: Developer note: It's possible that we can relax the `juxt.site.alpha/type`
+constraint across Site. We need to analyse if and where it's being used in the
+code and see how we can remove Site's dependency on it.
 
 .Document structure of a User
 [[user-doc-structure]]
@@ -24,14 +25,14 @@ l|"User"
 s|Required
 |===
 
-== Identities
+== User Identities
 
-(((identity, definition)))
+(((user identity, definition)))
 An Identity contains information that can uniquely identify a User, such as the
 user's login credentials, company-wide username, email address, Twitter handle
 or a reference to an external identity issued by another authority.
 
-(((identity, document structure)))
+(((user identity, document structure)))
 An Identity always references a *User*, with the `juxt.pass.alpha/user`
 attribute, as detailed in <<identity-doc-structure>>.
 
@@ -69,7 +70,7 @@ In Site, a *Subject* is a database document automatically created when the user
 authenticates and represents a *user login*. This document has the
 `juxt.site.alpha/type` attribute value set to "`Subject`".
 
-(((subject, relationship to identity)))
+(((subject, relationship to user identity)))
 A Subject always references an *Identity*, with the `juxt.pass.alpha/identity`
 attribute.
 
@@ -81,7 +82,7 @@ include information such as:
 * The number and type of authentication factors which were used
 * Whether the user's claimed email address has been verified
 
-(((identity, document structure)))
+(((user identity, document structure)))
 <<subject-doc-structure>> lists some recognised attributes of a Subject.
 
 .Document structure of a Subject
