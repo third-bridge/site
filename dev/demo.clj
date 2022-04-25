@@ -2,10 +2,11 @@
 
 (ns demo
   (:require
-   [juxt.site.alpha.repl :refer :all]
+   [juxt.site.alpha.util :refer [random-bytes as-hex-str]]
    [juxt.http.alpha :as-alias http]
    [juxt.pass.alpha :as-alias pass]
    [juxt.site.alpha :as-alias site]
+   juxt.pass.alpha.application
    [clojure.walk :refer [postwalk]]
    [clojure.string :as str]
    [malli.core :as m]))
@@ -843,6 +844,17 @@
       {:xt/id "https://site.test/actions/put-application"
        :juxt.pass.alpha/scope "write:application"
        :juxt.site.alpha/type "Action"
+       :juxt.pass.alpha.malli/args-schema
+       [:tuple
+        [:map
+         [:xt/id [:re "https://site.test/applications/(.+)"]]
+         [:juxt.pass.alpha/oauth2-client-id [:string {:min 10}]]
+         [:juxt.pass.alpha/oauth2-client-secret [:string {:min 16}]]]]
+       :juxt.pass.alpha/process
+       [
+        [:juxt.pass.alpha.malli/validate]
+        [:xtdb.api/put]
+        ]
        :juxt.pass.alpha/rules
        '[[(allowed? permission subject action resource)
           [id :juxt.pass.alpha/user user]
@@ -864,4 +876,21 @@
        :juxt.pass.alpha/action "https://site.test/actions/put-application"
        :juxt.pass.alpha/purpose nil})
      ;; end::grant-permission-to-invoke-action-put-application![]
+     ))))
+
+(defn demo-invoke-put-application!! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::invoke-put-application![]
+     (do
+       (require '[juxt.site.alpha.util :refer [random-bytes as-hex-str]])
+       (do-action
+        "https://site.test/subjects/repl-default"
+        "https://site.test/actions/put-application"
+        (juxt.pass.alpha.application/make-application-doc
+         :prefix "https://site.test/applications/"
+         :client-id (as-hex-str (random-bytes 12))
+         :client-secret (as-hex-str (random-bytes 20)))))
+     ;; end::invoke-put-application![]
      ))))

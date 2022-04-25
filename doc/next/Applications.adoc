@@ -58,3 +58,14 @@ include::../../dev/demo.clj[tag=grant-permission-to-invoke-action-put-applicatio
 ====
 
 NOTE: Possibly demote this to Preliminaries
+
+== Create the application
+
+.Creating the application
+[[example-create-application]]
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=invoke-put-application!,indent=0]
+----
+====
