@@ -25,11 +25,15 @@ HTML edition available at https://juxt.site/site-book.html
 
 toc::[]
 
+= Introduction
+
 include::Introduction.adoc[leveloffset=+1]
 
-include::Values.adoc[leveloffset=+2]
+include::Values.adoc[leveloffset=+1]
 
-include::Principles.adoc[leveloffset=+2]
+include::Principles.adoc[leveloffset=+1]
+
+= Getting Started
 
 include::Installation.adoc[leveloffset=+1]
 
