@@ -2,13 +2,13 @@
 :toc: left
 :experimental:
 
+Users are individuals with access to Site.
+
+== User documents
+
 (((user, document structure)))
 A User is a database document, with the `juxt.site.alpha/type` attribute value
 set to "`User`", as detailed in <<user-doc-structure>>.
-
-NOTE: Developer note: It's possible that we can relax the `juxt.site.alpha/type`
-constraint across Site. We need to analyse if and where it's being used in the
-code and see how we can remove Site's dependency on it.
 
 .Document structure of a User
 [[user-doc-structure]]
@@ -19,11 +19,30 @@ code and see how we can remove Site's dependency on it.
 |:xt/id
 |Users are resources, so this is a URI.
 s|Required
-
-|:juxt.site.alpha/type
-l|"User"
-s|Required
 |===
+
+=== Create a User
+
+Since an Action are performed by a *User*, we need to create a user to start
+invoking our actions.
+
+<<example-put-user>> demonstrates how to create a user called "Malcolm Sparks".
+
+.Create your own User
+[[example-put-user]]
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=install-user!,indent=0]
+----
+====
+
+[IMPORTANT]
+--
+. Copy the code from <<example-put-user>> and paste it into an editor.
+. Personalise it according to your own user details.
+. Copy the result into a REPL and evaluate it.
+--
 
 == User Identities
 
@@ -46,10 +65,6 @@ attribute, as detailed in <<identity-doc-structure>>.
 |Identities are resources, so this is a URI.
 s|Required
 
-|:juxt.site.alpha/type
-l|"Identity"
-s|Required
-
 |:juxt.pass.alpha/user
 |A reference to a User.
 s|Required
@@ -62,6 +77,26 @@ s|Required
 |The OpenID Subject Identifier, e.g. "+johndoe+"
 |Optional
 |===
+
+=== Create a User Identity
+
+<<example-put-user-identity>> demonstrates how to create an identity for our user.
+
+.Creating a User Identity
+[[example-put-user-identity]]
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=install-user-identity!,indent=0]
+----
+====
+
+[IMPORTANT]
+--
+. Copy the code from <<example-put-user-identity>> and paste it into an editor.
+. Personalise it according to your own user details.
+. Copy the result into a REPL and evaluate it.
+--
 
 == Subjects
 
@@ -95,10 +130,6 @@ include information such as:
 |Subjects are resources, so this is a URI.
 s|Required
 
-|:juxt.site.alpha/type
-l|"Subject"
-s|Required
-
 |:juxt.pass.alpha/identity
 |A reference to an Identity.
 s|Required
@@ -119,25 +150,23 @@ include::user-model.json[]
 ....
 ====
 
-== Create a User
+=== Create a Subject
 
-Since an Action are performed by a *User*, we need to create a user to start
-invoking our actions.
+<<example-put-subject>> demonstrates how a subject could be created linked to
+the User Identity when a User logs in.
 
-<<example-put-user>> demonstrates how to create a user called "Malcolm Sparks", with an associated identity.
-
-.Create your own User
-[[example-put-user]]
+.Creating a Subject
+[[example-put-subject]]
 ====
 [source,clojure]
 ----
-include::../../dev/demo.clj[tag=install-user!,indent=0]
+include::../../dev/demo.clj[tag=install-subject!,indent=0]
 ----
 ====
 
 [IMPORTANT]
 --
-. Copy the code from <<example-put-user>> and paste it into an editor.
+. Copy the code from <<example-put-subject>> and paste it into an editor.
 . Personalise it according to your own user details.
 . Copy the result into a REPL and evaluate it.
 --

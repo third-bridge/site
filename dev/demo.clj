@@ -18,6 +18,32 @@
      )
    form))
 
+(defn demo-put-user! []
+  ;; tag::install-user![]
+  (put! {:xt/id "https://site.test/users/mal"
+         :juxt.site.alpha/type "User"
+         :juxtcode "mal"
+         :name "Malcolm Sparks"})
+  ;; end::install-user![]
+  )
+
+(defn demo-put-user-identity! []
+  ;; tag::install-user-identity![]
+  (put! {:xt/id "https://site.test/identities/mal"
+         :juxt.pass.alpha/user "https://site.test/users/mal"
+         :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
+         :juxt.pass.jwt/sub "github|163131"})
+  ;; end::install-user-identity![]
+  )
+
+(defn demo-put-subject! []
+  ;; tag::install-subject![]
+  (put! {:xt/id "https://site.test/subjects/repl-default"
+         :juxt.site.alpha/type "Subject"
+         :juxt.pass.alpha/identity "https://site.test/identities/mal"})
+  ;; end::install-subject![]
+  )
+
 (defn demo-install-do-action-fn! []
   ;; tag::install-do-action-fn![]
   (install-do-action-fn!)
@@ -55,23 +81,6 @@
           [permission :juxt.pass.alpha/user user]]]})
      ;; end::install-create-action![]
      ))))
-
-(defn demo-put-user! []
-  ;; tag::install-user![]
-  (put! {:xt/id "https://site.test/users/mal"
-         :juxt.site.alpha/type "User"
-         :juxtcode "mal"
-         :name "Malcolm Sparks"})
-  (put! {:xt/id "https://site.test/identities/mal"
-         :juxt.site.alpha/type "Identity"
-         :juxt.pass.alpha/user "https://site.test/users/mal"
-         :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
-         :juxt.pass.jwt/sub "github|163131"})
-  (put! {:xt/id "https://site.test/subjects/repl-default"
-         :juxt.site.alpha/type "Subject"
-         :juxt.pass.alpha/identity "https://site.test/identities/mal"})
-  ;; end::install-user![]
-  )
 
 (defn demo-permit-create-action! []
   (eval

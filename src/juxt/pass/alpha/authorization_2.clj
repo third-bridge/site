@@ -1,5 +1,7 @@
 ;; Copyright © 2022, JUXT LTD.
 
+;; Deprecated, kept because of make-access-token-doc and others
+
 (ns juxt.pass.alpha.authorization-2
   (:require
    [clojure.set :as set]
