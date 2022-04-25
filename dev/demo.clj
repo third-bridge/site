@@ -829,3 +829,23 @@
        :juxt.http.alpha/content (slurp "dev/unauthorized.html")})
      ;; end::put-unauthorized-error-representation-for-html-with-login-link![]
      ))))
+
+;; Application
+
+(defn demo-create-action-put-application! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-action-get-public-resource![]
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
+      {:xt/id "https://site.test/actions/put-application"
+       :juxt.pass.alpha/scope "write:application"
+       :juxt.pass.alpha/rules
+       ''[[(allowed? permission subject action resource)
+           [i :juxt.pass.alpha/user user]
+           [subject :juxt.pass.alpha/identity i]
+           [permission :juxt.pass.alpha/user user]]]})
+     ;; end::create-action-get-public-resource![]
+     ))))

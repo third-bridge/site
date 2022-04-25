@@ -71,7 +71,7 @@ In fact, we could designate our black cat Arya as a user.
 
 .The cat as a User
 ====
-This is the same document as in <<ex-cat-user-identity>>. Nothing to see here!
+This is the same document as in <<ex-cat-user-identity>>, nothing to see here.
 
 [source,clojure]
 ----
