@@ -1,0 +1,28 @@
+Afternoon Malcolm. Hope you had a good weekend. I just wanted to let you know that I've run through the site documentation so far in your mal/sessions branch. Generally it was helpful to get an understanding of how site works and what it's role is. I had a few notes, but I know that you are still very much updating it because it was updating as I was reading it so some might be out of date. I just pulled them straight out of my notes so if any are unclear, just let me know.
+
+    * 2.3.6 Configure nginx - is etc/dev/nginx.conf supposed to be /etc/nginx/nginx.conf? Or is it supposed to refer to etc directory in the site repository (this won't have been cloned by this point and doesn't have a /etc/dev/ directory. Other places where the site folders are referred to, it's with site/**)
+
+    * I assume you know about this because it seems to line up with the change from functions to actions, but there is an error on starting site-server because the steps function was commented out.
+
+    * Very minor typo of "Resourse" in the "Resources" section.
+
+    * mkcert is probably fine, but it is a shame that it generates a CA certificate with an expiry of 10 years. On real certs, I don't think Google recommends over 1 year and when I've done it before it's been more like 3 months.
+
+    * I suspect a typo in 6.1 when it says "There is convoluted logic or mappings" which I suspect should be "There are no..."
+
+    * 3.3 Code-Link 6 "if there exists a permission granting the user to..."
+
+    * There are some places which tell you to insert into the REPL but all should probably also have "Update with your values" as well. When you get to the refinement stage, probably worth having consistent terminology
+
+    * When granting permissions, a lot of the example code used a set of actions for the action value, but in the specification, we define a regex for the expected value so this doesn't work.
+
+    * Example 10 if you wanted to show the difference between "content" and "representation" you could prove that the original version was still accessible with `curl -i -H 'Accept: text/plain' https://site.test/hello`
+
+    * When attempting to hit the hello-world-with-template.html clojure.lang.ExceptionInfo: Nil template-model. Template resources must have a :juxt.site.alpha/template-model attribute.
+
+    * When adding put-template and put-error-resource, I couldn't use the example code as defined. I had to copy the rules from put-immutable-resource or I would get access denied. The difference seems to be the user entry in the rules, but without knowing the syntax for the rules, I don't know if this is on purpose.
+
+    * Should the 8.2 error action merge in the "ErorrResource" type like the other actions have done?
+
+    * In the diagram for *Authentication Flow* I think that the arrow for "Look up config of\nOpenID Provider" might be going the wrong way. Nothing prompts communication in that direction and it's coming from the XTDB to the login page. (I see that it says that it purposefully leaves out steps for clarity)
+Much beyond this still looks like it hasn't been updated with the new create-action method, so I didn't look much further.
