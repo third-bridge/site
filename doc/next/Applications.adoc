@@ -69,17 +69,49 @@ include::../../dev/demo.clj[tag=invoke-authorize-application!,indent=0]
 ----
 ====
 
+== Create the action to issue an access token
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-issue-access-token!,indent=0]
+----
+====
+
+NOTE: Possibly demote this to Preliminaries
+
+== Grant permission to issue an access token
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=grant-permission-to-invoke-action-issue-access-token!,indent=0]
+----
+====
+
+NOTE: Possibly demote this to Preliminaries
+
+== Issue the access token
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=invoke-issue-access-token!,indent=0]
+----
+====
+
 == Development Notes
 
 [NOTE]
 --
 Outstanding work:
 
-. Create an Action to Authorize an Application's use by a User
-. Authorize an Application's use by a User
 . Create an Action to generate an Access Token, given a User and Application, and possibly restricted scopes
 . Generate an Access Token
 . Use it from the console to access a private resource
+
+/authorize should create an 'ApplicationAuthorization' document, if one doesn't already exist, possibly it can update it too
+/token should create an 'AccessToken' document, with subject, application and scope burned into it
 --
 
 .Restricting permissions to sessions

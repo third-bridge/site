@@ -905,8 +905,7 @@
          [:xt/id [:re "https://site.test/authorizations/(.+)"]]
          [:juxt.pass.alpha/user [:re "https://site.test/users/(.+)"]]
          [:juxt.pass.alpha/application [:re "https://site.test/applications/(.+)"]]
-         ;; Optionally, an application can be authorized by a user for a limited
-         ;; scope
+         ;; A space-delimited list of permissions that the application requires.
          [:juxt.pass.alpha/scope {:optional true} :string]]]
        :juxt.pass.alpha/process
        [
@@ -949,4 +948,65 @@
        :user "https://site.test/users/mal"
        :application "https://site.test/applications/local-terminal"))
      ;; end::invoke-authorize-application![]
+     ))))
+
+(defn demo-create-action-issue-access-token! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-action-issue-access-token![]
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
+      {:xt/id "https://site.test/actions/issue-access-token"
+       :juxt.site.alpha/type "Action"
+       :juxt.pass.alpha.malli/args-schema
+       [:tuple
+        [:map
+         [:xt/id [:re "https://site.test/access-tokens/(.+)"]]
+         [:juxt.pass.alpha/user [:re "https://site.test/users/(.+)"]]
+         [:juxt.pass.alpha/application [:re "https://site.test/applications/(.+)"]]
+         [:juxt.pass.alpha/scope {:optional true} :string]]]
+       :juxt.pass.alpha/process
+       [
+        [:juxt.pass.alpha.malli/validate]
+        [:xtdb.api/put]
+        ]
+       :juxt.pass.alpha/rules
+       '[[(allowed? permission subject action resource)
+          [id :juxt.pass.alpha/user user]
+          [subject :juxt.pass.alpha/identity id]
+          [permission :juxt.pass.alpha/user user]]]})
+     ;; end::create-action-issue-access-token![]
+     ))))
+
+(defn demo-grant-permission-to-invoke-action-issue-access-token! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-to-invoke-action-issue-access-token![]
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/grant-permission"
+      {:xt/id "https://site.test/permissions/repl/authorize-application"
+       :juxt.pass.alpha/user "https://site.test/users/mal"
+       :juxt.pass.alpha/action "https://site.test/actions/issue-access-token"
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-to-invoke-action-issue-access-token![]
+     ))))
+
+(defn demo-invoke-access-token! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::invoke-issue-access-token![]
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/issue-access-token"
+      (make-access-token-doc
+       :prefix "https://site.test/access-tokens/"
+       :user "https://site.test/users/mal"
+       :application "https://site.test/applications/local-terminal"
+       :scope "read:admin"))
+     ;; end::invoke-issue-access-token![]
      ))))

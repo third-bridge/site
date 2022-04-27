@@ -699,6 +699,9 @@
 (defn make-application-authorization-doc [& options]
   (apply application/make-application-authorization-doc options))
 
+(defn make-access-token-doc [& options]
+  (apply application/make-access-token-doc options))
+
 (defn random-bytes [size]
   (util/random-bytes size))
 

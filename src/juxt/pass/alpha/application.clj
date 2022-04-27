@@ -17,3 +17,12 @@
    ::site/type "ApplicationAuthorization"
    ::pass/user user
    ::pass/application application})
+
+(defn make-access-token-doc [& {:keys [prefix user application scope]}]
+  (let [token (as-hex-str (random-bytes 16))]
+    {:xt/id (str prefix token)
+     ::site/type "AccessToken"
+     ::pass/user user
+     ::pass/application application
+     ::pass/scope scope
+     ::pass/token token}))
