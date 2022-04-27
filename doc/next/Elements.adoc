@@ -146,10 +146,6 @@ include::cat.json[]
 
 Users, identities and subjects are described in <<ch-users>>.
 
-== Applications
-
-NOTE: TODO
-
 == Resources
 
 [quote]
@@ -239,6 +235,25 @@ Rules are applied to queries as well as to mutating writes.
 
 Actions are described in <<ch-actions>>.
 
+== Rules
+
+Rules can be as simple or as complex as the domain requires. The power and
+expressiveness of Datalog allows for a wide range of possibilities.
+
+When compared to other 'third-party' solutions, Site's authorization system has
+two further key advantages:
+
+* Action rules are written as graphs which are free to traverse as deep as
+  necessary into the complete database of facts. Other systems must often rely
+  on a small subset of facts which place limits on the flexibility of
+  authorization policies.
+
+* Action rules benefit from strong database consistency. Rules are run only
+  after any pending updates to Permission have been applied. Other systems often
+  cannot achieve consistency because they are implemented as services across a
+  network boundary and their database of facts may be out-of-date when making
+  critical authorization decisions.
+
 == Permissions
 
 The Action in <<ex-action>> potentially allows cats to sit on the mat, but a
@@ -257,16 +272,33 @@ membership of a particular role.
 
 Permissions are described in <<ch-permissions>>.
 
-== Benefits
+== Applications
 
-When compared to other 'third-party' solutions, Site's authorization system has
-two significant advantages:
+Actions are invoked when users make direct requests to an API. However, APIs are
+primarily designed to be used by applications acting on a user's behalf.
 
-* Action rules are written as graphs which are free to traverse as deep as
-  necessary into the complete database of facts. Other systems must often rely
-  on a small subset of facts.
+Applications must first be registered with Site. Then a User must authorize an
+application to access an API on their behalf. Only then can an application
+request a time-limited access token-from Site which it can present when making
+API requests.
 
-* Action rules benefit from strong database consistency. Rules are run only
-  after any pending updates to Permission have been applied. Other systems often
-  cannot achieve consistency since they are across the network and the
-  subsequent loss of availability would be too severe.
+== Scope
+
+Actions can be grouped together into access ranges. For example, the actions
+required for user administration might be grouped into an access range named
+`user:admin`.
+
+Applications might only need a limited set of these access ranges in order to
+function. The allowed access ranges might be restricted during application
+registration. This set of access ranges is called a 'scope'. An example scope
+might be "`user:admin resources:read resources:write`"
+
+During the application authorization step, the authorizing User might choose to
+restrict the scope of access ranges an application can acquire.
+
+Furthermore, applications might unilaterally request a restricted scope upon
+requesting an access token.
+
+No matter the ultimate scope of the access-token that is issued, an application
+cannot use an access-token to invoke an action that would otherwise be
+unavailable to a User.
