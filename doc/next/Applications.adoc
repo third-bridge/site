@@ -1,38 +1,6 @@
 = Applications
 :toc: left
 
-== Development Notes
-
-[NOTE]
---
-. Create an Action to create an Application
-. Create an Application
-. Create an Action to Authorize an Application's use by a User
-. Authorize an Application's use by a Subject
-. Create an Action to generate an Access Token, given a User and Application, and possibly restricted scopes
-. Generate an Access Token
-. Use it from the console to access a private resource
---
-
-=== Restricting permissions to sessions
-
-Currently there is the concern that we're granting permissions to the User,
-which doesn't give us information about the login, so we can't grant permissions
-conditional on certain login conditions being met.
-
-Could we put an additional rules invocation against the permission? (Nope, we
-can't dynamically load rules)
-
-Alternatively, we can add two rules: if the permission has a user attribute, the first rule applies.
-If the permission has a subject attribute, the second rule applies.
-
-But that still doesn't solve our problem, since we want to restrict an action in
-certain cases to, say, 2FA, which is only available on a Session.
-
-The only solution seems to have separate actions, or even use purpose, or go
-back to having a 'special' REPL user.
-
-
 == Create the action to create an application
 
 .Creating the action
@@ -46,7 +14,7 @@ include::../../dev/demo.clj[tag=create-action-put-application!,indent=0]
 
 NOTE: Possibly demote this to Preliminaries
 
-== Grant permission to this action
+== Grant permission to create an application
 
 .Granting permission
 [[example-grant-permission-put-application]]
@@ -69,3 +37,66 @@ NOTE: Possibly demote this to Preliminaries
 include::../../dev/demo.clj[tag=invoke-put-application!,indent=0]
 ----
 ====
+
+== Create the action to authorize an application
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-authorize-application!,indent=0]
+----
+====
+
+NOTE: Possibly demote this to Preliminaries
+
+== Grant permission to authorize an application
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=grant-permission-to-invoke-action-authorize-application!,indent=0]
+----
+====
+
+NOTE: Possibly demote this to Preliminaries
+
+== Authorize the application
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=invoke-authorize-application!,indent=0]
+----
+====
+
+== Development Notes
+
+[NOTE]
+--
+Outstanding work:
+
+. Create an Action to Authorize an Application's use by a User
+. Authorize an Application's use by a User
+. Create an Action to generate an Access Token, given a User and Application, and possibly restricted scopes
+. Generate an Access Token
+. Use it from the console to access a private resource
+--
+
+.Restricting permissions to sessions
+****
+Currently there is the concern that we're granting permissions to the User,
+which doesn't give us information about the login, so we can't grant permissions
+conditional on certain login conditions being met.
+
+Could we put an additional rules invocation against the permission? (Nope, we
+can't dynamically load rules)
+
+Alternatively, we can add two rules: if the permission has a user attribute, the first rule applies.
+If the permission has a subject attribute, the second rule applies.
+
+But that still doesn't solve our problem, since we want to restrict an action in
+certain cases to, say, 2FA, which is only available on a Session.
+
+The only solution seems to have separate actions, or even use purpose, or go
+back to having a 'special' REPL user.
+****

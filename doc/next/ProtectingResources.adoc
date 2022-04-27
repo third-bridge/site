@@ -144,8 +144,6 @@ authorized to access it.
 To authorize the subject we'll need to first determine who is trying to access
 the resource.
 
-That's the subject of <<authentication>>.
-
 == Improving the 401 error
 
 If the user is using a browser, it's a better user experience if we provide them

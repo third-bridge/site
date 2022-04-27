@@ -66,13 +66,12 @@ include::Resources.adoc[leveloffset=+1]
 
 include::Representations.adoc[leveloffset=+1]
 
-include::ProtectingResources.adoc[leveloffset=+1]
-
-= Application Development with Site
 
 include::Applications.adoc[leveloffset=+1]
 
-[[authentication]]
+include::ProtectingResources.adoc[leveloffset=+1]
+
+[[ch-authentication-with-openid]]
 include::AuthenticationWithOpenID.adoc[leveloffset=+1]
 
 // Create an action to list-identities
@@ -80,10 +79,10 @@ include::AuthenticationWithOpenID.adoc[leveloffset=+1]
 
 // include::APIs.adoc[leveloffset=+1]
 
-
-
 // [[authorization]]
 // include::Authorization.adoc[leveloffset=+1]
+
+= Application Development with Site
 
 include::NextSteps.adoc[leveloffset=+1]
 

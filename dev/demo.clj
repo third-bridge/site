@@ -5,10 +5,10 @@
    [juxt.http.alpha :as-alias http]
    [juxt.pass.alpha :as-alias pass]
    [juxt.site.alpha :as-alias site]
-   juxt.pass.alpha.application
    [clojure.walk :refer [postwalk]]
    [clojure.string :as str]
-   [malli.core :as m]))
+   [malli.core :as m]
+   [juxt.site.alpha.repl :refer [base-uri put! install-do-action-fn!]]))
 
 (defn substitute-actual-base-uri [form]
   (postwalk
@@ -21,7 +21,6 @@
 (defn demo-put-user! []
   ;; tag::install-user![]
   (put! {:xt/id "https://site.test/users/mal"
-         :juxt.site.alpha/type "User"
          :juxtcode "mal"
          :name "Malcolm Sparks"})
   ;; end::install-user![]
@@ -362,7 +361,6 @@
        [:tuple
         [:map
          [:xt/id [:re "https://site.test/.*"]]
-         [:juxt.site.alpha/type [:= "Identity"]]
          [:juxt.pass.jwt/iss [:re "https://.+"]]
          [:juxt.pass.jwt/sub [:string {:min 1}]]]]
 
@@ -370,8 +368,7 @@
        [
         [:juxt.pass.alpha.process/update-in
          [0] 'merge
-         {:juxt.site.alpha/type "Identity"
-          :juxt.http.alpha/methods
+         {:juxt.http.alpha/methods
           {:get {:juxt.pass.alpha/actions #{"https://site.test/actions/get-identity"}}
            :head {:juxt.pass.alpha/actions #{"https://site.test/actions/get-identity"}}
            :options {}}}]
@@ -887,7 +884,69 @@
       "https://site.test/actions/put-application"
       (make-application-doc
        :prefix "https://site.test/applications/"
-       :client-id (as-hex-str (random-bytes 12))
+       :client-id "local-terminal"
        :client-secret (as-hex-str (random-bytes 20))))
      ;; end::invoke-put-application![]
+     ))))
+
+(defn demo-create-action-authorize-application! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::create-action-authorize-application![]
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/create-action"
+      {:xt/id "https://site.test/actions/authorize-application"
+       :juxt.site.alpha/type "Action"
+       :juxt.pass.alpha.malli/args-schema
+       [:tuple
+        [:map
+         [:xt/id [:re "https://site.test/authorizations/(.+)"]]
+         [:juxt.pass.alpha/user [:re "https://site.test/users/(.+)"]]
+         [:juxt.pass.alpha/application [:re "https://site.test/applications/(.+)"]]
+         ;; Optionally, an application can be authorized by a user for a limited
+         ;; scope
+         [:juxt.pass.alpha/scope {:optional true} :string]]]
+       :juxt.pass.alpha/process
+       [
+        [:juxt.pass.alpha.malli/validate]
+        [:xtdb.api/put]
+        ]
+       :juxt.pass.alpha/rules
+       '[[(allowed? permission subject action resource)
+          [id :juxt.pass.alpha/user user]
+          [subject :juxt.pass.alpha/identity id]
+          [permission :juxt.pass.alpha/user user]]]})
+     ;; end::create-action-authorize-application![]
+     ))))
+
+(defn demo-grant-permission-to-invoke-action-authorize-application!! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::grant-permission-to-invoke-action-authorize-application![]
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/grant-permission"
+      {:xt/id "https://site.test/permissions/repl/authorize-application"
+       :juxt.pass.alpha/user "https://site.test/users/mal"
+       :juxt.pass.alpha/action "https://site.test/actions/authorize-application"
+       :juxt.pass.alpha/purpose nil})
+     ;; end::grant-permission-to-invoke-action-authorize-application![]
+     ))))
+
+(defn demo-invoke-authorize-application!! []
+  (eval
+   (substitute-actual-base-uri
+    (quote
+     ;; tag::invoke-authorize-application![]
+     (do-action
+      "https://site.test/subjects/repl-default"
+      "https://site.test/actions/authorize-application"
+      (make-application-authorization-doc
+       :prefix "https://site.test/authorizations/"
+       :user "https://site.test/users/mal"
+       :application "https://site.test/applications/local-terminal"))
+     ;; end::invoke-authorize-application![]
      ))))
