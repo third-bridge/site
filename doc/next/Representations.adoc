@@ -66,7 +66,9 @@ include::../../dev/demo.clj[tag=create-hello-world-html-representation!,indent=0
 
 [IMPORTANT]
 --
-Do it
+Developer note: Don't do this just now, since we should allow `variant-of` to
+mean _additional_ variant of, but right now it overrides the representation in
+`/hello`
 --
 
 We can now test with curl
@@ -79,38 +81,5 @@ Or, indeed, with a browser.
 
 image::hello-world.png[width=75%]
 
-
-====
-
-== Templates
-
-[source,clojure]
-----
-include::../../dev/demo.clj[tag=create-put-template-action!,indent=0]
-----
-
-[source,clojure]
-----
-include::../../dev/demo.clj[tag=grant-permission-to-invoke-action-put-template!,indent=0]
-----
-
-.Creating a template
-====
-
-[source,clojure]
-----
-include::../../dev/demo.clj[tag=create-hello-world-html-template!,indent=0]
-----
-
-
-====
-
-.Referencing the template
-====
-
-[source,clojure]
-----
-include::../../dev/demo.clj[tag=create-hello-world-with-html-template!,indent=0]
-----
 
 ====

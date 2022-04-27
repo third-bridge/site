@@ -59,20 +59,26 @@ include::Actions.adoc[leveloffset=+1]
 [[ch-permissions]]
 include::Permissions.adoc[leveloffset=+1]
 
-= Essentials
+= Resources
 
 [[ch-resources]]
 include::Resources.adoc[leveloffset=+1]
 
 include::Representations.adoc[leveloffset=+1]
 
+include::ProtectingResources.adoc[leveloffset=+1]
+
+include::BasicAuthentication.adoc[leveloffset=+1]
+
+= Applications
+
 [[ch-applications]]
 include::Applications.adoc[leveloffset=+1]
 
-include::ProtectingResources.adoc[leveloffset=+1]
-
 [[ch-authentication-with-openid]]
 include::AuthenticationWithOpenID.adoc[leveloffset=+1]
+
+include::ErrorResources.adoc[leveloffset=+1]
 
 // Create an action to list-identities
 // Create a resource at /users that is attached to list-identities
@@ -82,11 +88,15 @@ include::AuthenticationWithOpenID.adoc[leveloffset=+1]
 // [[authorization]]
 // include::Authorization.adoc[leveloffset=+1]
 
-= Application Development with Site
-
 include::NextSteps.adoc[leveloffset=+1]
 
 include::AppDevelopment.adoc[leveloffset=+1]
+
+= Websites with Site
+
+include::Templates.adoc[leveloffset=+1]
+
+= Backmatter
 
 include::Glossary.adoc[leveloffset=+1]
 
