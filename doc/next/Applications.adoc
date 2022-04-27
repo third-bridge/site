@@ -104,11 +104,15 @@ include::../../dev/demo.clj[tag=invoke-issue-access-token!,indent=0]
 
 [NOTE]
 --
+I think this whole chapter belongs in Preliminaries - doesn't require Resources
+
 Outstanding work:
 
-. Create an Action to generate an Access Token, given a User and Application, and possibly restricted scopes
-. Generate an Access Token
-. Use it from the console to access a private resource
+. Use an access token from the console to access a private resource
+.. Put the access token in the `Authorization: Bearer <token>` header
+.. Create a private resource
+.. Fish out the token using middleware
+.. Apply the action associated with the `:get` method of the private resource
 
 /authorize should create an 'ApplicationAuthorization' document, if one doesn't already exist, possibly it can update it too
 /token should create an 'AccessToken' document, with subject, application and scope burned into it

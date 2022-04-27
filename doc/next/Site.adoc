@@ -59,6 +59,9 @@ include::Actions.adoc[leveloffset=+1]
 [[ch-permissions]]
 include::Permissions.adoc[leveloffset=+1]
 
+[[ch-applications]]
+include::Applications.adoc[leveloffset=+1]
+
 = Essentials
 
 [[ch-resources]]
@@ -66,8 +69,6 @@ include::Resources.adoc[leveloffset=+1]
 
 include::Representations.adoc[leveloffset=+1]
 
-
-include::Applications.adoc[leveloffset=+1]
 
 include::ProtectingResources.adoc[leveloffset=+1]
 

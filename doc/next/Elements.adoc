@@ -146,6 +146,10 @@ include::cat.json[]
 
 Users, identities and subjects are described in <<ch-users>>.
 
+== Applications
+
+NOTE: TODO
+
 == Resources
 
 [quote]
