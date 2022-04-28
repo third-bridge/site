@@ -126,7 +126,7 @@ A copy of the transaction metadata record is returned as a result of the
 s|Required
 
 |:juxt.site.alpha/type
-l|"Action"
+l|"https://meta.juxt.site/pass/action"
 s|Required
 
 |:juxt.pass.alpha/rules

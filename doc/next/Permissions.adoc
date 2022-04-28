@@ -40,7 +40,7 @@ revocations are easier to manage and report on.
 s|Required
 
 |:juxt.site.alpha/type
-l|"Perimssion"
+l|"https://meta.juxt.site/pass/permission"
 s|Required
 
 |:juxt.pass.alpha/action

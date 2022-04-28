@@ -103,7 +103,3 @@ permissions-policy: interest-cohort=()
 Unauthorized
 ----
 ====
-
-NOTE: Move the rest of this chapter to a new chapter. Let's now introduce the
-idea of an application client (curl), and generate an access-token that contains
-the subject, application client and any further scope restrictions.

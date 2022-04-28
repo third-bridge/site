@@ -45,12 +45,6 @@
   ;; end::install-subject![]
   )
 
-(defn demo-install-do-action-fn! []
-  ;; tag::install-do-action-fn![]
-  (install-do-action-fn!)
-  ;; end::install-do-action-fn![]
-  )
-
 (defn demo-install-create-action! []
   (eval
    (substitute-actual-base-uri
@@ -58,19 +52,19 @@
      ;; tag::install-create-action![]
      (put!
       {:xt/id "https://site.test/actions/create-action" ; <1>
-       :juxt.site.alpha/type "Action"
+       :juxt.site.alpha/type "https://meta.juxt.site/pass/action"
        :juxt.pass.alpha/scope "write:admin"
        :juxt.pass.alpha.malli/args-schema
        [:tuple
         [:map
          [:xt/id [:re "https://site.test/actions/(.+)"]] ; <2>
-         [:juxt.site.alpha/type [:= "Action"]]
+         [:juxt.site.alpha/type [:= "https://meta.juxt.site/pass/action"]]
          [:juxt.pass.alpha/rules [:vector [:vector :any]]]]]
 
        :juxt.pass.alpha/process
        [
         [:juxt.pass.alpha.process/update-in [0] ; <3>
-         'merge {:juxt.site.alpha/type "Action"}]
+         'merge {:juxt.site.alpha/type "https://meta.juxt.site/pass/action"}]
         [:juxt.pass.alpha.malli/validate] ; <4>
         [:xtdb.api/put]] ; <5>
 
@@ -83,6 +77,12 @@
      ;; end::install-create-action![]
      ))))
 
+(defn demo-install-do-action-fn! []
+  ;; tag::install-do-action-fn![]
+  (install-do-action-fn!)
+  ;; end::install-do-action-fn![]
+  )
+
 (defn demo-permit-create-action! []
   (eval
    (substitute-actual-base-uri
@@ -90,7 +90,7 @@
      ;; tag::permit-create-action![]
      (put!
       {:xt/id "https://site.test/permissions/mal/create-action" ; <1>
-       :juxt.site.alpha/type "Permission" ; <2>
+       :juxt.site.alpha/type "https://meta.juxt.site/pass/permission" ; <2>
        :juxt.pass.alpha/user "https://site.test/users/mal" ; <3>
        :juxt.pass.alpha/action "https://site.test/actions/create-action" ; <4>
        :juxt.pass.alpha/purpose nil}) ; <5>
@@ -106,21 +106,22 @@
       "https://site.test/subjects/repl-default"
       "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/grant-permission"
-       :juxt.site.alpha/type "Action"
+       :juxt.site.alpha/type "https://meta.juxt.site/pass/action"
        :juxt.pass.alpha/scope "write:admin"
 
        :juxt.pass.alpha.malli/args-schema
        [:tuple
         [:map
          [:xt/id [:re "https://site.test/permissions/(.+)"]]
-         [:juxt.site.alpha/type [:= "Permission"]]
+         [:juxt.site.alpha/type [:= "https://meta.juxt.site/pass/permission"]]
          [:juxt.pass.alpha/action [:re "https://site.test/actions/(.+)"]]
          [:juxt.pass.alpha/purpose [:maybe :string]]
          ]]
 
        :juxt.pass.alpha/process
        [
-        [:juxt.pass.alpha.process/update-in [0] 'merge {:juxt.site.alpha/type "Permission"}]
+        [:juxt.pass.alpha.process/update-in [0]
+         'merge {:juxt.site.alpha/type "https://meta.juxt.site/pass/permission"}]
         [:juxt.pass.alpha.malli/validate]
         [:xtdb.api/put]]
 
@@ -137,7 +138,7 @@
   ;; tag::permit-grant-permission-action![]
   (put!
    {:xt/id "https://site.test/permissions/mal/grant-permission"
-    :juxt.site.alpha/type "Permission"
+    :juxt.site.alpha/type "https://meta.juxt.site/pass/permission"
     :juxt.pass.alpha/user "https://site.test/users/mal"
     :juxt.pass.alpha/action "https://site.test/actions/grant-permission"
     :juxt.pass.alpha/purpose nil})
@@ -841,7 +842,6 @@
       "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/put-application"
        :juxt.pass.alpha/scope "write:application"
-       :juxt.site.alpha/type "Action"
        :juxt.pass.alpha.malli/args-schema
        [:tuple
         [:map
@@ -900,7 +900,6 @@
       "https://site.test/subjects/repl-default"
       "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/authorize-application"
-       :juxt.site.alpha/type "Action"
        :juxt.pass.alpha.malli/args-schema
        [:tuple
         [:map

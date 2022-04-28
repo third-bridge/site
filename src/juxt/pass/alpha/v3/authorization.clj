@@ -35,13 +35,13 @@
               :keys '[permission action]
               :where
               '[
-                [action ::site/type "Action"]
+                [action ::site/type "https://meta.juxt.site/pass/action"]
 
                 ;; Only consider given actions
                 [(contains? actions action)]
 
                 ;; Only consider a permitted action
-                [permission ::site/type "Permission"]
+                [permission ::site/type "https://meta.juxt.site/pass/permission"]
                 [permission ::pass/action action]
                 (allowed? permission subject action resource)
 
@@ -67,13 +67,13 @@
      {:find '[resource]
       :where
       '[
-        [action ::site/type "Action"]
+        [action ::site/type "https://meta.juxt.site/pass/action"]
 
         ;; Only consider given actions
         [(contains? actions action)]
 
         ;; Only consider a permitted action
-        [permission ::site/type "Permission"]
+        [permission ::site/type "https://meta.juxt.site/pass/permission"]
         [permission ::pass/action action]
         (allowed? permission subject action resource)
 
@@ -99,13 +99,13 @@
            :keys '[subject action]
            :where
            '[
-             [action ::site/type "Action"]
+             [action ::site/type "https://meta.juxt.site/pass/action"]
 
              ;; Only consider given actions
              [(contains? actions action)]
 
              ;; Only consider a permitted action
-             [permission ::site/type "Permission"]
+             [permission ::site/type "https://meta.juxt.site/pass/permission"]
              [permission ::pass/action action]
              (allowed? permission subject action resource)
 
@@ -156,11 +156,11 @@
           :where
           (cond-> '[
                     ;; Only consider given actions
-                    [action ::site/type "Action"]
+                    [action ::site/type "https://meta.juxt.site/pass/action"]
                     [(contains? actions action)]
 
                     ;; Only consider allowed permssions
-                    [permission ::site/type "Permission"]
+                    [permission ::site/type "https://meta.juxt.site/pass/permission"]
                     [permission ::pass/action action]
                     (allowed? permission subject action resource)
 
