@@ -21,6 +21,7 @@
 (defn demo-put-user! []
   ;; tag::install-user![]
   (put! {:xt/id "https://site.test/users/mal"
+         :juxt.site.alpha/type "https://meta.juxt.site/pass/user"
          :juxtcode "mal"
          :name "Malcolm Sparks"})
   ;; end::install-user![]
@@ -29,6 +30,7 @@
 (defn demo-put-user-identity! []
   ;; tag::install-user-identity![]
   (put! {:xt/id "https://site.test/identities/mal"
+         :juxt.site.alpha/type "https://meta.juxt.site/pass/identity"
          :juxt.pass.alpha/user "https://site.test/users/mal"
          :juxt.pass.jwt/iss "https://juxt.eu.auth0.com/"
          :juxt.pass.jwt/sub "github|163131"})
@@ -38,7 +40,7 @@
 (defn demo-put-subject! []
   ;; tag::install-subject![]
   (put! {:xt/id "https://site.test/subjects/repl-default"
-         :juxt.site.alpha/type "Subject"
+         :juxt.site.alpha/type "https://meta.juxt.site/pass/subject"
          :juxt.pass.alpha/identity "https://site.test/identities/mal"})
   ;; end::install-subject![]
   )

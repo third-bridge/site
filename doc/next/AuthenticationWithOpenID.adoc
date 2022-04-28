@@ -32,7 +32,7 @@ authentication issues, perhaps due to misconfiguration.
 
 .Authentication flow
 [[authentication-flow]]
-[plantuml,authentication-flow,png]
+[plantuml,authentication-flow,svg]
 ....
 skinparam monochrome true
 autonumber
@@ -137,7 +137,7 @@ and other domain-specific documents.
 [[identity-model]]
 ====
 
-[plantuml,identity-model,png]
+[plantuml,identity-model,svg]
 ....
 skinparam monochrome true
 @startjson

@@ -135,7 +135,7 @@ the User logging in.
 .The Subject's view
 [[cat-model]]
 ====
-[plantuml,cat,png]
+[plantuml,cat,svg]
 ....
 skinparam monochrome true
 @startjson

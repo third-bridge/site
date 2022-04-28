@@ -8,7 +8,8 @@ Users are individuals with access to Site.
 
 (((user, document structure)))
 A User is a database document, with the `juxt.site.alpha/type` attribute value
-set to "`User`", as detailed in <<user-doc-structure>>.
+set to "+https://meta.juxt.site/pass/user+", as detailed in
+<<user-doc-structure>>.
 
 .Document structure of a User
 [[user-doc-structure]]
@@ -18,6 +19,10 @@ set to "`User`", as detailed in <<user-doc-structure>>.
 
 |:xt/id
 |Users are resources, so this is a URI.
+s|Required
+
+|:juxt.site.alpha/type
+l|"https://meta.juxt.site/pass/user"
 s|Required
 |===
 
@@ -65,6 +70,10 @@ attribute, as detailed in <<identity-doc-structure>>.
 |Identities are resources, so this is a URI.
 s|Required
 
+|:juxt.site.alpha/type
+l|"https://meta.juxt.site/pass/identity"
+s|Required
+
 |:juxt.pass.alpha/user
 |A reference to a User.
 s|Required
@@ -103,7 +112,8 @@ include::../../dev/demo.clj[tag=install-user-identity!,indent=0]
 (((subject, definition)))
 In Site, a *Subject* is a database document automatically created when the user
 authenticates and represents a *user login*. This document has the
-`juxt.site.alpha/type` attribute value set to "`Subject`".
+`juxt.site.alpha/type` attribute value set to
+"+https://meta.juxt.site/pass/subject+".
 
 (((subject, relationship to user identity)))
 A Subject always references an *Identity*, with the `juxt.pass.alpha/identity`
@@ -130,6 +140,10 @@ include information such as:
 |Subjects are resources, so this is a URI.
 s|Required
 
+|:juxt.site.alpha/type
+l|"https://meta.juxt.site/pass/subject"
+s|Required
+
 |:juxt.pass.alpha/identity
 |A reference to an Identity.
 s|Required
@@ -141,7 +155,7 @@ how an Identity, in turn, may relate to a User.
 .A possible relationship between a Users Subject and Identity
 [[user-model]]
 ====
-[plantuml,user-model,png]
+[plantuml,user-model,svg]
 ....
 skinparam monochrome true
 @startjson

@@ -3,7 +3,7 @@
 == Understanding the authorization flow
 
 .Authorization Flow
-[plantuml,authorization-flow,png]
+[plantuml,authorization-flow,svg]
 ....
 skinparam monochrome true
 autonumber

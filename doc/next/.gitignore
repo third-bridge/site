@@ -3,4 +3,5 @@
 authorization-flow.png
 authentication-flow.png
 *.png
+*.svg
 identity.json
