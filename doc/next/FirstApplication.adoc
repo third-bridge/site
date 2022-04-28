@@ -27,6 +27,15 @@ include::../../dev/demo.clj[tag=invoke-authorize-application!,indent=0]
 ----
 ====
 
+== Create a test subject
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-test-subject!,indent=0]
+----
+====
+
 == Issue the access token
 
 ====

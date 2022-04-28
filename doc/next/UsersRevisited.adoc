@@ -14,12 +14,40 @@ Subjects. That's the subject of this chapter.
 
 == Create an action to create a user
 
-NOTE: TODO
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-put-user!,indent=0]
+----
+====
+
+IMPORTANT: Do it!
 
 == Create an action to create an identity
 
-NOTE: TODO
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-put-identity!,indent=0]
+----
+====
+
+IMPORTANT: Do it!
 
 == Create an action to create an subject
 
-NOTE: TODO
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=create-action-put-subject!,indent=0]
+----
+====
+
+====
+[source,clojure]
+----
+include::../../dev/demo.clj[tag=grant-permission-to-invoke-action-put-subject!,indent=0]
+----
+====
+
+IMPORTANT: Do it!

@@ -18,11 +18,11 @@
    ::pass/user user
    ::pass/application application})
 
-(defn make-access-token-doc [& {:keys [prefix user application scope]}]
+(defn make-access-token-doc [& {:keys [prefix subject application scope]}]
   (let [token (as-hex-str (random-bytes 16))]
     {:xt/id (str prefix token)
      ::site/type "AccessToken"
-     ::pass/user user
+     ::pass/subject subject
      ::pass/application application
      ::pass/scope scope
      ::pass/token token}))
