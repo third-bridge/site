@@ -59,6 +59,12 @@ include::Actions.adoc[leveloffset=+1]
 [[ch-permissions]]
 include::Permissions.adoc[leveloffset=+1]
 
+[[ch-creating-users]]
+include::UsersRevisited.adoc[leveloffset=+1]
+
+[[ch-applications]]
+include::Applications.adoc[leveloffset=+1]
+
 = Resources
 
 [[ch-resources]]
@@ -72,8 +78,8 @@ include::BasicAuthentication.adoc[leveloffset=+1]
 
 = Applications
 
-[[ch-applications]]
-include::Applications.adoc[leveloffset=+1]
+[[ch-first-application]]
+include::FirstApplication.adoc[leveloffset=+1]
 
 [[ch-authentication-with-openid]]
 include::AuthenticationWithOpenID.adoc[leveloffset=+1]

@@ -463,6 +463,8 @@
 
 (defn wrap-authenticate [h]
   (fn [{:ring.request/keys [method] :as req}]
+    ;; @mal: I think we can authenticate OPTIONS now, authenticate doesn't
+    ;; prevent access, authorization does.
     (let [sub (when-not (= method :options) (authn/authenticate req))]
       (h (cond-> req sub (assoc ::pass/subject sub))))))
 
@@ -1252,7 +1254,7 @@
 
    ;; Authenticate
    session/wrap-associate-session
-   #_wrap-authenticate
+   wrap-authenticate
 
    ;; Locate resources
    wrap-locate-resource

@@ -966,7 +966,6 @@
       "https://site.test/subjects/repl-default"
       "https://site.test/actions/create-action"
       {:xt/id "https://site.test/actions/issue-access-token"
-       :juxt.site.alpha/type "Action"
        :juxt.pass.alpha.malli/args-schema
        [:tuple
         [:map

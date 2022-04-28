@@ -1,6 +1,6 @@
 ;; Copyright © 2021, JUXT LTD.
 
-;; Almost all DEPRECATED in favor of session.clj
+;;(remove-ns 'juxt.pass.alpha.authentication)
 
 (ns juxt.pass.alpha.authentication
   (:require
@@ -10,19 +10,16 @@
    [xtdb.api :as x]
    [juxt.reap.alpha.decoders :as reap]
    [juxt.reap.alpha.rfc7235 :as rfc7235]
-   ;; We're gradually moving over to this ns
-   [juxt.pass.alpha.session :as session]
-   [ring.util.codec :refer [form-decode url-decode]]
+   [juxt.http.alpha :as-alias http]
+   [juxt.pass.alpha :as-alias pass]
+   [juxt.site.alpha :as-alias site]
+   [ring.util.codec :refer [form-decode]]
    [ring.middleware.cookies :refer [cookies-request cookies-response]]))
 
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
-(alias 'site (create-ns 'juxt.site.alpha))
+#_(def SECURE-RANDOM (new java.security.SecureRandom))
+#_(def BASE64-ENCODER (java.util.Base64/getUrlEncoder))
 
-(def SECURE-RANDOM (new java.security.SecureRandom))
-(def BASE64-ENCODER (java.util.Base64/getUrlEncoder))
-
-(defn access-token []
+#_(defn access-token []
   (let [bytes (byte-array 24)]
     (.nextBytes SECURE-RANDOM bytes)
     (.encodeToString BASE64-ENCODER bytes)))
@@ -45,7 +42,7 @@
   (expire-sessions! date-now)
   (get @sessions-by-access-token k))
 
-(defn token-response
+#_(defn token-response
   [{::site/keys [received-representation resource start-date]
     ::pass/keys [subject] :as req}]
 
@@ -122,7 +119,7 @@
     (first users)))
 
 
-(defn ^:deprecated login-response
+#_(defn ^:deprecated login-response
   "This is the original login called by a POST of user credentials to
   /_site/login. It checks the credentials and creates an access-token which is
   sets in the returned cookie. This will be replaced entirely with an OAuth2
@@ -216,7 +213,7 @@
             (assoc :ring.response/status 302 :ring.response/body "Failed to login\r\n")
             (update :ring.response/headers assoc "location" "/"))})))))
 
-(defn logout-response
+#_(defn logout-response
   [req]
   ;; TODO: We must clear out the session!
   (-> req
@@ -240,7 +237,13 @@
   particular Protection Space that it is part of, and the appropriate
   authentication scheme(s) for accessing the resource."
   [{::site/keys [db] :as req}]
+
+  (log/info "AUTHENTICATE")
+
   ;; TODO: This might be where we also add the 'on-behalf-of' info
+
+
+
   (let [ ;; Deprecated
         {access-token "access_token"}
         (some-> req
