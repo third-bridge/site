@@ -846,10 +846,13 @@
        [:tuple
         [:map
          [:xt/id [:re "https://site.test/applications/(.+)"]]
+         [:juxt.site.alpha/type [:= "https://meta.juxt.site/pass/application"]]
          [:juxt.pass.alpha/oauth2-client-id [:string {:min 10}]]
          [:juxt.pass.alpha/oauth2-client-secret [:string {:min 16}]]]]
        :juxt.pass.alpha/process
        [
+        [:juxt.pass.alpha.process/update-in [0]
+         'merge {:juxt.site.alpha/type "https://meta.juxt.site/pass/application"}]
         [:juxt.pass.alpha.malli/validate]
         [:xtdb.api/put]
         ]
@@ -904,12 +907,15 @@
        [:tuple
         [:map
          [:xt/id [:re "https://site.test/authorizations/(.+)"]]
+         [:juxt.site.alpha/type [:= "https://meta.juxt.site/pass/authorization"]]
          [:juxt.pass.alpha/user [:re "https://site.test/users/(.+)"]]
          [:juxt.pass.alpha/application [:re "https://site.test/applications/(.+)"]]
          ;; A space-delimited list of permissions that the application requires.
          [:juxt.pass.alpha/scope {:optional true} :string]]]
        :juxt.pass.alpha/process
        [
+        [:juxt.pass.alpha.process/update-in [0]
+         'merge {:juxt.site.alpha/type "https://meta.juxt.site/pass/authorization"}]
         [:juxt.pass.alpha.malli/validate]
         [:xtdb.api/put]
         ]
@@ -965,11 +971,14 @@
        [:tuple
         [:map
          [:xt/id [:re "https://site.test/access-tokens/(.+)"]]
+         [:juxt.site.alpha/type [:= "https://meta.juxt.site/pass/access-token"]]
          [:juxt.pass.alpha/user [:re "https://site.test/users/(.+)"]]
          [:juxt.pass.alpha/application [:re "https://site.test/applications/(.+)"]]
          [:juxt.pass.alpha/scope {:optional true} :string]]]
        :juxt.pass.alpha/process
        [
+        [:juxt.pass.alpha.process/update-in [0]
+         'merge {:juxt.site.alpha/type "https://meta.juxt.site/pass/access-token"}]
         [:juxt.pass.alpha.malli/validate]
         [:xtdb.api/put]
         ]
