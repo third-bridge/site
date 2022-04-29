@@ -14,7 +14,8 @@
    [juxt.pass.alpha :as-alias pass]
    [juxt.site.alpha :as-alias site]
    [ring.util.codec :refer [form-decode]]
-   [ring.middleware.cookies :refer [cookies-request cookies-response]]))
+   [ring.middleware.cookies :refer [cookies-request cookies-response]]
+   [xtdb.api :as xt]))
 
 #_(def SECURE-RANDOM (new java.security.SecureRandom))
 #_(def BASE64-ENCODER (java.util.Base64/getUrlEncoder))
@@ -24,21 +25,21 @@
     (.nextBytes SECURE-RANDOM bytes)
     (.encodeToString BASE64-ENCODER bytes)))
 
-(defonce sessions-by-access-token (atom {}))
+#_(defonce sessions-by-access-token (atom {}))
 
-(defn put-session! [k session ^java.time.Instant expiry-instant]
+#_(defn put-session! [k session ^java.time.Instant expiry-instant]
   (swap! sessions-by-access-token
          assoc k (assoc session
                         ::expiry-instant expiry-instant)))
 
-(defn expire-sessions! [date-now]
+#_(defn expire-sessions! [date-now]
   (swap! sessions-by-access-token
          (fn [sessions]
            (into {} (remove #(.isAfter (.toInstant date-now)
                                        (-> % second (get ::expiry-instant)))
                             sessions)))))
 
-(defn lookup-session [k date-now]
+#_(defn lookup-session [k date-now]
   (expire-sessions! date-now)
   (get @sessions-by-access-token k))
 
@@ -231,6 +232,12 @@
       (cookies-response)
       ((fn [req] (assoc-in req [:ring.response/headers "set-cookie"] (get-in req [:headers "Set-Cookie"]))))))
 
+(defn lookup-access-token [db bearer-token]
+  (first
+   (xt/q db '{:find [(pull e [*])]
+              :where [[e ::site/type "https://meta.juxt.site/pass/access-token"]
+                      [e ::pass/token tok]] :in [tok]} bearer-token)))
+
 (defn authenticate
   "Authenticate a request. Return a pass subject, with information about user,
   roles and other credentials. The resource can be used to determine the
@@ -238,66 +245,49 @@
   authentication scheme(s) for accessing the resource."
   [{::site/keys [db] :as req}]
 
-  (log/info "AUTHENTICATE")
-
   ;; TODO: This might be where we also add the 'on-behalf-of' info
 
+  (let [now (::site/start-date req)
+        authorization-header
+        (get-in req [:ring.request/headers "authorization"])]
 
+    ;; Authorization header
+    (when authorization-header
+      (let [{::rfc7235/keys [auth-scheme token68]}
+            (reap/authorization authorization-header)]
 
-  (let [ ;; Deprecated
-        {access-token "access_token"}
-        (some-> req
-                ((fn [req] (assoc req :headers (get req :ring.request/headers))))
-                cookies-request
-                :cookies (get "site_session") :value json/read-value)
+        (case (.toLowerCase auth-scheme)
+          "basic"
+          (try
+            (let [[_ username password]
+                  (re-matches
+                   #"([^:]*):([^:]*)"
+                   (String. (.decode (java.util.Base64/getDecoder) token68)))
 
-        now (::site/start-date req)]
+                  [user pwhash] (lookup-user db username)]
 
-    (or
-     ;; TODO: Load subject from session
+              (when (and password pwhash (password/check password pwhash))
+                {::pass/user user
+                 ::pass/username username
+                 ::pass/auth-scheme "Basic"}))
+            (catch Exception e
+              (log/error e)))
 
-     ;; Old Cookie
-     (when access-token
-       (when-let [session (lookup-session access-token now)]
-         (->
-          (select-keys session [::pass/user ::pass/username])
-          (assoc ::pass/auth-scheme "Session"))))
+          "bearer"
+          (when-let [access-token (lookup-access-token db token68)]
+            (throw (ex-info "TODO: found access token" {:access-token access-token})))
 
-     ;; Authorization header
-     (when-let [authorization-header
-                (get-in req [:ring.request/headers "authorization"])]
-       (let [{::rfc7235/keys [auth-scheme token68]}
-             (reap/authorization authorization-header)]
+          #_(when-let [session (lookup-session token68 now)]
+              (->
+               (select-keys session [::pass/user ::pass/username])
+               (assoc ::pass/auth-scheme "Bearer"
+                      ;;::pass/session-expiry (java.util.Date/from (::expiry-instant session))
+                      )))
 
-         (case (.toLowerCase auth-scheme)
-           "basic"
-           (try
-             (let [[_ username password]
-                   (re-matches
-                    #"([^:]*):([^:]*)"
-                    (String. (.decode (java.util.Base64/getDecoder) token68)))
-
-                   [user pwhash] (lookup-user db username)]
-
-               (when (and password pwhash (password/check password pwhash))
-                 {::pass/user user
-                  ::pass/username username
-                  ::pass/auth-scheme "Basic"}))
-             (catch Exception e
-               (log/error e)))
-
-           "bearer"
-           (when-let [session (lookup-session token68 now)]
-             (->
-              (select-keys session [::pass/user ::pass/username])
-              (assoc ::pass/auth-scheme "Bearer"
-                     ;;::pass/session-expiry (java.util.Date/from (::expiry-instant session))
-                     )))
-
-           (throw
-            (ex-info
-             "Auth scheme unsupported"
-             {::site/request-context (assoc req :ring.response/status 401)}))))))))
+          (throw
+           (ex-info
+            "Auth scheme unsupported"
+            {::site/request-context (assoc req :ring.response/status 401)})))))))
 
 (defn login-template-model [req]
   {:query (str (:ring.request/query req))})

@@ -463,7 +463,7 @@
 
 (defn wrap-authenticate [h]
   (fn [{:ring.request/keys [method] :as req}]
-    ;; @mal: I think we can authenticate OPTIONS now, authenticate doesn't
+    ;; @mal: TODO: I think we can authenticate OPTIONS now, authenticate doesn't
     ;; prevent access, authorization does.
     (let [sub (when-not (= method :options) (authn/authenticate req))]
       (h (cond-> req sub (assoc ::pass/subject sub))))))

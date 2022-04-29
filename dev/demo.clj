@@ -1115,9 +1115,11 @@
       "https://site.test/subjects/repl-default"
       "https://site.test/actions/issue-access-token"
       (make-access-token-doc
+       :token "test-access-token"
        :prefix "https://site.test/access-tokens/"
        :subject "https://site.test/subjects/test"
        :application "https://site.test/applications/local-terminal"
-       :scope "read:admin"))
+       :scope "read:admin"
+       :expires-in-seconds (* 5 60)))
      ;; end::invoke-issue-access-token![]
      ))))

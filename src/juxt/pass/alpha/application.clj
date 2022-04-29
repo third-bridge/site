@@ -8,21 +8,21 @@
 
 (defn make-application-doc [& {:keys [prefix client-id client-secret]}]
   {:xt/id (str prefix client-id)
-   ::site/type "Application"
    ::pass/oauth2-client-id client-id
    ::pass/oauth2-client-secret client-secret})
 
 (defn make-application-authorization-doc [& {:keys [prefix user application]}]
   {:xt/id (str prefix (as-hex-str (random-bytes 10)))
-   ::site/type "ApplicationAuthorization"
    ::pass/user user
    ::pass/application application})
 
-(defn make-access-token-doc [& {:keys [prefix subject application scope]}]
-  (let [token (as-hex-str (random-bytes 16))]
-    {:xt/id (str prefix token)
-     ::site/type "AccessToken"
-     ::pass/subject subject
-     ::pass/application application
-     ::pass/scope scope
-     ::pass/token token}))
+(defn make-access-token-doc
+  [& {:keys [prefix subject application scope token expires-in-seconds]
+      :or {token (as-hex-str (random-bytes 16))
+           expires-in-seconds (* 60 60)}}]
+  {:xt/id (str prefix token)
+   ::pass/subject subject
+   ::pass/application application
+   ::pass/scope scope
+   ::pass/token token
+   ::pass/expiry (java.util.Date/from (.plusSeconds (.toInstant (java.util.Date.)) expires-in-seconds))})

@@ -49,6 +49,11 @@ include::../../dev/demo.clj[tag=invoke-issue-access-token!,indent=0]
 
 NOTE: Developer note: TODO
 
+
+----
+curl -i https://site.test/private.html -H "Authorization: Bearer test-access-token"
+----
+
 == Development Notes
 
 [NOTE]
