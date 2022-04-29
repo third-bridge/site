@@ -26,6 +26,8 @@
   "Given a subject, possible actions and resource, return all related pairs of permissions and actions."
   [db actions {:keys [subject resource purpose] :as pass-ctx}]
 
+  (log/debugf "CHECK PERMS: %s" (pr-str (assoc pass-ctx :actions actions)))
+
   (let [rules (actions->rules db actions)]
     (when (seq rules)
       (let [permissions

@@ -540,7 +540,7 @@
         :ring.request/keys [method]
         :as req}]
 
-    (log/info "AUTHORIZE")
+    (log/infof "AUTHORIZE: subject is %s" subject)
 
     (let [actions (get-in resource [::http/methods method ::pass/actions])
           permissions

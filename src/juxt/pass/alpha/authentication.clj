@@ -99,6 +99,7 @@
                 ::http/content-length (count body)}})
         (update :ring.response/headers assoc "Cache-Control" "no-store"))))
 
+;; Deprecated until reinstated with subjects from the database
 (defn lookup-user
   "Return a vector of user, pwhash"
   [db username]
@@ -232,11 +233,16 @@
       (cookies-response)
       ((fn [req] (assoc-in req [:ring.response/headers "set-cookie"] (get-in req [:headers "Set-Cookie"]))))))
 
-(defn lookup-access-token [db bearer-token]
-  (first
-   (xt/q db '{:find [(pull e [*])]
-              :where [[e ::site/type "https://meta.juxt.site/pass/access-token"]
-                      [e ::pass/token tok]] :in [tok]} bearer-token)))
+(defn lookup-subject-from-bearer [db bearer-token]
+  (:subject
+   (first
+    (xt/q db '{:find [(pull sub [*])]
+               :keys [subject]
+               :where [[at ::pass/token tok]
+                       [at ::site/type "https://meta.juxt.site/pass/access-token"]
+                       [at ::pass/subject sub]
+                       [sub ::site/type "https://meta.juxt.site/pass/subject"]]
+               :in [tok]} bearer-token))))
 
 (defn authenticate
   "Authenticate a request. Return a pass subject, with information about user,
@@ -267,15 +273,15 @@
                   [user pwhash] (lookup-user db username)]
 
               (when (and password pwhash (password/check password pwhash))
+                ;; TODO: Now this needs to return the subject that is in the
+                ;; database
                 {::pass/user user
                  ::pass/username username
                  ::pass/auth-scheme "Basic"}))
             (catch Exception e
               (log/error e)))
 
-          "bearer"
-          (when-let [access-token (lookup-access-token db token68)]
-            (throw (ex-info "TODO: found access token" {:access-token access-token})))
+          "bearer" (lookup-subject-from-bearer db token68)
 
           #_(when-let [session (lookup-session token68 now)]
               (->
