@@ -213,7 +213,7 @@
                         content-length
                         (:juxt.reap.alpha.rfc7231/type content-type))
                 {::content-language (get-in req [:ring.request/headers "content-language"])
-                 ::site/request-context (assoc req :ring.response/status 418)})))))))))
+                 ::site/request-context (assoc req :ring.response/status 598)})))))))))
 
 (defn GET [req]
   (conditional/evaluate-preconditions! req)
