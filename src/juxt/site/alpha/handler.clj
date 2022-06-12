@@ -184,25 +184,33 @@
           {::site/request-context (assoc req :ring.response/status 400)})))
 
       (with-open [in (:ring.request/body req)]
-        (let [body (.readNBytes in content-length)
-              content-type (:juxt.reap.alpha.rfc7231/content-type decoded-representation)]
+        (let [content-type (:juxt.reap.alpha.rfc7231/content-type decoded-representation)]
+          (try
+            (let [body (.readNBytes in content-length)]
+              (merge
+               decoded-representation
+               {::http/content-length content-length
+                ::http/last-modified start-date}
 
-          (merge
-           decoded-representation
-           {::http/content-length content-length
-            ::http/last-modified start-date}
+               (if (and
+                    (= (:juxt.reap.alpha.rfc7231/type content-type) "text")
+                    (nil? (get decoded-representation ::http/content-encoding)))
+                 (let [charset
+                       (get-in decoded-representation
+                               [:juxt.reap.alpha.rfc7231/content-type :juxt.reap.alpha.rfc7231/parameter-map "charset"])]
+                   (merge
+                    {::http/content (new String body (or charset "utf-8"))}
+                    (when charset {::http/charset charset})))
 
-           (if (and
-                (= (:juxt.reap.alpha.rfc7231/type content-type) "text")
-                (nil? (get decoded-representation ::http/content-encoding)))
-             (let [charset
-                   (get-in decoded-representation
-                           [:juxt.reap.alpha.rfc7231/content-type :juxt.reap.alpha.rfc7231/parameter-map "charset"])]
-               (merge
-                {::http/content (new String body (or charset "utf-8"))}
-                (when charset {::http/charset charset})))
-
-             {::http/body body})))))))
+                 {::http/body body})))
+            (catch Exception _e
+              (throw
+               (ex-info
+                (format "Exception caught trying to read %d bytes (content-type: %s)"
+                        content-length
+                        (:juxt.reap.alpha.rfc7231/type content-type))
+                {::content-language (get-in req [:ring.request/headers "content-language"])
+                 ::site/request-context (assoc req :ring.response/status 418)})))))))))
 
 (defn GET [req]
   (conditional/evaluate-preconditions! req)
