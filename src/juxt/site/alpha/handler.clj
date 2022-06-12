@@ -204,6 +204,9 @@
 
                  {::http/body body})))
             (catch Exception _e
+              (log/warnf "XXX Exception caught trying to read %d bytes (content-type: %s)"
+                         content-length
+                         (:juxt.reap.alpha.rfc7231/type content-type))
               (throw
                (ex-info
                 (format "Exception caught trying to read %d bytes (content-type: %s)"
