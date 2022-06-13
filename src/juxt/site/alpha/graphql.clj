@@ -406,9 +406,9 @@
                 :_siteQuery (and query (pr-str query)))))
 
 (defn infer-query
-  [db xt-node subject field query args]
+  [db xt-node subject field query]
   (let [type (field->type field)
-        results (pull-entities db xt-node subject (xt/q db query type) query)]
+        results (pull-entities db xt-node subject (xt/q db query) query)]
     (or (process-xt-results field results)
         (throw (ex-info "No resolver found for " type)))))
 
