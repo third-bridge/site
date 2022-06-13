@@ -244,9 +244,15 @@
 ;; TODO: When this works, repeat for PUT
 
 (defn POST [{::site/keys [resource request-id] :as req}]
-  (let [rep (->
-             (receive-representation req)
-             (assoc ::site/request request-id))
+  (let [rep (try
+              (-> (receive-representation req)
+                  (assoc ::site/request request-id))
+              (catch Exception e
+                (throw
+                 (ex-info
+                   (format "receive-representation exception: %s" (ex-message e))
+                   {::site/request-context (assoc req :ring.response/status 500)}))))
+
         req (assoc req ::site/received-representation rep)
         post-fn (::site/post-fn resource)
         post
