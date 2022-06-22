@@ -10,7 +10,7 @@
 
 (defmethod ig/init-key ::server [_ {::site/keys [port] :as opts}]
   (log/infof "Starting nREPL server on port %d" port)
-  (start-server :port port))
+  (start-server :port port :bind "0.0.0.0"))
 
 (defmethod ig/halt-key! ::server [_ server]
   (when server
