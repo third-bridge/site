@@ -184,24 +184,23 @@
   (let [tx-id (xt/submit-tx node tx)]
     (xt/await-tx node tx-id)))
 
-(defn import-resources-skip
-  ([] (import-resources-skip "import/resources.edn"))
+(defn import-resources
+  ([] (import-resources "import/resources.edn"))
   ([filename]
    (let [node (xt-node)]
      (if (xt/entity (xt/db (xt-node)) filename)
        (println "Skipping already imported: " filename)
        (let [in (java.io.PushbackReader. (io/reader (io/input-stream (io/file filename))))]
          (doseq [rec (resources-from-stream in)]
-           (println "Importing record" (:xt/id rec))
+           (println "Importing record: " (:xt/id rec))
            (when (:xt/id rec)
              (xt/submit-tx node [[:xtdb.api/put rec]])))
-         (xt/submit-tx node [[:xtdb.api/put {:xt/id filename}]])
-         (xt/sync node)
+         (submit-and-wait-tx node [[:xtdb.api/put {:xt/id filename}]])
          (println "Import finished."))))))
 
 
 
-(defn import-resources
+(defn import-resources-overwrite
   ([] (import-resources "import/resources.edn"))
   ([filename]
    (let [node (xt-node)
