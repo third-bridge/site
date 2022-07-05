@@ -184,6 +184,21 @@
   (let [tx-id (xt/submit-tx node tx)]
     (xt/await-tx node tx-id)))
 
+(defn import-resources-skip
+  ([] (import-resources-skip "import/resources.edn"))
+  ([filename]
+   (let [node (xt-node)]
+     (if (xt/entity (xt/db (xt-node)) filename)
+       (println "Skipping already imported: " filename)
+       (let [in (java.io.PushbackReader. (io/reader (io/input-stream (io/file filename))))]
+         (doseq [rec (resources-from-stream in)]
+           (println "Importing record" (:xt/id rec))
+           (when (:xt/id rec)
+             (xt/submit-tx node [[:xtdb.api/put rec]])))
+         (xt/submit-tx node [[:xtdb.api/put {:xt/id filename}]])
+         (xt/sync node)
+         (println "Import finished."))))))
+
 (defn import-resources
   ([] (import-resources "import/resources.edn"))
   ([filename]
@@ -496,3 +511,27 @@
         schema (:juxt.grab.alpha/schema (e (format "%s/_site/graphql" (::site/base-uri config))))
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
+
+(defn repl-post-handler [{::site/keys [uri db]
+                          ::pass/keys [subject]
+                          :as req}]
+  (let [
+        body (some-> req ::site/received-representation ::http/body (String.) read-string)
+        _ (when (nil? body)
+            (throw
+              (ex-info
+                "Invalid body"
+                {::site/request-context req})))
+
+        results (try
+                  (binding [*ns* (find-ns 'juxt.site.alpha.repl)]
+                    (eval body))
+                  (catch Exception e
+                    (throw (ex-info "Syntax error" e))))]
+
+    (-> req
+        (assoc
+          :ring.response/status 200
+          :ring.response/body
+          (json/write-value-as-string results))
+        (update :ring.response/headers assoc "content-type" "application/json"))))
