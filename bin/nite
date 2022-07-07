@@ -1,0 +1,333 @@
+#!/usr/bin/nbb
+
+;; Copyright © 2022, JUXT LTD.
+
+(ns site
+  (:require [clojure.edn :as edn]
+            [clojure.tools.cli :refer [parse-opts summarize]]
+            [clojure.pprint :refer [pprint]]
+            [clojure.string :as str]
+
+            ;; TODO: replace
+            ;; [cheshire.core :as json]
+            ;; [io.aviso.ansi :as ansi]
+            ;; [clojure.java.io :as io]
+            ;; [clojure.java.shell :as sh]
+
+            ["axios$default" :as axios]
+            ["chalk$default" :as chalk]
+            ["console$log" :as log]
+            [promesa.core :as p]
+            ["fs" :as fs]
+            ))
+
+(def ^:dynamic *silent* nil)
+(def ^:dynamic *debug* nil)
+
+
+(defn show-config []
+  )
+
+(defn get-token []
+  )
+
+(defn check-token []
+  )
+
+(defn clear-token []
+  )
+
+(defn list-users []
+  )
+
+(defn put-user []
+  )
+
+(defn reset-password []
+  )
+
+(defn put-role []
+  )
+
+(defn list-roles []
+  )
+
+(defn assign-role []
+  )
+
+(defn put-rule []
+  )
+
+(defn put-trigger []
+  )
+
+(defn put-graphql []
+  )
+
+(defn post-graphql []
+  )
+
+(defn put-redirect []
+  )
+
+(defn put-api []
+  )
+
+(defn put-asset []
+  )
+
+(defn put-template []
+  )
+
+(defn post-resources []
+  )
+
+(defn post []
+  )
+
+(defn post-json []
+  )
+
+(defn put-json []
+  )
+
+(defn put-static-site []
+  )
+
+(def global-cli-options
+  [["-b" "--base-uri BASE-URI" "The Base-URI of the server you are targetting"]
+   ["-s" "--silent" "Silent mode"]
+   ["-D" "--debug" "Enable debug mode"]
+   ["-v" "--verbose" "Verbose mode"]
+   ["-h" "--help" "Show this summary"]])
+
+(def commands
+  [["config"
+    {:description (:doc (meta #'show-config))
+     :cli-options []
+     :delegate show-config}]
+
+   ["get-token"
+    {:description (:doc (meta #'get-token))
+     :cli-options [["-u" "--username USERNAME" "Username"]
+                   ["-p" "--password PASSWORD" "Password"]
+                   ["-K" "--curl FILE" "Store creds in curl config file"]]
+     :delegate get-token}]
+
+   ["check-token"
+    {:description (:doc (meta #'check-token))
+     :cli-options []
+     :delegate check-token}]
+
+   ["clear-token"
+    {:description (:doc (meta #'clear-token))
+     :cli-options []
+     :delegate clear-token}]
+
+   ["list-users"
+    {:description (:doc (meta #'list-users))
+     :cli-options []
+     :delegate list-users}]
+
+   ["put-user"
+    {:description (:doc (meta #'put-user))
+     :cli-options [["-n" "--name NAME" "The user's name"]
+                   ["-u" "--username USERNAME" "The username of the user you are creating/updating"]
+                   ["-p" "--password PASSWORD" "A temporary password for the user"]
+                   ["-e" "--email EMAIL" "The user's email"]]
+     :delegate put-user}]
+
+   ["reset-password"
+    {:description (:doc (meta #'reset-password))
+
+     :cli-options [["-u" "--username USERNAME" "The username of the user"]
+                   ["-p" "--password PASSWORD" "A temporary password for the user"]]
+     :delegate reset-password}]
+
+   ["put-role"
+    {:description (:doc (meta #'put-role))
+     :cli-options [["-r" "--role ROLE" "The role you are creating/updating"]
+                   ["-d" "--description DESCRIPTION" "An optional description"]]
+     :delegate put-role}]
+
+   ["list-roles"
+    {:description (:doc (meta #'list-roles))
+     :cli-options []
+     :delegate list-roles}]
+
+   ["assign-role"
+    {:description (:doc (meta #'assign-role))
+     :cli-options [["-u" "--username USERNAME" "The user receiving the role"]
+                   ["-r" "--role ROLE" "The role you are assigning"]
+                   ["-j" "--justification JUSTIFICATION" "The business justification"]]
+     :delegate assign-role}]
+
+   ["put-rule"
+    {:description (:doc (meta #'put-rule))
+     :cli-options [["-n" "--name NAME" "Rule name"]
+                   ["-r" "--rule FILE" "Rule file"]]
+     :delegate put-rule}]
+
+   ["put-trigger"
+    {:description (:doc (meta #'put-trigger))
+     :cli-options [["-n" "--name NAME" "Trigger name"]
+                   ["-t" "--trigger FILE" "Trigger file"]]
+     :delegate put-trigger}]
+
+   ["put-graphql"
+    {:description (:doc (meta #'put-graphql))
+     :cli-options [["-f" "--file FILE" "GraphQL schema file"]
+                   ["-p" "--path PATH" "The destination path after the base-uri"]]
+     :delegate put-graphql}]
+
+   ["post-graphql"
+    {:description (:doc (meta #'post-graphql))
+     :cli-options [["-f" "--file FILE" "GraphQL request"]
+                   ["-p" "--path PATH" "The destination path after the base-uri"]]
+     :delegate post-graphql}]
+
+   ["put-redirect"
+    {:description (:doc (meta #'put-redirect))
+     :cli-options [["-r" "--resource URL" "Resource"]
+                   ["-l" "--location URL" "Location to redirect to"]]
+     :delegate put-redirect}]
+
+   ["put-api"
+    {:description (:doc (meta #'put-api))
+     :cli-options [["-n" "--name NAME" "API name"]
+                   ["-f" "--openapi FILE" "OpenAPI description file"]]
+     :delegate put-api}]
+
+   ["put-asset"
+    {:description (:doc (meta #'put-asset))
+     :cli-options [["-f" "--file FILE" "The asset file"]
+                   ["-p" "--path PATH" "The destination path after the base-uri"]
+                   ["-t" "--type MIME_TYPE" "The content-type"]
+                   ["-e" "--encoding ENCODING" "The content-encoding (optional)"]
+                   ["-l" "--language LANGUAGE" "The content-language (optional)"]
+                   ["-r" "--resource URI" "The resource for which this asset is a variant of"]
+                   ["-c" "--classification CLASSIFICATION" "The classification (e.g PUBLIC, RESTRICTED) applied to resource"]]
+     :delegate put-asset}]
+
+   ["put-template"
+    {:description (:doc (meta #'put-template))
+     :cli-options [["-f" "--file FILE" "The template file"]
+                   ["-p" "--path PATH" "The destination path after the base-uri"]
+                   ["-t" "--type MIME_TYPE" "The content-type"]
+                   ["-e" "--encoding ENCODING" "The content-encoding (optional)"]
+                   ["-l" "--language LANGUAGE" "The content-language (optional)"]
+                   ["-d" "--dialect DIALECT" "The template dialect (e.g. selmer, mustache)"]]
+     :delegate put-asset}]
+
+   ["post-resources"
+    {:description (:doc (meta #'post-resources))
+     :cli-options [["-f" "--file FILE" "Resource file (in EDN format)"]]
+     :delegate post-resources}]
+
+   ["post"
+    {:description (:doc (meta #'post))
+     :cli-options
+     [ ;; One of these
+      ["-p" "--path PATH" "The destination path after the base-uri"]
+      ["-u" "--url URL" "URL to post to"]
+
+      ["-t" "--type MIME_TYPE" "The content-type"] ; If missing, try to deduce
+                                                   ; from other the file suffix
+      ["-e" "--encoding ENCODING" "The content-encoding (optional)"]
+      ["-l" "--language LANGUAGE" "The content-language (optional)"]
+
+      ;; One of these
+      ["-d" "--data DATA" "Data to post"]
+      ["-f" "--file FILE" "File containing data"]]
+     :delegate post}]
+
+   ["post-json"
+    {:description (:doc (meta #'post-json))
+     :cli-options [["-f" "--file FILE" "File containing data"]
+                   ["-u" "--url URL" "URL to POST to"]]
+     :delegate post-json}]
+
+   ["put-json"
+    {:description (:doc (meta #'put-json))
+     :cli-options [["-f" "--file FILE" "File containing data"]
+                   ["-u" "--url URL" "URL to POST to"]]
+     :delegate put-json}]
+
+   ["put-static-site"
+    {:description (:doc (meta #'put-static-site))
+     :cli-options [["-d" "--directory DIR" "Directory containing static site files"]
+                   ["-p" "--path PATH" "Path the site will be available at. e.g -p mysite will make the site available at BASE_URI/mysite/index.html"]
+                   ["-spa" "--spa SPA" "If set the html file will be served at PATH/app/*"]]
+     :delegate put-static-site}]])
+
+(let [{:keys [options arguments summary errors]}
+      (parse-opts (next *command-line-args*)  global-cli-options :in-order true)
+      command (first arguments)
+      {:keys [cli-options delegate]} ((into {} commands) (first arguments))
+
+      print-summary
+      (fn []
+        (do
+          (println (chalk/green.bold "site"))
+          (println)
+          (println "This is a resource management tool for Site.")
+          (println)
+          (println (chalk/white "Usage"))
+          (println)
+          (println "site <global-options> <subcommand> <subcommand-options>")
+          (println)
+          (println (chalk/white "Global options"))
+          (println summary)
+          (println)
+          (println (chalk/white "Environment variables"))
+          (println)
+          (println "SITE_BASE_URI \tSet the default Base-URI")
+          (println "SITE_PASS_DIR \tOverride where Unix pass passwords are located")
+          (println)
+          (println (chalk/white "Subcommands"))
+          (println)
+          (doseq [[command {:keys [description cli-options delegate]}] commands]
+            (apply
+             println
+             (remove nil? [command (chalk/yellow "(" description (when-not delegate " - coming soon!") ")")]))
+            (when-let [summary (:summary (parse-opts [] cli-options))]
+              (when-not (str/blank? (str/trim summary))
+                (println summary)))
+            (println))))]
+
+  (cond
+    (contains? options :help)
+    (print-summary)
+
+    errors
+    (doseq [err errors]
+      (println err))
+
+    (find (into {} commands) command)
+    (binding [*silent* (:silent options)
+              *debug* (:debug options)]
+      (if delegate
+        (let [opts (parse-opts (next arguments) (concat global-cli-options
+                                                        cli-options))]
+          (when-let [err (some->> opts :errors (str/join ", "))]
+            (println (chalk/red "Error: " err)))
+          (delegate
+           (-> opts
+               (update :options merge options))))
+        (println "No implementation:" command)))
+
+    (first arguments)
+    (println "Unknown command:" (first arguments))
+
+    :else
+    (print-summary)))
+
+;; Following snippet shows examplary usage of nbb
+#_(p/let [resp (axios/get "https://clojure.org")
+        resp (js->clj resp :keywordize-keys true)]
+  (prn (:status resp)) ;; => 200
+  (prn (subs (:data resp) 0 10))) ;; => "<!DOCTYPE "
+
+;; Local Variables:
+;; mode: clojurescript
+;; End:

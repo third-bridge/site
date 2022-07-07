@@ -10,3 +10,5 @@ opt/graphiql/target
 *.dylib
 .clj-kondo
 **/generated/*
+node_modules/
+.cljs_node_repl/
