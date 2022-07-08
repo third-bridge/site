@@ -3,33 +3,205 @@
 ;; Copyright © 2022, JUXT LTD.
 
 (ns site
+  {:clj-kondo/config '{:lint-as {promesa.core/let clojure.core/let}}}
   (:require [clojure.edn :as edn]
             [clojure.tools.cli :refer [parse-opts summarize]]
             [clojure.pprint :refer [pprint]]
             [clojure.string :as str]
+
+            [nbb.core :refer [slurp]]
 
             ;; TODO: replace
             ;; [cheshire.core :as json]
             ;; [io.aviso.ansi :as ansi]
             ;; [clojure.java.io :as io]
             ;; [clojure.java.shell :as sh]
+            [cljs.pprint :refer [pprint]]
 
             ["axios$default" :as axios]
-            ["chalk$default" :as chalk]
+            ["zx" :refer [$ chalk]]
             ["console$log" :as log]
             [promesa.core :as p]
             ["fs" :as fs]
+            ["os" :as os]
+            ["util" :refer [format]]
             ))
 
 (def ^:dynamic *silent* nil)
 (def ^:dynamic *debug* nil)
 
+;; (def site-root-dir (io/file (first *command-line-args*)))
 
-(defn show-config []
-  )
+;; TODO: to fix
+(defn edn-to-json
+  [edn]
+  (-> (edn/read-string {:readers {'juxt.site.alpha/as-str pr-str}} edn)
+      #_(clj->js)))
 
-(defn get-token []
-  )
+(def env
+  (let [js-p (.-env js/process)]
+    (into {} (for [k (js-keys js-p)]
+               [k (aget js-p k)]))))
+
+(defn env-get [property]
+  (cond
+    (string? property) (get env property)
+    (keyword? property) (get env (name property))
+    :else (do (message! "No property found!"))))
+
+(defn error! [& msg]
+  (when-not *silent*
+    (apply println (apply chalk/red "fail:") msg)))
+
+(defn error-and-exit! [exit & msg]
+  (apply error! msg)
+  (js/process.exit exit))
+
+(defn error-and-usage! [msg opts]
+  (error! msg)
+  (println "Usage:")
+  (println (:summary opts))
+  (js/process.exit 1))
+
+(defn message! [& msg]
+  (when-not *silent*
+    (apply println (apply chalk/green "site:") msg)))
+
+(def config-file
+  (case (os.type)
+    ("Linux" "Mac OS X") (str (os.homedir) "/.config/site/config.edn")
+    (error-and-exit! 1 "Unsupported OS")))
+
+(defn file-extension
+  [path]
+  (subs path (inc (str/last-index-of path "."))))
+
+(def config
+  (cond-> {}
+    (fs/existsSync config-file)
+    (merge
+     (edn/read-string
+      {:readers {'ig/ref identity
+                 'ref identity
+                 'profile #(get % :prod)
+                 'env #(env-get (str %))
+                 'join #(apply str %)}}
+
+      ;; You need to call `str` on result as `readFileSync` returns buffer or what
+      (str (fs/readFileSync config-file))))
+
+    js/process.env.SITE_BASE_URI  ;; or (get-env "SITE_BASE_URI")
+    (assoc :juxt.site.alpha/base-uri js/process.env.SITE_BASE_URI))) ;; or (get-env "SITE_BASE_URI")
+
+
+;; TODO: Test if it works
+(defn get-password-from-unix-pass [unix-pass-password-prefix username]
+  (let [filename (str unix-pass-password-prefix username)
+        passfile (str (os.homedir) "/.password-store/" filename ".gpg")]
+    (if (fs/existsSync passfile)
+      (do
+        (message! "Extracting password from" (str filename))
+        (let [{:keys [exit out]} ($ #js ["gpg -d " (fs/readFileSync passfile)])]
+          (when (zero? exit) (str/trim out))))
+      (error-and-exit! 1 (format "Passfile does not exist: %s" filename)))))
+
+(defn get-password [unix-pass-password-prefix username]
+  (or
+   (get-password-from-unix-pass unix-pass-password-prefix username)
+   ;; TODO: Try other strategies, like pinentry
+   (error-and-exit! 1 "Failed to get password for" username)))
+
+
+;; (fs.existsSync (fs.opendirSync (str (os.homedir) "/.local/share/site")))
+;; TODO:
+(defn local-token-file []
+  (let [dir (fs.readFileSync (str (os.homedir) "/.local/share/site"))]
+    (when-not (.exists dir)
+      (when-not (.mkdirs dir)
+        (error-and-exit! 1 (str "Failed to make directory: " dir))))
+    (fs.readFileSync (str dir "/access-token.json"))))
+
+#_(def get-site-token
+  (let [token (-> os
+                  .homedir
+                  (str "/.local/share/site/access-token.json")
+                  fs/readFileSync
+                  js/JSON.parse
+                  (js->clj :keywordize-keys true)
+                  :access_token)]
+    (if token
+      token
+      (prn "Please get a new access-token to proceed"))))
+
+(defn show-config
+  "Show configuration"
+  [opts]
+  (pprint config))
+
+(defn get-password-prefix []
+  (or
+   (when-let [dir (js/process.env.SITE_PASS_DIR)]
+     (cond-> dir
+       (not (.endsWith dir "/")) (str "/")))
+   (:juxt.site.alpha.unix-pass/password-prefix config)))
+
+(defn get-token
+  "Request a token"
+  [opts]
+  (let [{:keys [base-uri username password password-prefix curl]
+         :or {base-uri (:juxt.site.alpha/base-uri config)
+              password-prefix (get-password-prefix)
+              username (-> os
+                           .userInfo
+                           (js->clj :keywordize-keys true)
+                           :username)}}
+        (:options opts)]
+
+    (when password-prefix
+      (message! (format "Unix pass prefix: %s" password-prefix)))
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not username (error-and-exit! 1 "Username required"))
+
+    (message! "Get token from" (format "%s/_site/token" base-uri))
+
+    (let [{:keys [status headers body]}
+          (curl/post
+           (format "%s/_site/token" base-uri)
+           {:headers {"content-type" "application/x-www-form-urlencoded"}
+            :basic-auth [username (or password
+                                      (when password-prefix (get-password password-prefix username))
+                                      (error-and-exit! 1 "Failed to get password"))]
+            :body "grant_type=client_credentials"
+            :throw false
+            :debug false})]
+      (cond
+        (= status 401)
+        (do
+          (message! "Server response:" status body)
+          (message! (format "Are your credentials valid? request-id is %s" (get headers "site-request-id"))))
+
+        (= status 200)
+        (let [f (local-token-file)
+              data (json/decode body)
+              expires (java.util.Date.
+                       (+ (.getTime (java.util.Date.))
+                          (* (get data "expires_in") 1000)))
+
+              data (-> data
+                       (assoc "username" username)
+                       (assoc "expires" (.format java.time.format.DateTimeFormatter/ISO_INSTANT (.toInstant expires))))]
+
+          (message! (format "Token expires in %s seconds" (get data "expires_in")))
+          (message! (format "Storing token in %s" f))
+          (spit f (json/encode data {:pretty true}))
+          (when curl
+            (message! (format "Storing curl config in %s" curl))
+            (spit curl (format "-H \"Authorization: Bearer %s\"\n" (get data "access_token")))))
+
+        :else
+        (do
+          (println "Server response:" status (str/trim body)))))))
 
 (defn check-token []
   )
@@ -321,12 +493,6 @@
 
     :else
     (print-summary)))
-
-;; Following snippet shows examplary usage of nbb
-#_(p/let [resp (axios/get "https://clojure.org")
-        resp (js->clj resp :keywordize-keys true)]
-  (prn (:status resp)) ;; => 200
-  (prn (subs (:data resp) 0 10))) ;; => "<!DOCTYPE "
 
 ;; Local Variables:
 ;; mode: clojurescript
