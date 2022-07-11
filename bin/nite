@@ -30,24 +30,19 @@
 (def ^:dynamic *silent* nil)
 (def ^:dynamic *debug* nil)
 
-;; (def site-root-dir (io/file (first *command-line-args*)))
+;; TODO: make helper function: if file doesn't exist, tell me
+;; (def site-root-dir (fs/readFileSync (first *command-line-args*)))
+;; (prn *command-line-args*)
 
-;; TODO: to fix
 (defn edn-to-json
   [edn]
   (-> (edn/read-string {:readers {'juxt.site.alpha/as-str pr-str}} edn)
-      #_(clj->js)))
+      (clj->js)))
 
 (def env
   (let [js-p (.-env js/process)]
     (into {} (for [k (js-keys js-p)]
                [k (aget js-p k)]))))
-
-(defn env-get [property]
-  (cond
-    (string? property) (get env property)
-    (keyword? property) (get env (name property))
-    :else (do (message! "No property found!"))))
 
 (defn error! [& msg]
   (when-not *silent*
@@ -71,6 +66,12 @@
   (case (os.type)
     ("Linux" "Mac OS X") (str (os.homedir) "/.config/site/config.edn")
     (error-and-exit! 1 "Unsupported OS")))
+
+(defn env-get [property]
+  (cond
+    (string? property) (get env property)
+    (keyword? property) (get env (name property))
+    :else (do (message! "No property found!"))))
 
 (defn file-extension
   [path]
@@ -104,6 +105,7 @@
         (let [{:keys [exit out]} ($ #js ["gpg -d " (fs/readFileSync passfile)])]
           (when (zero? exit) (str/trim out))))
       (error-and-exit! 1 (format "Passfile does not exist: %s" filename)))))
+
 
 (defn get-password [unix-pass-password-prefix username]
   (or
@@ -145,6 +147,12 @@
        (not (.endsWith dir "/")) (str "/")))
    (:juxt.site.alpha.unix-pass/password-prefix config)))
 
+(defn load-json [data] ;; add optional keys keywordization
+  (-> data
+      ;; fs/readFileSync
+      js/JSON.parse
+      (js->clj :keywordize-keys true)))
+
 (defn get-token
   "Request a token"
   [opts]
@@ -166,7 +174,7 @@
     (message! "Get token from" (format "%s/_site/token" base-uri))
 
     (let [{:keys [status headers body]}
-          (curl/post
+          (axios/post
            (format "%s/_site/token" base-uri)
            {:headers {"content-type" "application/x-www-form-urlencoded"}
             :basic-auth [username (or password
@@ -183,18 +191,20 @@
 
         (= status 200)
         (let [f (local-token-file)
-              data (json/decode body)
-              expires (java.util.Date.
-                       (+ (.getTime (java.util.Date.))
+              data (js->clj (js/JSON.parse body))
+              expires (js/Date.
+                       (+ (.getTime (js/Date.))
                           (* (get data "expires_in") 1000)))
 
               data (-> data
                        (assoc "username" username)
+
+                       ;; https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString
                        (assoc "expires" (.format java.time.format.DateTimeFormatter/ISO_INSTANT (.toInstant expires))))]
 
           (message! (format "Token expires in %s seconds" (get data "expires_in")))
           (message! (format "Storing token in %s" f))
-          (spit f (json/encode data {:pretty true}))
+          (spit f (clj->js data {:pretty true}))
           (when curl
             (message! (format "Storing curl config in %s" curl))
             (spit curl (format "-H \"Authorization: Bearer %s\"\n" (get data "access_token")))))
@@ -202,6 +212,20 @@
         :else
         (do
           (println "Server response:" status (str/trim body)))))))
+
+
+;; TODO: WIP
+(defn load-token []
+  "Load token from local cache"
+  (let [f (local-token-file)
+        _ (when-not (fs/existsSync f)
+            (error-and-exit! 1 "Please request a token with the 'get-token' subcommand"))
+        {access-token "access_token" expires "expires" :as token}
+        (load-json (slurp f))]
+
+    (if (.isBefore (java.time.Instant/parse expires) (java.time.Instant/now))
+      (error-and-exit! 1 (format "Access token has expired. Request a new token with %ssite get-token%s" ansi/cyan-font ansi/reset-font))
+      token)))
 
 (defn check-token []
   )
