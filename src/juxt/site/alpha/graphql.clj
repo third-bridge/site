@@ -31,7 +31,10 @@
   {"object-id" (:xt/id object-value)
    "args" argument-values
    "type-k" type-k
-   "username" (::pass/username subject)})
+   "username" (::pass/username subject)
+
+   ;; for legacy support only
+   "type" type-k})
 
 (defn field->type
   [field]
