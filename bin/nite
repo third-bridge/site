@@ -20,11 +20,12 @@
 
             ["axios$default" :as axios]
             ["zx" :refer [$ chalk]]
-            ["console$log" :as log]
             [promesa.core :as p]
+            ["console$log" :as log]
             ["fs" :as fs]
             ["os" :as os]
             ["util" :refer [format]]
+            ["path" :as path]
             ))
 
 (def ^:dynamic *silent* nil)
@@ -43,6 +44,10 @@
   (let [js-p (.-env js/process)]
     (into {} (for [k (js-keys js-p)]
                [k (aget js-p k)]))))
+
+(comment
+  env
+  )
 
 (defn error! [& msg]
   (when-not *silent*
@@ -94,7 +99,6 @@
     js/process.env.SITE_BASE_URI  ;; or (get-env "SITE_BASE_URI")
     (assoc :juxt.site.alpha/base-uri js/process.env.SITE_BASE_URI))) ;; or (get-env "SITE_BASE_URI")
 
-
 ;; TODO: Test if it works
 (defn get-password-from-unix-pass [unix-pass-password-prefix username]
   (let [filename (str unix-pass-password-prefix username)
@@ -113,13 +117,12 @@
    ;; TODO: Try other strategies, like pinentry
    (error-and-exit! 1 "Failed to get password for" username)))
 
-
-;; (fs.existsSync (fs.opendirSync (str (os.homedir) "/.local/share/site")))
-;; TODO:
+;; TODO: you probably need (js->clj (js/JSON.parse f)) at the end
 (defn local-token-file []
-  (let [dir (fs.readFileSync (str (os.homedir) "/.local/share/site"))]
-    (when-not (.exists dir)
-      (when-not (.mkdirs dir)
+  (let [dir (str (os.homedir) "/.local/share/site")]
+    (when-not (fs/existsSync dir)
+      (fs/mkdirSync dir)
+      (when-not (fs/existsSync dir)
         (error-and-exit! 1 (str "Failed to make directory: " dir))))
     (fs.readFileSync (str dir "/access-token.json"))))
 
@@ -198,97 +201,893 @@
 
               data (-> data
                        (assoc "username" username)
-
-                       ;; https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString
-                       (assoc "expires" (.format java.time.format.DateTimeFormatter/ISO_INSTANT (.toInstant expires))))]
+                       (assoc "expires" (js/Date. expires)))]
 
           (message! (format "Token expires in %s seconds" (get data "expires_in")))
           (message! (format "Storing token in %s" f))
-          (spit f (clj->js data {:pretty true}))
+          (fs/writeFileSync f (clj->js data {:pretty true}))
           (when curl
             (message! (format "Storing curl config in %s" curl))
-            (spit curl (format "-H \"Authorization: Bearer %s\"\n" (get data "access_token")))))
+            (fs/writeFileSync curl (format "-H \"Authorization: Bearer %s\"\n" (get data "access_token")))))
 
         :else
         (do
           (println "Server response:" status (str/trim body)))))))
 
-
-;; TODO: WIP
 (defn load-token []
   "Load token from local cache"
   (let [f (local-token-file)
         _ (when-not (fs/existsSync f)
             (error-and-exit! 1 "Please request a token with the 'get-token' subcommand"))
         {access-token "access_token" expires "expires" :as token}
-        (load-json (slurp f))]
+        (js->clj (js/JSON.parse (slurp f)))]
 
-    (if (.isBefore (java.time.Instant/parse expires) (java.time.Instant/now))
-      (error-and-exit! 1 (format "Access token has expired. Request a new token with %ssite get-token%s" ansi/cyan-font ansi/reset-font))
+    (if (< (js/Date. expires) (js/Date.))
+      (error-and-exit! 1 "Access token has expired. Request a new token with " (chalk/cyan "site get-token"))
       token)))
 
-(defn check-token []
+;; TODO: To remove
+;; site: Unix pass prefix: site/local/
+;; site: Get token from http://localhost:2021/_site/token
+;; ISO_INSTANT:  2022-07-11T13:54:03.217Z
+;; EXPIRES:  #inst "2022-07-11T13:54:03.217-00:00"
+;; site: Token expires in 3600 seconds
+;; site: Storing token in /home/jaw/.local/share/site/access-token.json
+
+
+
+;; (p/let [f (nbb.core/load-file "bin/testing-json.json")]
+;;   (log f))
+
+(defn check-token
+  "Check the validity of the locally cached token"
+  [_]
+  (let [local-token-file (local-token-file)
+        _ (when-not (fs/existsSync local-token-file)
+            (error-and-exit! 1 (str "Access token does not exist. Request a token with " (chalk/cyan "site get-token"))))
+
+        token (-> local-token-file slurp js/JSON.parse js->clj)
+        expires (get token "expires")
+
+        _ (when (< (js/Date. expires) (js/Date.))
+            (error-and-exit! 1 "Access token has expired"))
+
+        mins-left (/ (- (js/Date.) (js/Date. expires))
+                     ;; to minutes
+                     (* 60 1000))
+        ]
+
+    (if (> mins-left 5)
+      (message! (format "Access token expires in %d minutes" mins-left))
+      (error-and-exit! 2 (format "Access token expires in %d seconds and should be refreshed"
+                                 (/ (- (js/Date.) (js/Date. expires)) 1000))))))
+
+(defn clear-token
+  "Clear the token to end the session"
+  [_]
+  (if (.delete (local-token-file))
+    (message! "Token deleted")
+    (when (fs/existsSync (local-token-file))
+      (error! "Failed to delete token"))))
+
+(def j "[ {
+  \"juxt.site.alpha/type\" : \"User\",
+  \"juxt.pass.alpha/username\" : \"admin\",
+  \"name\" : \"Administrator\",
+  \"xt/id\" : \"http://localhost:2021/_site/users/admin\"
+}, {
+  \"juxt.site.alpha/type\" : \"User\",
+  \"juxt.pass.alpha/username\" : \"jaw\",
+  \"name\" : \"User\",
+  \"xt/id\" : \"http://localhost:2021/_site/users/jaw\"
+} ]")
+
+(-> j
+    js/JSON.parse
+    (js->clj :keywordize-keys true)
+    ;; (clj->js {:pretty true})
+    )
+
+;; ({:juxt.site.alpha/type "User",
+;;   :juxt.pass.alpha/username "admin",
+;;   :name "Administrator",
+;;   :xt/id "http://localhost:2021/_site/users/admin"}
+;;  {:juxt.site.alpha/type "User",
+;;   :juxt.pass.alpha/username "jaw",
+;;   :name "User",
+;;   :xt/id "http://localhost:2021/_site/users/jaw"})
+
+(defn reset-password
+  "Reset a user's password"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri username password]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)
+        password-prefix (get-password-prefix)]
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI required"))
+    (when-not username (error-and-usage! "User required" opts))
+
+    (let [password (cond
+                     password password
+                     password-prefix (get-password password-prefix username))
+
+          _ (when-not password
+              (error-and-exit! 1 "No password to set"))
+
+          {:keys [status headers body]}
+          (axios/put
+           (format "%s/_site/users/%s/password" base-uri username)
+           {:headers {"authorization" (format "Bearer %s" access-token)
+                      "content-type" "application/json"}
+            :body (clj->js {"type" "Password"
+                            "user" (format "%s/_site/users/%s" base-uri username)
+                            "password" password})
+            :throw false})]
+      (cond
+        (= status 401)
+        (error-and-exit! 1 "Server response: " status " " (str/trim body))
+
+        (= (quot status 100) 2)
+        (message! "Password reset for" username)
+
+        :else
+        (do
+          (error! "Server response: " status " " (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(log (clj->js {:name "jacek" :age 22}))
+
+(defn put-user
+  "Create or update a user"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri username password name email]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)]
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not username (error-and-usage! "Username required" opts))
+    (when-not name (error-and-usage! "Name required" opts))
+    (when-not email (error-and-usage! "Email required" opts))
+
+    (let [{:keys [status headers body]}
+          (axios/put
+           (format "%s/_site/users/%s" base-uri username)
+           {:headers {"authorization" (format "Bearer %s" access-token)
+                      "content-type" "application/json"}
+            :body (clj->js {"type" "User"
+                            ;;"username" username
+                            "name" name
+                            "email" email})
+            :throw false})]
+      (cond
+        (= status 401)
+        (do
+          (error! "Server response: " status " " (str/trim body))
+          (message! "Is your access-token valid?")
+          (message! "To get a new access token, use the get-token sub-command")
+          (message! "Request id: " (get headers "site-request-id")))
+
+        (= status 201)
+        (message! "User created:" (format "%s (Welcome %s!)" username name))
+
+        (= status 204)
+        (message! "User updated:" username)
+
+        :else
+        (do
+          (error! "Server response: " status " " (str/trim body))
+          (message! "Request id:" (get headers "site-request-id"))))
+
+      (when (#{201 204} status) (reset-password opts)))))
+
+(defn put-role
+  "Create or update a role"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri role description]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)]
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not role (error-and-usage! "Role required" opts))
+
+    (let [{:keys [status headers body]}
+          (axios/put
+           (format "%s/_site/roles/%s" base-uri role)
+           {:headers {"authorization" (format "Bearer %s" access-token)
+                      "content-type" "application/json"}
+            :body (clj->js
+                   (cond-> {"type" "Role"
+                            "name" role}
+                     description (assoc "description" description)))
+
+            :throw false})]
+      (cond
+        (= status 401)
+        (do
+          (error! "Server response: " status " " (str/trim body))
+          (message! "Is your access-token valid?")
+          (message! "To get a new access token, use the get-token sub-command")
+          (message! "Request id:" (get headers "site-request-id")))
+
+        (= status 201)
+        (message! "Role created:" role)
+
+        (= status 204)
+        (message! "Role updated:" role)
+
+        :else
+        (do
+          (error! "Server response: " status " " (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(defn list-roles
+  "List roles"
+  [opts]
+  (let [{:keys [base-uri]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)]
+    (let [{access-token "access_token"} (load-token)
+          {:keys [status headers body]}
+          (axios/get
+           (format "%s/_site/roles/" base-uri)
+           {:headers {"authorization" (format "Bearer %s" access-token)
+                      "accept" "application/json"}
+            :throw false})]
+      (cond
+        (= (quot status 100) 2)
+        (println (json/encode (json/decode body) {:pretty true}))
+
+        :else
+        (do
+          (error! "Server response: " status " " (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(defn assign-role
+  "Assign a role to a user"
+  [opts]
+  (let [{access-token "access_token" assigner "username"} (load-token)
+        {:keys [base-uri username role justification]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)]
+
+    (when-not username (error-and-usage! "Username required" opts))
+    (when-not role (error-and-usage! "Role required" opts))
+
+    (let [{:keys [status headers body]}
+          (axios/put
+           (format "%s/_site/roles/%s/users/%s" base-uri role username)
+           {:headers {"authorization" (format "Bearer %s" access-token)
+                      "content-type" "application/json"}
+            :body (clj->js
+                   (cond-> {"type" "UserRoleMapping"
+                            "assignee" (format "%s/_site/users/%s" base-uri username)
+                            "assigner" (format "%s/_site/users/%s" base-uri assigner)
+                            "role" (format "%s/_site/roles/%s" base-uri role)}
+                     justification (assoc "businessJustification" justification)))
+            :throw false})]
+      (cond
+        (= status 401)
+        (do
+          (error! "Server response: " status " " (str/trim body))
+          (message! "Is your access-token valid?")
+          (message! "To get a new access token, use the get-token sub-command")
+          (message! "Request id:" (get headers "site-request-id")))
+
+        (= status 201)
+        (message! "Assignment created:" username "assigned role of" role)
+
+        (= status 204)
+        (message! "Assignment updated:" username "re-assigned role of" role)
+
+        :else
+        (do
+          (error! "Server response:" status (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(defn put-rule
+  "Put a rule"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri name rule]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)]
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not name (error-and-usage! "Name required" opts))
+    (when-not rule (error-and-usage! "Rule required" opts))
+    (when-not (.isFile (fs/lstatSync rule)) (error-and-exit! 1 "Rule file must be a file"))
+
+    (let [{:keys [status headers body]}
+          (axios/put
+           (format "%s/_site/rules/%s" base-uri name)
+           {:headers {"authorization" (format "Bearer %s" access-token)
+                      "content-type" "application/json"}
+            :body (cond-> (slurp (io/file rule))
+                    :always (str/replace "{{base-uri}}" base-uri)
+                    (re-matches #".*\.edn$" rule) edn-to-json)
+            :throw false})]
+      (cond
+        (= status 201)
+        (message! (format "Rule created: %s" (get headers "location")))
+
+        (= status 204)
+        (message! (format "Rule updated: %s" (get headers "location")))
+
+        :else
+        (do
+          (error! "Server response:" status (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(defn put-trigger
+  "Put a trigger"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri name trigger]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)]
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not name (error-and-usage! "Name required" opts))
+    (when-not trigger (error-and-usage! "Trigger file required" opts))
+    (when-not (.isFile (fs/lstatSync trigger)) (error-and-exit! 1 "Trigger file must be a file"))
+
+    (let [{:keys [status headers body]}
+          (axios/put
+           (format "%s/_site/triggers/%s" base-uri name)
+           {:headers {"authorization" (format "Bearer %s" access-token)
+                      "content-type" "application/json"}
+            :body (cond-> (slurp (io/file trigger))
+                    base-uri (str/replace "{{base-uri}}" base-uri)
+                    (re-matches #".*\.edn$" trigger)
+                    edn-to-json)
+            :throw false})]
+      (cond
+        (= status 201)
+        (message! (format "Trigger created: %s" (get headers "location")))
+
+        (= status 204)
+        (message! (format "Trigger updated: %s" (get headers "location")))
+
+        :else
+        (do
+          (error! "Server response:" status (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(defn put-graphql
+  "Put a GraphQL document"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri file path]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)
+        file (-> file io/file)] ;; TODO
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not file (error-and-usage! "GraphQL schema file required" opts))
+    (when-not (.isFile (fs/lstatSync file)) (error-and-exit! 1 "GraphQL schema file must be a file"))
+    (when-not path (error-and-usage! "Path required" opts))
+
+    (let [{:keys [status headers body]}
+          (axios/put
+           (format "%s%s" base-uri path)
+           {:headers {"authorization" (format "Bearer %s" access-token)
+                      "content-type" "application/graphql"
+                      "accept" "text/plain"}
+            :body (cond-> (slurp file)
+                    base-uri (str/replace "{{base-uri}}" base-uri))
+            :throw false})]
+      (cond
+        (#{201 204} status)
+        (message! (format "GraphQL document uploaded: %s%s %s->%s %s%s"
+                          ansi/blue-font (.getName file) ansi/reset-font
+                          ansi/blue-font path ansi/reset-font))
+
+        :else
+        (do
+          (error! "Server response:" status (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(defn post-graphql
+  "Post a GraphQL schema"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri file path]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)]
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not file (error-and-usage! "GraphQL schema file required" opts))
+    (when-not (.isFile (fs/lstatSync file)) (error-and-exit! 1 "GraphQL schema file must be a file"))
+    (when-not path (error-and-usage! "Path required" opts))
+
+    (let [{:keys [status headers body]}
+          (axios/post
+           (format "%s%s" base-uri path)
+           {:headers {"authorization" (format "Bearer %s" access-token)
+                      "content-type" "application/json"
+                      "accept" "text/plain"}
+            :body (clj->js {"query" (cond-> (fs/existsSync file)
+                                      base-uri (str/replace "{{base-uri}}" base-uri))})
+            :throw false})]
+      (cond
+        (= status 200)
+        (do
+          (message! (format "GraphQL posted"))
+          (message! (str/trim body)))
+
+        :else
+        (do
+          (error! "Server response:" status (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(defn put-redirect
+  "Put a redirect"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri resource location]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)]
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not resource (error-and-usage! "Resource required" opts))
+    (when-not location (error-and-usage! "Location required" opts))
+
+    (let [{:keys [status headers body]}
+          (axios/post
+           (format "%s/_site/redirects/" base-uri)
+           {:headers {"authorization" (format "Bearer %s" access-token)
+                      "content-type" "application/json"}
+            :body (clj->js (cond-> {"type" "Redirect"
+                                    "resource" (str base-uri resource)
+                                    "location" (str base-uri location)}))
+            :throw false})]
+      (cond
+        (= status 401)
+        (do
+          (error! "Server response:" status (str/trim body))
+          (message! "Is your access-token valid?")
+          (message! "To get a new access token, use the get-token sub-command")
+          (message! "Request id:" (get headers "site-request-id")))
+
+        (= status 201)
+        (message! (format "Redirect created"))
+
+        (= status 204)
+        (message! (format "Redirect updated"))
+
+        :else
+        (do
+          (error! "Server response:" status (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(defn put-api
+  "Upload and install an API"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri name openapi]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}} (:options opts)
+
+        _ (when-not name (error-and-usage! "API name required" opts))
+        _ (when-not (re-matches #"[a-z]{2,}" name)
+            (error-and-usage! "Name must match pattern: [a-z]{2,}" opts))
+
+        _ (when-not openapi (error-and-usage! "OpenAPI file required" opts))
+        _ (when-not (fs/existsSync openapi) (error-and-exit! 1 "OpenAPI file not found"))
+        _ (when-not (.isFile (fs/lstatSync openapi)) (error-and-exit! 1 "OpenAPI argument is not a file"))
+
+        openapi-doc (edn/read-string
+                     {:readers {'juxt.site.alpha/as-str pr-str}}
+                     (-> (slurp (io/file openapi))
+                         (str/replace "{{base-uri}}" base-uri)))
+
+        {:keys [status headers body]}
+        (axios/put
+         (format "%s/_site/apis/%s/openapi.json" base-uri name)
+         {:headers {"authorization" (format "Bearer %s" access-token)
+                    "content-type" "application/vnd.oai.openapi+json;version=3.0.2"}
+          :body (clj->js {"type" "OpenAPI"
+                          "openapi" openapi-doc})
+          :throw true})]
+    (cond
+      (#{201 204} status)
+      (message! (format "API %s: %s (version %s)"
+                        (case status 201 "installed" 204 "updated")
+                        (get-in openapi-doc [:info :title])
+                        (get-in openapi-doc [:info :version])))
+
+      :else
+      (do
+        (error! "Server response:" status (str/trim body))
+        (message! "Request id:" (get headers "site-request-id"))))))
+
+(defn sh [& args]
+  (let [{:keys [exit out err]} (apply sh/sh args)]
+    (when (pos? exit)
+      (error! err))))
+
+(defn create-tmp-dir []
+  (let [tmpdir (Files/createTempDirectory
+                "site-" (into-array FileAttribute []))]
+    (message! "Created tmp dir:" (.toString tmpdir))
+    tmpdir))
+
+(defn infer-content-type
+  [extension]
+  (case extension
+    ("htm" "html") "text/html;charset=utf-8"
+    "js" "text/javascript"
+    ("map" "json") "application/json"
+    "edn" "application/edn"
+    "csv" "text/csv"
+    "png" "image/png"
+    ("jpg" "jpeg") "image/jpeg"
+    "svg" "image/svg+xml"
+    "ico" "image/x-icon"
+    ("gif" "webp" "bmp") (str "image/" extension)
+    "css" "text/css; charset=utf-8"
+    "txt" "text/plain"
+    ("woff" "woff2" "otf" "ttf") (str "font/" extension)
+    ("mp4" "mpeg" "webm") (str "video/" extension)
+    ("opus" "wav" "aac") (str "audio/" extension)
+    "mp3" "audio/mpeg"
+    nil))
+
+(defn content-type [filename]
+  (when-let [suffix (file-extension filename)]
+    (or
+     (infer-content-type suffix)
+     (do
+       (error! "Failed to determine content-type for"
+               filename (format "(suffix=%s)" suffix)
+               " Falling back to application/octet-stream")
+       "application/octet-stream"))))
+
+(defn upload-file* [access-token base-uri file type encoding language path opts]
+  (assert (instance? java.io.File file))
+  (when-not (.exists file)
+    (error-and-exit! 1 (format "Cannot upload file that does not exist: %s" (str file))))
+
+  (message! "Uploading file to" (str base-uri path))
+
+  (let [variant-of (some-> (get-in opts [:options :resource])
+                           (str/replace "{{base-uri}}" base-uri))
+        classification (get-in opts [:options :classification])
+        dialect (get-in opts [:options :dialect])
+        {:keys [status headers body]}
+        (axios/put
+         (str base-uri path)
+         {:headers (cond-> {"authorization" (format "Bearer %s" access-token)
+                            ;; want errors in text/plain, will accept json
+                            "accept" "text/plain,application/json;q=0.8"
+                            "content-type" type}
+                     encoding (assoc "content-encoding" encoding)
+                     language (assoc "content-language" language)
+                     variant-of (assoc "site-variant-of" variant-of)
+                     classification (assoc "site-classification" classification)
+                     dialect (assoc "site-template-dialect" dialect))
+          :body file
+          :throw false})]
+
+    (cond
+      (= status 400)
+      (do
+        (error! "Server response:" status)
+        (when body (println (str/trim body)))
+        (message! "Request id:" (get headers "site-request-id")))
+
+      (= status 401)
+      (do
+        (error! "Server response:" status (str/trim body))
+        (message! "Is your access-token valid?")
+        (message! "To get a new access token, use the get-token sub-command")
+        (message! "Request id:" (get headers "site-request-id")))
+
+      (= status 200)
+      (do
+        (message! (format "Asset uploaded: %s" path))
+        (message! "Server response:" status (str/trim body)))
+
+      (= status 201)
+      (message! (format "Asset created: %s" path))
+
+      (= status 204)
+      (message! (format "Asset updated: %s" path))
+
+      :else
+      (do
+        (error! "Server response:" status (str/trim body))
+        (message! "Request id:" (get headers "site-request-id"))))))
+
+(defn put-asset
+  "Upload an asset"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri file type encoding language path]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)
+        type (or type (when file (content-type file)))]
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not file (error-and-usage! "Asset file required" opts))
+    (when-not type (error-and-usage! "Content-type required" opts))
+    (when-not path (error-and-usage! "Path required" opts))
+
+    (upload-file*
+     access-token
+     base-uri
+     (io/file (str/replace file "{{base-uri}}" base-uri))
+     type encoding language path opts)))
+
+(defn put-template
+  "Upload an template"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri file type encoding language path dialect]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)
+        type (or type (when file (content-type (.getName file))))]
+
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not file (error-and-usage! "Asset file required" opts))
+    (when-not type (error-and-usage! "Content-type required" opts))
+    (when-not path (error-and-usage! "Path required" opts))
+    (when-not dialect (error-and-usage! "Dialect required" opts))
+
+    (upload-file*
+     access-token
+     base-uri
+     (io/file (str/replace file "{{base-uri}}" base-uri))
+     type encoding language path opts)))
+
+(defn post-resources
+  "Post one or more resources"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri file]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}} (:options opts)]
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not (fs/existsSync file) (error-and-exit! 1 (str "File not found: " file)))
+
+    (let [{:keys [status headers body]}
+          (axios/post
+           (str base-uri "/_site/resources/")
+           {:headers (cond-> {"authorization" (format "Bearer %s" access-token)
+                              "content-type" "application/edn"})
+            :body (cond-> (slurp (io/file file))
+                    :always (str/replace "{{base-uri}}" base-uri))
+            :throw false})]
+      (message! (format "Posting resources from %s" (io/file file)))
+      (case status
+        (201 204)
+        (message! (format "Resource %s: %s"
+                          (case status 201 "created" 204 "updated")
+                          (get headers "location")))
+
+        207
+        (let [results (edn/read-string body)
+              errors (filter #(contains? % :error) results)]
+          (dorun
+               (map
+                (fn [ix r]
+                  (cond
+                    (< (:status r) 400)
+                    (println (format "%s%d: %s%s" ansi/green-font ix r ansi/reset-font))
+                    :else
+                    (println (format "%s%d: %s%s" ansi/red-font ix r ansi/reset-font))))
+                (range) results)))
+        (do
+          (error! "Server response:" status (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(defn post
+  "Post a resource"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri path url type encoding language data file]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}} (:options opts)]
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+
+    (when-not (or path url)
+      (error-and-exit! 1 "PATH or URI required"))
+
+    (when (and path url)
+      (error-and-exit! 1 "Must specify one of PATH and URI"))
+
+    (when (and data file)
+      (error-and-exit! 1 "Must specify one of DATA and FILE"))
+
+    (when (not (fs/existsSync file))
+      (error-and-exit! 1 (str "File not found: " file)))
+
+    (let [url (if path (str base-uri path) (str/replace url "{{base-uri}}" base-uri))
+
+          type (or
+                type
+                (when file (content-type (.getName file)))
+                (error-and-exit! 1 "Content-type must be specified or deducible from the file name"))
+
+          {:keys [status headers body]}
+          (axios/post
+           url
+           {:headers (cond-> {"authorization" (format "Bearer %s" access-token)
+                              "content-type" type}
+                       encoding (assoc "content-encoding" encoding)
+                       language (assoc "content-language" language))
+            :body (or data (slurp (io/file file)))
+            :throw false})]
+      (case status
+        200
+        (do
+          (message! (format "OK: %s" status))
+          (println (str/trim body)))
+
+        (201 204)
+        (message! (format "Resource %s: %s"
+                          (case status 201 "created" 204 "updated")
+                          (get headers "location")))
+        (do
+          (error-and-exit! 1 "Server response:" status (str/trim body))
+          ;;(message! "Request id:" (get headers "site-request-id"))
+          )))))
+
+(defn post-json
+  "Post JSON to a resource"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri file url]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}} (:options opts)]
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not file (error-and-exit! 1 "File required"))
+    (when-not (fs/existsSync file) (error-and-exit! 1 (str "File not found: " file)))
+    (when-not url (error-and-exit! 1 "URL is required"))
+
+    (let [url (str/replace url "{{base-uri}}" base-uri)
+          {:keys [status headers body]}
+          (axios/post
+           url
+           {:headers (cond-> {"authorization" (format "Bearer %s" access-token)
+                              "content-type" "application/json"})
+            :body (cond-> (slurp (io/file file))
+                    :always (str/replace "{{base-uri}}" base-uri)
+                    (.endsWith file ".edn") (edn-to-json))
+            :throw false})]
+      (case status
+        (201 204)
+        (message! (format "Resource %s: %s"
+                          (case status 201 "created" 204 "updated")
+                          (get headers "location")))
+        (do
+          (error! "Server response:" status (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+(fs/existsSync "hello_world.txt")
+
+(defn put-json
+  "PUT JSON to a resource"
+  [opts]
+  (let [{access-token "access_token"} (load-token)
+        {:keys [base-uri file url]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}} (:options opts)]
+    (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+    (when-not file (error-and-exit! 1 "File required"))
+    (when-not (fs/existsSync file) (error-and-exit! 1 (str "File not found: " file)))
+
+    (let [embedded-url (when (.endsWith file ".edn")
+                         (:xt/id (edn/read-string (slurp file))))
+
+          _ (when (and embedded-url url) (error-and-exit! 1 "Should not specify URL both in the document and as an option"))
+
+          url (or embedded-url url)
+
+          _ (when-not url (error-and-exit! 1 "Failed to specify identity (URI), either in the document (xt/id) or as an option"))
+
+          url (str/replace url "{{base-uri}}" base-uri)
+          {:keys [status headers body]}
+          (axios/put
+           url
+           {:headers (cond-> {"authorization" (format "Bearer %s" access-token)
+                              "content-type" "application/json"})
+            :body (cond-> (slurp (io/file file))
+                    :always (str/replace "{{base-uri}}" base-uri)
+                    (.endsWith file ".edn") (edn-to-json))
+            :throw false})]
+      (case status
+        (201 204)
+        (message! (format "Resource %s: %s"
+                          (case status 201 "created" 204 "updated")
+                          (get headers "location")))
+        (do
+          (error! "Server response:" status (str/trim body))
+          (message! "Request id:" (get headers "site-request-id")))))))
+
+
+
+(comment
+  (path.dirname "/home/jaw/work/site-3/bin/hello_world.txt")
+  (path.resolve "hello_world.txt")
+
+  ;; https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURI
   )
 
-(defn clear-token []
-  )
+(defn put-static-site
+  "Given a path and a directory containing at least an index.html file, serves the
+  files in the directory using the given path as the root"
+  [opts]
+  (try
+    (let [{access-token "access_token"} (load-token)
+          {:keys [base-uri directory path spa]
+           :or {base-uri (:juxt.site.alpha/base-uri config)}} (:options opts)]
+      (message! "putting site" base-uri directory path)
+      (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
+      (when-not (fs/existsSync (str directory "/index.html"))
+        (error-and-exit! 1 (str "No index.html found in directory: " directory)))
+      (let [base (str (.getPath (.toURI (io/file (System/getProperty "user.dir")))) directory)
+            relative-path (fn [file] (str path (str/replace-first (.getPath (.toURI file)) base "")))
+            put-file
+            (fn [file]
+              (let [destination (str base-uri "/" (relative-path file))
+                    _ (message! (str "Putting file " (.getAbsolutePath file) " to path " destination))
+                    {:keys [status headers body]}
+                    (axios/put
+                     destination
+                     {:headers (merge
+                                {"authorization" (format "Bearer %s" access-token)
+                                 "content-type" (content-type (.getName file))}
+                                (prn (relative-path file))
+                                (when (and (str/includes? (relative-path file) "index.html")
+                                           spa)
+                                  (prn "adding headers")
+                                  {"site-type" "AppRoutes"
+                                   "site-pattern" (str base-uri "/" path "/app/.*")}))
+                      :body (io/file file)
+                      :throw false})]
+                (case status
+                  (201 204)
+                  (message! (format "Resource %s: %s"
+                                    (case status 201 "created" 204 "updated")
+                                    headers))
 
-(defn list-users []
-  )
+                  207
+                  (let [results (edn/read-string body)
+                        errors (filter #(contains? % :error) results)]
+                    (if (pos? (count errors))
+                      (do
+                        (error! (format "Not all resources were accepted:"))
+                        (dorun (map (fn [ix r]
+                                      (cond
+                                        (< (:status r) 400)
+                                        (println (format "%s%d: %s%s" ansi/green-font ix r ansi/reset-font))
+                                        :else
+                                        (println (format "%s%d: %s%s" ansi/red-font ix r ansi/reset-font))))
+                                    (range) results)))
+                      (message! (format "Resources all posted OK"))))
 
-(defn put-user []
-  )
+                  (do
+                    (error! "Server response:" status (str/trim body))
+                    (message! "Request id:" (get headers "site-request-id"))))))]
+        (some->> directory
+                 io/file
+                 file-seq
+                 (filter #(.isFile %))
+                 (mapv put-file))
+        (message! "Site successfully deployed. Visit "
+                  (str base-uri "/" (-> directory
+                                        (str "/index.html")
+                                        io/file
+                                        relative-path)))))
+    (catch Exception e (str "error putting static site " e))))
 
-(defn reset-password []
-  )
 
-(defn put-role []
-  )
 
-(defn list-roles []
-  )
-
-(defn assign-role []
-  )
-
-(defn put-rule []
-  )
-
-(defn put-trigger []
-  )
-
-(defn put-graphql []
-  )
-
-(defn post-graphql []
-  )
-
-(defn put-redirect []
-  )
-
-(defn put-api []
-  )
-
-(defn put-asset []
-  )
-
-(defn put-template []
-  )
-
-(defn post-resources []
-  )
-
-(defn post []
-  )
-
-(defn post-json []
-  )
-
-(defn put-json []
-  )
-
-(defn put-static-site []
-  )
+(defn debugf
+  "Write a debug message to the console, but only if *debug* is true."
+  [& args]
+  (when *debug*
+    (println "DEBUG:" (apply format args))))
 
 (def global-cli-options
   [["-b" "--base-uri BASE-URI" "The Base-URI of the server you are targetting"]
