@@ -81,25 +81,17 @@
     js/process.env.SITE_BASE_URI  ;; or (get-env "SITE_BASE_URI")
     (assoc :juxt.site.alpha/base-uri js/process.env.SITE_BASE_URI))) ;; or (get-env "SITE_BASE_URI")
 
-(defn local-token-file []
-  (let [dir (str (os.homedir) "/.local/share/site")]
-    (when-not (fs/existsSync dir)
-      (fs/mkdirSync dir)
-      (when-not (fs/existsSync dir)
-        (error-and-exit! 1 (str "Failed to make directory: " dir))))
-    (fs.readFileSync (str dir "/access-token.json"))))
-
-(defn load-token []
-  "Load token from local cache"
-  (let [f (local-token-file)
-        _ (when-not (fs/existsSync f)
-            (error-and-exit! 1 "Please request a token with the 'get-token' subcommand"))
-        {access-token "access_token" expires "expires" :as token}
-        (js->clj (js/JSON.parse (slurp f)))]
-
-    (if (< (js/Date. expires) (js/Date.))
-      (error-and-exit! 1 "Access token has expired. Request a new token with " (chalk/cyan "site get-token"))
-      token)))
+(def load-token
+  (let [token (-> os
+                  .homedir
+                  (str "/.local/share/site/access-token.json")
+                  fs/readFileSync
+                  js/JSON.parse
+                  (js->clj :keywordize-keys true)
+                  :access_token)]
+    (if token
+      token
+      (prn "Please get a new access-token to proceed"))))
 
 (defn show-config
   "Show configuration"
@@ -244,24 +236,30 @@
           (error! "Server response:" status (str/trim body))
           (message! "Request id:" (get headers "site-request-id")))))))))
 
+;; mopts
+
 (defn put-static-site
   "Given a path and a directory containing at least an index.html file, serves the
   files in the directory using the given path as the root"
   [opts]
-  (try
+  ;; (try
     (let [{access-token "access_token"} (load-token)
+          _ (prn "other debug")
+          _ (prn access-token)
           {:keys [base-uri directory path spa]
            :or {base-uri (:juxt.site.alpha/base-uri config)}} (:options opts)]
       (message! "putting site" base-uri directory path)
       (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
       (when-not (fs/existsSync (str directory "/index.html"))
         (error-and-exit! 1 (str "No index.html found in directory: " directory)))
-      (let [base (str (.getPath (.toURI (io/file (System/getProperty "user.dir")))) directory)
-            relative-path (fn [file] (str path (str/replace-first (.getPath (.toURI file)) base "")))
+      (let [base (path.resolve directory)
+            ;; relative-path (fn [file] (str path (str/replace-first (.getPath (.toURI file)) base "")))
+            relative-path (fn [file] (str path (-> file path.basename (str/replace-first base ""))))
+            _ (prn "STATIC SITE2:")
             put-file
             (fn [file]
               (let [destination (str base-uri "/" (relative-path file))
-                    _ (message! (str "Putting file " (.getAbsolutePath file) " to path " destination))
+                    _ (message! (str "Putting file " (path.resolve file) " to path " destination))
                     {:keys [status headers body]}
                     (axios/put
                      destination
@@ -274,7 +272,7 @@
                                   (prn "adding headers")
                                   {"site-type" "AppRoutes"
                                    "site-pattern" (str base-uri "/" path "/app/.*")}))
-                      :body (io/file file)
+                      :body (fs/readFileSync file)
                       :throw false})]
                 (case status
                   (201 204)
@@ -287,7 +285,7 @@
                         errors (filter #(contains? % :error) results)]
                     (if (pos? (count errors))
                       (do
-                        (error! (format "Not all resources were accepted:"))
+                        (error! "Not all resources were accepted:")
                         (dorun (map (fn [ix r]
                                       (cond
                                         (< (:status r) 400)
@@ -301,16 +299,15 @@
                     (error! "Server response:" status (str/trim body))
                     (message! "Request id:" (get headers "site-request-id"))))))]
         (some->> directory
-                 io/file
-                 file-seq
-                 (filter #(.isFile %))
+                 fs/readdirSync
+                 (filter #(.isFile (fs/lstatSync %)))
                  (mapv put-file))
         (message! "Site successfully deployed. Visit "
                   (str base-uri "/" (-> directory
                                         (str "/index.html")
-                                        io/file
                                         relative-path)))))
-    (catch Exception e (str "error putting static site " e))))
+  ;; (catch js/Error e (str "error putting static site " e)))
+  )
 
 (def global-cli-options
   [["-b" "--base-uri BASE-URI" "The Base-URI of the server you are targetting"]
@@ -344,10 +341,42 @@
                    ["-spa" "--spa SPA" "If set the html file will be served at PATH/app/*"]]
      :delegate put-static-site}]])
 
+(defn print-summary [summary]
+  (do
+    (println (chalk/green.bold "site"))
+    (println)
+    (println "This is a resource management tool for Site.")
+    (println)
+    (println (chalk/white "Usage"))
+    (println)
+    (println "site <global-options> <subcommand> <subcommand-options>")
+    (println)
+    (println (chalk/white "Global options"))
+    (println summary)
+    (println)
+    (println (chalk/white "Environment variables"))
+    (println)
+    (println "SITE_BASE_URI \tSet the default Base-URI")
+    (println "SITE_PASS_DIR \tOverride where Unix pass passwords are located")
+    (println)
+    (println (chalk/white "Subcommands"))
+    (println)
+    (doseq [[command {:keys [description cli-options delegate]}] commands]
+      (apply
+       println
+       (remove nil? [command (chalk/yellow "(" description (when-not delegate " - coming soon!") ")")]))
+      (when-let [summary (:summary (parse-opts [] cli-options))]
+        (when-not (str/blank? (str/trim summary))
+          (println summary)))
+      (println))))
+
 (let [{:keys [options arguments summary errors]}
-      (parse-opts (next *command-line-args*)  global-cli-options :in-order true)
+      (parse-opts *command-line-args*  global-cli-options :in-order true)
+
       command (first arguments)
-      {:keys [cli-options delegate]} ((into {} commands) (first arguments))
+
+      {:keys [cli-options delegate]}
+      ((into {} commands) command)
 
       print-summary
       (fn []
@@ -381,7 +410,7 @@
 
   (cond
     (contains? options :help)
-    (print-summary)
+    (print-summary summary)
 
     errors
     (doseq [err errors]
@@ -404,7 +433,7 @@
     (println "Unknown command:" (first arguments))
 
     :else
-    (print-summary)))
+    (print-summary summary)))
 
 ;; Local Variables:
 ;; mode: clojurescript
