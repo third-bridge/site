@@ -339,36 +339,7 @@
      :cli-options [["-d" "--directory DIR" "Directory containing static site files"]
                    ["-p" "--path PATH" "Path the site will be available at. e.g -p mysite will make the site available at BASE_URI/mysite/index.html"]
                    ["-spa" "--spa SPA" "If set the html file will be served at PATH/app/*"]]
-     :delegate put-static-site}]])
-
-(defn print-summary [summary]
-  (do
-    (println (chalk/green.bold "site"))
-    (println)
-    (println "This is a resource management tool for Site.")
-    (println)
-    (println (chalk/white "Usage"))
-    (println)
-    (println "site <global-options> <subcommand> <subcommand-options>")
-    (println)
-    (println (chalk/white "Global options"))
-    (println summary)
-    (println)
-    (println (chalk/white "Environment variables"))
-    (println)
-    (println "SITE_BASE_URI \tSet the default Base-URI")
-    (println "SITE_PASS_DIR \tOverride where Unix pass passwords are located")
-    (println)
-    (println (chalk/white "Subcommands"))
-    (println)
-    (doseq [[command {:keys [description cli-options delegate]}] commands]
-      (apply
-       println
-       (remove nil? [command (chalk/yellow "(" description (when-not delegate " - coming soon!") ")")]))
-      (when-let [summary (:summary (parse-opts [] cli-options))]
-        (when-not (str/blank? (str/trim summary))
-          (println summary)))
-      (println))))
+     :delegate #'put-static-site}]])
 
 (let [{:keys [options arguments summary errors]}
       (parse-opts *command-line-args*  global-cli-options :in-order true)
@@ -410,7 +381,7 @@
 
   (cond
     (contains? options :help)
-    (print-summary summary)
+    (print-summary)
 
     errors
     (doseq [err errors]
@@ -433,7 +404,7 @@
     (println "Unknown command:" (first arguments))
 
     :else
-    (print-summary summary)))
+    (print-summary)))
 
 ;; Local Variables:
 ;; mode: clojurescript
