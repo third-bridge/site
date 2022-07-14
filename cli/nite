@@ -81,7 +81,7 @@
     js/process.env.SITE_BASE_URI  ;; or (get-env "SITE_BASE_URI")
     (assoc :juxt.site.alpha/base-uri js/process.env.SITE_BASE_URI))) ;; or (get-env "SITE_BASE_URI")
 
-(def load-token
+(defn load-token []
   (let [token (-> os
                   .homedir
                   (str "/.local/share/site/access-token.json")
@@ -339,10 +339,11 @@
      :cli-options [["-d" "--directory DIR" "Directory containing static site files"]
                    ["-p" "--path PATH" "Path the site will be available at. e.g -p mysite will make the site available at BASE_URI/mysite/index.html"]
                    ["-spa" "--spa SPA" "If set the html file will be served at PATH/app/*"]]
-     :delegate #'put-static-site}]])
+     :delegate put-static-site}]])
 
 (let [{:keys [options arguments summary errors]}
       (parse-opts *command-line-args*  global-cli-options :in-order true)
+
 
       command (first arguments)
 
