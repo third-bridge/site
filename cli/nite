@@ -33,17 +33,11 @@
 
 (defn message! [& msg]
   (when-not *silent*
-    (apply println (apply chalk/green "site:") msg)))
-
-(defn env-get [property]
-  (cond
-    (string? property) (get env property)
-    (keyword? property) (get env (name property))
-    :else (do (message! "No property found!"))))
+    (apply println (chalk/green "site:") msg)))
 
 (defn error! [& msg]
   (when-not *silent*
-    (apply println (apply chalk/red "fail:") msg)))
+    (apply println (chalk/red "fail:") msg)))
 
 (defn error-and-exit! [exit & msg]
   (apply error! msg)
@@ -54,6 +48,12 @@
   (println "Usage:")
   (println (:summary opts))
   (js/process.exit 1))
+
+(defn env-get [property]
+  (cond
+    (string? property) (get env property)
+    (keyword? property) (get env (name property))
+    :else (do (message! "No property found!"))))
 
 (def config-file
   (case (os.type)
@@ -236,13 +236,12 @@
           (error! "Server response:" status (str/trim body))
           (message! "Request id:" (get headers "site-request-id")))))))))
 
-;; mopts
 
 (defn put-static-site
   "Given a path and a directory containing at least an index.html file, serves the
   files in the directory using the given path as the root"
   [opts]
-  ;; (try
+  (try
     (let [{access-token "access_token"} (load-token)
           _ (prn "other debug")
           _ (prn access-token)
@@ -253,9 +252,7 @@
       (when-not (fs/existsSync (str directory "/index.html"))
         (error-and-exit! 1 (str "No index.html found in directory: " directory)))
       (let [base (path.resolve directory)
-            ;; relative-path (fn [file] (str path (str/replace-first (.getPath (.toURI file)) base "")))
             relative-path (fn [file] (str path (-> file path.basename (str/replace-first base ""))))
-            _ (prn "STATIC SITE2:")
             put-file
             (fn [file]
               (let [destination (str base-uri "/" (relative-path file))
@@ -306,8 +303,7 @@
                   (str base-uri "/" (-> directory
                                         (str "/index.html")
                                         relative-path)))))
-  ;; (catch js/Error e (str "error putting static site " e)))
-  )
+  (catch js/Error e (str "error putting static site " e))))
 
 (def global-cli-options
   [["-b" "--base-uri BASE-URI" "The Base-URI of the server you are targetting"]
