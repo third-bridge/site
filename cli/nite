@@ -106,19 +106,33 @@
   ([url body]
    (post url body {}))
   ([url body headers]
-   (.post instance
-          url
-          body
-          (j/update-in! instance [:defaults :headers] j/extend! (clj->js headers)))))
+   ;; response contains following keys:
+   ;; (:status :statusText :headers :config :request :data)
+   (p/let [resp (.post instance
+                       url
+                       body
+                       (j/update-in! instance
+                                     [:defaults :headers]
+                                     j/extend!
+                                     (clj->js headers)))
+           resp (->clj resp)]
+     resp)))
 
 (defn put
   ([url body]
    (put url body {}))
   ([url body headers]
-   (.put instance
-          url
-          body
-          (j/update-in! instance [:defaults :headers] j/extend! (clj->js headers)))))
+   ;; response contains following keys:
+   ;; (:status :statusText :headers :config :request :data)
+   (p/let [resp (.put instance
+                      url
+                      body
+                      (j/update-in! instance
+                                    [:defaults :headers]
+                                    j/extend!
+                                    (clj->js headers)))
+           resp (->clj resp)]
+     resp)))
 
 (defn put-graphql
   "Put a GraphQL document"
@@ -133,7 +147,7 @@
     (when-not (.isFile (fs/lstatSync file)) (error-and-exit! 1 "GraphQL schema file must be a file"))
     (when-not path (error-and-usage! "Path required" opts))
 
-    (p/let [{:keys [status headers body]}
+    (p/let [{:keys [status headers request data] :as resp}
             (put
              (format "%s%s" base-uri path)
              (cond-> (fs/readFileSync file "utf-8")
@@ -143,14 +157,14 @@
       (cond
         (#{201 204} status)
         (message! (str "GraphQL document uploaded: "
-                       (chalk/blue (.getName file)) ;; TODO?
+                       (chalk/blue file)
                        " -> "
                        (chalk/blue path)))
 
         :else
         (do
-          (error! "Server response:" status (str/trim body))
-          (message! "Request id:" (get headers "site-request-id")))))))
+          (error! "Server response:" status (str/trim data))
+          (message! "Request id:" (:site-request-id headers)))))))
 
 (defn post-graphql
   "Post a GraphQL schema"
@@ -165,7 +179,7 @@
     (when-not (.isFile (fs/lstatSync file)) (error-and-exit! 1 "GraphQL schema file must be a file"))
     (when-not path (error-and-usage! "Path required" opts))
 
-    (p/let [{:keys [status headers body]}
+    (p/let [{:keys [status headers request data] :as resp}
             (post
              (format "%s%s" base-uri path)
              (->js {"query" (cond-> (fs/readFileSync file "utf-8")
@@ -177,12 +191,12 @@
         (= status 200)
         (do
           (message! (format "GraphQL posted"))
-          (message! (str/trim body)))
+          (message! (str/trim data)))
 
         :else
         (do
-          (error! "No response body with status:" status)
-          (message! "Request id:" (get headers "site-request-id")))))))
+          (error! "No response data with status:" status)
+          (message! "Request id:" (:site-request-id headers)))))))
 
 (defn infer-content-type
   [extension]
@@ -220,26 +234,28 @@
   [opts]
   (let [access-token (load-token)
         {:keys [base-uri file]
-         :or {base-uri (:juxt.site.alpha/base-uri config)}} (:options opts)]
+         :or {base-uri (:juxt.site.alpha/base-uri config)}}
+        (:options opts)]
+
     (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
     (when-not (fs/existsSync file) (error-and-exit! 1 (str "File not found: " file)))
 
-    (p/let [{:keys [status headers body]}
-          (post
-           (str base-uri "/_site/resources/")
-           (cond-> (fs/readFileSync "resources.edn" "utf-8")
-             :always (str/replace "{{base-uri}}" base-uri))
-           {"content-type" "application/edn"})]
+    (p/let [{:keys [status headers request data] :as resp}
+            (post
+             (str base-uri "/_site/resources/")
+             (cond-> (fs/readFileSync "resources.edn" "utf-8")
+               :always (str/replace "{{base-uri}}" base-uri))
+             {"content-type" "application/edn"})]
 
       (message! (format "Posting resources from %s" file))
       (case status
         (201 204)
         (message! (format "Resource %s: %s"
                           (case status 201 "created" 204 "updated")
-                          (get headers "location")))
+                          (:location headers)))
 
         207
-        (let [results (edn/read-string body)
+        (let [results (edn/read-string data)
               errors (filter #(contains? % :error) results)]
           (dorun
                (map
@@ -251,8 +267,8 @@
                     (println (chalk/red (format "%d: %s" ix r)))
                 (range) results)))
         (do
-          (error! "Server response:" status (str/trim body))
-          (message! "Request id:" (get headers "site-request-id")))))))))
+          (error! "Server response:" status (str/trim data))
+          (message! "Request id:" (:site-request-id headers)))))))))
 
 
 (defn put-static-site
@@ -274,19 +290,20 @@
             put-file
             (fn [file]
               (p/let [destination (str base-uri "/" (relative-path file))
-                    _ (message! (str "Putting file " (path.resolve file) " to path " destination))
-                    {:keys [status headers body]}
-                    (put
-                     destination
-                     (fs/readFileSync file)
-                     (merge
-                      "content-type" (content-type (.getName file))
-                      (prn (relative-path file))
-                      (when (and (str/includes? (relative-path file) "index.html")
-                                 spa)
-                        (prn "adding headers")
-                        {"site-type" "AppRoutes"
-                         "site-pattern" (str base-uri "/" path "/app/.*")})))]
+                      _ (message! (str "Putting file " (.resolve path file) " to path " destination))
+
+                      {:keys [status headers request data] :as resp}
+                      (put
+                       destination
+                       (fs/readFileSync file)
+                       (merge
+                        "content-type" (content-type (.getName file))
+                        (prn (relative-path file))
+                        (when (and (str/includes? (relative-path file) "index.html")
+                                   spa)
+                          (prn "adding headers")
+                          {"site-type" "AppRoutes"
+                           "site-pattern" (str base-uri "/" path "/app/.*")})))]
 
                 (case status
                   (201 204)
@@ -295,7 +312,7 @@
                                     headers))
 
                   207
-                  (let [results (edn/read-string body)
+                  (let [results (edn/read-string data)
                         errors (filter #(contains? % :error) results)]
                     (if (pos? (count errors))
                       (do
@@ -310,8 +327,8 @@
                       (message! "Resources all posted OK")))
 
                   (do
-                    (error! "Server response:" status (str/trim body))
-                    (message! "Request id:" (get headers "site-request-id"))))))]
+                    (error! "Server response:" status (str/trim data))
+                    (message! "Request id:" (:site-request-id headers))))))]
         (some->> directory
                  fs/readdirSync
                  (filter #(.isFile (fs/lstatSync %)))
@@ -320,7 +337,7 @@
                   (str base-uri "/" (-> directory
                                         (str "/index.html")
                                         relative-path)))))
-  (catch js/Error e (str "error putting static site " e))))
+    (catch js/Error e (str "error putting static site " e))))
 
 (def global-cli-options
   [["-b" "--base-uri BASE-URI" "The Base-URI of the server you are targetting"]
