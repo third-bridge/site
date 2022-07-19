@@ -9,6 +9,8 @@
             [clojure.string :as str]
             [nbb.core :refer [slurp]]
             [cljs.pprint :refer [pprint]]
+            [cljs-bean.core :refer [->js ->clj]]
+            [applied-science.js-interop :as j]
             ["axios$default" :as axios]
             ["zx" :refer [$ chalk]]
             [promesa.core :as p]
@@ -24,7 +26,7 @@
 (defn edn-to-json
   [edn]
   (-> (edn/read-string {:readers {'juxt.site.alpha/as-str pr-str}} edn)
-      (clj->js)))
+      (->js)))
 
 (def env
   (let [js-p (.-env js/process)]
@@ -93,15 +95,35 @@
       token
       (prn "Please get a new access-token to proceed"))))
 
-(defn show-config
-  "Show configuration"
-  [opts]
-  (pprint config))
+;; While in REPL, remember to re-eval instance creation
+;; every time your token has been refreshed.
+(def instance
+  (axios/create
+   (clj->js {"headers"
+             {"authorization" (format "Bearer %s" (load-token))}})))
+
+(defn post
+  ([url body]
+   (post url body {}))
+  ([url body headers]
+   (.post instance
+          url
+          body
+          (j/update-in! instance [:defaults :headers] j/extend! (clj->js headers)))))
+
+(defn put
+  ([url body]
+   (put url body {}))
+  ([url body headers]
+   (.put instance
+          url
+          body
+          (j/update-in! instance [:defaults :headers] j/extend! (clj->js headers)))))
 
 (defn put-graphql
   "Put a GraphQL document"
   [opts]
-  (let [{access-token "access_token"} (load-token)
+  (let [access-token (load-token)
         {:keys [base-uri file path]
          :or {base-uri (:juxt.site.alpha/base-uri config)}}
         (:options opts)]
@@ -111,19 +133,17 @@
     (when-not (.isFile (fs/lstatSync file)) (error-and-exit! 1 "GraphQL schema file must be a file"))
     (when-not path (error-and-usage! "Path required" opts))
 
-    (let [{:keys [status headers body]}
-          (axios/put
-           (format "%s%s" base-uri path)
-           {:headers {"authorization" (format "Bearer %s" access-token)
-                      "content-type" "application/graphql"
-                      "accept" "text/plain"}
-            :body (cond-> (fs/readFileSync file)
-                    base-uri (str/replace "{{base-uri}}" base-uri))
-            :throw false})]
+    (p/let [{:keys [status headers body]}
+            (put
+             (format "%s%s" base-uri path)
+             (cond-> (fs/readFileSync file "utf-8")
+               base-uri (str/replace "{{base-uri}}" base-uri))
+             {"content-type" "application/graphql"})]
+
       (cond
         (#{201 204} status)
         (message! (str "GraphQL document uploaded: "
-                       (chalk/blue (.getName file))
+                       (chalk/blue (.getName file)) ;; TODO?
                        " -> "
                        (chalk/blue path)))
 
@@ -135,7 +155,7 @@
 (defn post-graphql
   "Post a GraphQL schema"
   [opts]
-  (let [{access-token "access_token"} (load-token)
+  (let [access-token (load-token)
         {:keys [base-uri file path]
          :or {base-uri (:juxt.site.alpha/base-uri config)}}
         (:options opts)]
@@ -145,15 +165,14 @@
     (when-not (.isFile (fs/lstatSync file)) (error-and-exit! 1 "GraphQL schema file must be a file"))
     (when-not path (error-and-usage! "Path required" opts))
 
-    (let [{:keys [status headers body]}
-          (axios/post
-           (format "%s%s" base-uri path)
-           {:headers {"authorization" (format "Bearer %s" access-token)
-                      "content-type" "application/json"
-                      "accept" "text/plain"}
-            :body (clj->js {"query" (cond-> (fs/readFileSync file)
-                                      base-uri (str/replace "{{base-uri}}" base-uri))})
-            :throw false})]
+    (p/let [{:keys [status headers body]}
+            (post
+             (format "%s%s" base-uri path)
+             (->js {"query" (cond-> (fs/readFileSync file "utf-8")
+                              base-uri (str/replace "{{base-uri}}" base-uri))})
+             {"content-type" "application/json"
+              "accept" "text/plain"})]
+
       (cond
         (= status 200)
         (do
@@ -162,7 +181,7 @@
 
         :else
         (do
-          (error! "Server response:" status (str/trim body))
+          (error! "No response body with status:" status)
           (message! "Request id:" (get headers "site-request-id")))))))
 
 (defn infer-content-type
@@ -199,20 +218,19 @@
 (defn post-resources
   "Post one or more resources"
   [opts]
-  (let [{access-token "access_token"} (load-token)
+  (let [access-token (load-token)
         {:keys [base-uri file]
          :or {base-uri (:juxt.site.alpha/base-uri config)}} (:options opts)]
     (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
     (when-not (fs/existsSync file) (error-and-exit! 1 (str "File not found: " file)))
 
-    (let [{:keys [status headers body]}
-          (axios/post
+    (p/let [{:keys [status headers body]}
+          (post
            (str base-uri "/_site/resources/")
-           {:headers (cond-> {"authorization" (format "Bearer %s" access-token)
-                              "content-type" "application/edn"})
-            :body (cond-> (fs/readFileSync file)
-                    :always (str/replace "{{base-uri}}" base-uri))
-            :throw false})]
+           (cond-> (fs/readFileSync "resources.edn" "utf-8")
+             :always (str/replace "{{base-uri}}" base-uri))
+           {"content-type" "application/edn"})]
+
       (message! (format "Posting resources from %s" file))
       (case status
         (201 204)
@@ -242,35 +260,34 @@
   files in the directory using the given path as the root"
   [opts]
   (try
-    (let [{access-token "access_token"} (load-token)
-          _ (prn "other debug")
-          _ (prn access-token)
+    (let [access-token (load-token)
           {:keys [base-uri directory path spa]
            :or {base-uri (:juxt.site.alpha/base-uri config)}} (:options opts)]
+
       (message! "putting site" base-uri directory path)
       (when-not base-uri (error-and-exit! 1 "Base-URI not specified"))
       (when-not (fs/existsSync (str directory "/index.html"))
         (error-and-exit! 1 (str "No index.html found in directory: " directory)))
+
       (let [base (path.resolve directory)
             relative-path (fn [file] (str path (-> file path.basename (str/replace-first base ""))))
             put-file
             (fn [file]
-              (let [destination (str base-uri "/" (relative-path file))
+              (p/let [destination (str base-uri "/" (relative-path file))
                     _ (message! (str "Putting file " (path.resolve file) " to path " destination))
                     {:keys [status headers body]}
-                    (axios/put
+                    (put
                      destination
-                     {:headers (merge
-                                {"authorization" (format "Bearer %s" access-token)
-                                 "content-type" (content-type (.getName file))}
-                                (prn (relative-path file))
-                                (when (and (str/includes? (relative-path file) "index.html")
-                                           spa)
-                                  (prn "adding headers")
-                                  {"site-type" "AppRoutes"
-                                   "site-pattern" (str base-uri "/" path "/app/.*")}))
-                      :body (fs/readFileSync file)
-                      :throw false})]
+                     (fs/readFileSync file)
+                     (merge
+                      "content-type" (content-type (.getName file))
+                      (prn (relative-path file))
+                      (when (and (str/includes? (relative-path file) "index.html")
+                                 spa)
+                        (prn "adding headers")
+                        {"site-type" "AppRoutes"
+                         "site-pattern" (str base-uri "/" path "/app/.*")})))]
+
                 (case status
                   (201 204)
                   (message! (format "Resource %s: %s"
@@ -402,6 +419,8 @@
 
     :else
     (print-summary)))
+
+;; ./nite put-graphql --file schema.graphql --path testing-site/graphql -b http://localhost:2021/
 
 ;; Local Variables:
 ;; mode: clojurescript
