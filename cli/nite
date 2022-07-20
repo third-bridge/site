@@ -297,7 +297,7 @@
                        destination
                        (fs/readFileSync file)
                        (merge
-                        "content-type" (content-type (.getName file))
+                        "content-type" (content-type file)
                         (prn (relative-path file))
                         (when (and (str/includes? (relative-path file) "index.html")
                                    spa)
@@ -331,7 +331,7 @@
                     (message! "Request id:" (:site-request-id headers))))))]
         (some->> directory
                  fs/readdirSync
-                 (filter #(.isFile (fs/lstatSync %)))
+                 (filter #(.isFile (fs/lstatSync (str directory "/" %))))
                  (mapv put-file))
         (message! "Site successfully deployed. Visit "
                   (str base-uri "/" (-> directory
