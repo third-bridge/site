@@ -18,7 +18,7 @@
             ["fs" :as fs]
             ["os" :as os]
             ["util" :refer [format]]
-            ["path" :as path]))
+            ["path" :as pth]))
 
 (def ^:dynamic *silent* nil)
 (def ^:dynamic *debug* nil)
@@ -77,7 +77,7 @@
                  'env #(env-get (str %))
                  'join #(apply str %)}}
 
-      ;; You need to call `str` on result as `readFileSync` returns buffer or what
+      ;; You need to call `str` on result as `readFileSync` returns buffer
       (str (fs/readFileSync config-file))))
 
     js/process.env.SITE_BASE_URI  ;; or (get-env "SITE_BASE_URI")
@@ -243,7 +243,7 @@
     (p/let [{:keys [status headers request data] :as resp}
             (post
              (str base-uri "/_site/resources/")
-             (cond-> (fs/readFileSync "resources.edn" "utf-8")
+             (cond-> (fs/readFileSync file "utf-8")
                :always (str/replace "{{base-uri}}" base-uri))
              {"content-type" "application/edn"})]
 
@@ -270,7 +270,6 @@
           (error! "Server response:" status (str/trim data))
           (message! "Request id:" (:site-request-id headers)))))))))
 
-
 (defn put-static-site
   "Given a path and a directory containing at least an index.html file, serves the
   files in the directory using the given path as the root"
@@ -285,19 +284,25 @@
       (when-not (fs/existsSync (str directory "/index.html"))
         (error-and-exit! 1 (str "No index.html found in directory: " directory)))
 
-      (let [base (path.resolve directory)
-            relative-path (fn [file] (str path (-> file path.basename (str/replace-first base ""))))
+      (let [site-dir (-> *file* pth.dirname pth.dirname)
+            base (str site-dir "/" directory)
+
+            relative-path
+            (fn [file] (str path (-> file pth.basename (str/replace-first base ""))))
+
             put-file
             (fn [file]
-              (p/let [destination (str base-uri "/" (relative-path file))
-                      _ (message! (str "Putting file " (.resolve path file) " to path " destination))
+              (p/let [abs-file (str base "/" file)
+                      destination (str base-uri "/" (relative-path file))
+                      _ (message! (str "Putting file " abs-file " to path " destination))
 
                       {:keys [status headers request data] :as resp}
                       (put
                        destination
-                       (fs/readFileSync file)
+                       (fs/readFileSync abs-file "utf-8")
+
                        (merge
-                        "content-type" (content-type file)
+                        {"content-type" (content-type abs-file)}
                         (prn (relative-path file))
                         (when (and (str/includes? (relative-path file) "index.html")
                                    spa)
@@ -436,8 +441,6 @@
 
     :else
     (print-summary)))
-
-;; ./nite put-graphql --file schema.graphql --path testing-site/graphql -b http://localhost:2021/
 
 ;; Local Variables:
 ;; mode: clojurescript
