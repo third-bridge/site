@@ -62,13 +62,16 @@
     ;; this may take a while but because other TB services like forum
     ;; have to index everything from the kg all the time, if we don't do this
     ;; those queries will time out. We can revist if this query gets too long
-    (xt/q (xt/db node)
-          '{:find [(count v2)]
-            :where [[e :xt/id v]
-                    [(identity v) v2]]
-;; 15 minutes max, if we get past this or if this is too long we can query
-;; just for e.g transcripts, but lets keep it simple for now
-            :timeout 900000})
+    (let [now (System/currentTimeMillis)]
+      (xt/q (xt/db node)
+            '{:find [(count v2)]
+              :where [[e :xt/id v]
+                      [(identity v) v2]]
+      ;; 15 minutes max, if we get past this or if this is too long we can query
+      ;; just for e.g transcripts, but lets keep it simple for now
+              :timeout 900000})
+      (log/infof "Site cache query took: %s seconds" (quot (- (System/currentTimeMillis) now) 1000)))
+
     (log/info "... XT node started!")
     node))
 
