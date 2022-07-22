@@ -53,10 +53,18 @@
   (log/info "Starting system")
   (let [system-config (system-config)
         sys (ig/init system-config)
-        node (:juxt.site.alpha.db/xt-node sys)]
+        node (:juxt.site.alpha.db/xt-node sys)
+        db (xt/db node)
+        base-uri (or (:juxt.site.alpha/base-uri system-config) "http://localhost:5509")
+        open-api-path "/_site/apis/site/openapi.json"]
     (log/infof "Configuration: %s" (pr-str system-config))
 
-    (when-not (xt/entity (xt/db node) "/_site/graphql")
+    ;; clean up legacy open api to avoid clashes
+    (when-let [e (xt/entity db (str base-uri open-api-path))]
+      (log/infof "Deleting legacy open api: %s" (:xt/id e))
+      (xt/submit-tx node [[:xtdb.api/evict (:xt/id e)]]))
+
+    (when-not (xt/entity db open-api-path)
       (init/insert-base-resources! node config))
 
     (log/info "System started and ready...")
