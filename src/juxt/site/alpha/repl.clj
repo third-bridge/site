@@ -10,7 +10,6 @@
    [jsonista.core :as json]
    [clojure.java.shell :as sh]
    [io.aviso.ansi :as ansi]
-   [juxt.pass.alpha.authentication :as authn]
    [juxt.site.alpha.graphql :as graphql]
    [juxt.grab.alpha.schema :as graphql.schema]
    [juxt.grab.alpha.document :as graphql.document]
@@ -44,9 +43,6 @@
 
 (defn system []
   main/system)
-
-(defn base-uri []
-  (::site/base-uri (config)))
 
 (defn help []
   (doseq [[_ v] (sort (ns-publics 'juxt.site.alpha.repl))
@@ -102,10 +98,10 @@
 (defn ids-for-type-k
   [type-k]
   (map
-    first
-    (xt/q (db) {:find ['e]
-                :where [['e type-k]]
-                :timeout (* 1 1000 60 10)})))
+   first
+   (xt/q (db) {:find ['e]
+               :where [['e type-k]]
+               :timeout (* 1 1000 60 10)})))
 
 (defn count-type
   [type-k]
@@ -113,11 +109,11 @@
 
 (defn evict! [& ids]
   (->>
-    (xt/submit-tx
-      (xt-node)
-      (for [id ids]
-        [:xtdb.api/evict id]))
-    (xt/await-tx (xt-node))))
+   (xt/submit-tx
+    (xt-node)
+    (for [id ids]
+      [:xtdb.api/evict id]))
+   (xt/await-tx (xt-node))))
 
 (defn rm-r!
   "Does xtdb.api/delete on all entities containing an attribute with the given key"
@@ -218,9 +214,7 @@
 (defn import-resources
   ([] (import-resources {:filename "import/resources.edn"
                          :uri-mapping
-                         {"{{KG_URL_BASE}}"
-                          (or (System/getenv "KG_URL_BASE")
-                              "http://localhost:5509")}}))
+                         {"{{KG_URL_BASE}}" ""}}))
   ([{:keys [filename uri-mapping]}]
    (let [node (xt-node)
          in (java.io.PushbackReader. (io/reader (io/input-stream (io/file filename))))]
@@ -231,9 +225,6 @@
          (do
            (submit-and-wait-tx node [[:xtdb.api/put rec]])
            (println "Imported resource: " (:xt/id rec))))))))
-
-
-
 
 (defn validate-resource-line [s]
   (edn/read-string
@@ -249,20 +240,16 @@
               (.putNextEntry (java.util.zip.ZipEntry. "resources.edn")))]
     (java.io.OutputStreamWriter. zos)))
 
-
-
 (comment
   (export-resources
    {:pred (fn [x] (or (= (:juxt.home/type x) "Person")))
-    :filename "/home/mal/Sync/persons.edn"
-    :uri-mapping {"http://localhost:2021"
-                  "https://home.juxt.site"}}))
+    :filename "/home/mal/Sync/persons.edn"}))
 
 (defn export-resources
   "Export all resources to a file."
   ([]
    (export-resources {}))
-  ([{:keys [out pred filename uri-mapping]}]
+  ([{:keys [out pred filename]}]
    (let [out (or out
                  (when filename (io/output-stream (io/file filename)))
                  (get-zipped-output-stream))
@@ -274,7 +261,6 @@
            true (map first)
            true (filter #(not= (::site/type %) "Request"))
            pred (filter pred)
-           uri-mapping (map (apply-uri-mappings uri-mapping))
            true (sort-by :xt/id))]
 
      (defmethod print-method (type (byte-array [])) [x writer]
@@ -356,58 +342,22 @@
        (println "Evicting" (count batch) "records")
        (println (apply evict! batch))))))
 
-(defn sessions []
-  (authn/expire-sessions! (java.util.Date.))
-  (deref authn/sessions-by-access-token))
-
-(defn clear-sessions []
-  (reset! authn/sessions-by-access-token {}))
-
-(defn superusers
-  ([] (superusers (config)))
-  ([{::site/keys [base-uri]}]
-   (map first
-        (xt/q (db) '{:find [user]
-                     :where [[user ::site/type "User"]
-                             [mapping ::site/type "UserRoleMapping"]
-                             [mapping ::pass/assignee user]
-                             [mapping ::pass/role superuser]]
-                     :in [superuser]}
-              (str base-uri "/_site/roles/superuser")))))
-
 (defn steps
   ([] (steps (config)))
   ([opts]
-   (let [{::site/keys [base-uri]} opts
-         _ (assert base-uri)
-         db (xt/db (xt-node))]
+   (let [db (xt/db (xt-node))]
      [;; Awaiting a fix to https://github.com/juxt/xtdb/issues/1480
       #_{:complete? (and
-                     (xt/entity db (str base-uri "/_site/tx_fns/put_if_match_wildcard"))
-                     (xt/entity db (str base-uri "/_site/tx_fns/put_if_match_etags")))
+                     (xt/entity db "/_site/tx_fns/put_if_match_wildcard")
+                     (xt/entity db "/_site/tx_fns/put_if_match_etags"))
          :happy-message "Site transaction functions installed."
          :sad-message "Site transaction functions not installed. "
          :fix "Enter (put-site-txfns!) to fix this."}
 
-      {:complete? (xt/entity db (str base-uri "/_site/apis/site/openapi.json"))
+      {:complete? (xt/entity db "/_site/apis/site/openapi.json")
        :happy-message "Site API resources installed."
        :sad-message "Site API not installed. "
-       :fix "Enter (put-site-api!) to fix this."}
-
-      {:complete? (xt/entity db (str base-uri "/_site/token"))
-       :happy-message "Authentication resources installed."
-       :sad-message "Authentication resources not installed. "
-       :fix "Enter (put-auth-resources!) to fix this."}
-
-      {:complete? (xt/entity db (str base-uri "/_site/roles/superuser"))
-       :happy-message "Role of superuser exists."
-       :sad-message "Role of superuser not yet created."
-       :fix "Enter (put-superuser-role!) to fix this."}
-
-      {:complete? (pos? (count (superusers opts)))
-       :happy-message "At least one superuser exists."
-       :sad-message "No superusers exist."
-       :fix "Enter (put-superuser! <username> <fullname>) or (put-superuser! <username> <fullname> <password>) to fix this."}])))
+       :fix "Enter (put-site-api!) to fix this."}])))
 
 (defn status
   ([] (status (steps (config))))
@@ -429,51 +379,9 @@
     (init/put-site-api! xt-node config)
     (status (steps config))))
 
-(defn put-auth-resources! []
-  (let [config (config)
-        xt-node (xt-node)]
-    (init/put-openid-token-endpoint! xt-node config)
-    (init/put-login-endpoint! xt-node config)
-    (init/put-logout-endpoint! xt-node config)
-    (status (steps config))))
-
-(defn put-superuser-role! []
-  (let [config (config)
-        xt-node (xt-node)]
-    (init/put-superuser-role! xt-node config)
-    (status (steps config))))
-
-(defn get-password [pass-name]
-  (println "Getting password" pass-name)
-  (let [{:keys [exit out err]} (sh/sh "pass" "show" pass-name)]
-    (if (zero? exit) (str/trim out) (println (ansi/red "Failed to get password")))))
-
-(defn put-superuser!
-  ([username fullname]
-   (if-let [password-prefix (:juxt.site.alpha.unix-pass/password-prefix (config))]
-     (if-let [password (get-password (str password-prefix username))]
-       (put-superuser! username fullname password)
-       (println (ansi/red "Failed to get password")))
-     (println (ansi/red "Password required!"))))
-  ([username fullname password]
-   (let [config (config)
-         xt-node (xt-node)]
-     (init/put-superuser!
-      xt-node
-      {:username username
-       :fullname fullname
-       :password password}
-      config)
-     (status (steps config)))))
-
 (defn update-site-graphql
   []
   (init/put-graphql-schema-endpoint! (xt-node) (config)))
-
-(defn allow-public-access-to-public-resources! []
-  (let [config (config)
-        xt-node (xt-node)]
-    (init/allow-public-access-to-public-resources! xt-node config)))
 
 (defn put-site-txfns! []
   (let [config (config)
@@ -481,34 +389,9 @@
     (init/put-site-txfns! xt-node config)
     (status)))
 
-(defn reset-password! [username password]
-  (let [user (str (::site/base-uri (config))  "/_site/users/" username)]
-    (put!
-     {:xt/id (str user "/password")
-      ::site/type "Password"
-      ::http/methods #{:post}
-      ::pass/user user
-      ::pass/password-hash (password/encrypt password)
-      ::pass/classification "RESTRICTED"})))
-
-(defn user [username]
-  (e (format "%s/_site/users/%s" (::site/base-uri (config)) username)))
-
-(defn user-apps [username]
-  (q '{:find [(pull application [*])]
-       :keys [app]
-       :where [[grant :juxt.site.alpha/type "Grant"]
-               [subject :juxt.pass.alpha/user user]
-               [user :juxt.pass.alpha/username username]
-               [grant :juxt.pass.alpha/user user]
-               [grant :juxt.pass.alpha/permission permission]
-               [permission :juxt.site.alpha/application application]]
-       :in [username]}
-     username))
-
 (defn introspect-graphql []
   (let [config (config)
-        schema (:juxt.grab.alpha/schema (e (format "%s/_site/graphql" (::site/base-uri config))))
+        schema (:juxt.grab.alpha/schema (e "/_site/graphql"))
         document (graphql.document/compile-document (graphql.parser/parse (slurp (io/file "opt/graphql/graphiql-introspection-query.graphql"))) schema)]
     (graphql/query schema document "IntrospectionQuery" {} {::site/db (db)})))
 
@@ -535,41 +418,20 @@
          (json/write-value-as-string results))
         (update :ring.response/headers assoc "content-type" "application/json"))))
 
-(def site-endpoint (::site/base-uri main/config-map))
-(def site-seed-zip "dev/seeds.edn.zip" )
+(def site-seed-zip "dev/seeds.edn.zip")
 
 (defn is-site-initialized?
   "Returns true if insite console page is in the DB"
   []
   (log/info "Checking if site is ready")
-  (some? (e (str site-endpoint "/_site/insite/index.html"))))
-
-(defn ensure-init!
-  "Initialize Site by loading resources such as insite console
-  available in the seed folder. If the schema is already loaded and
-  available it assumes Site is already initialized and skip seeding."
-  []
-  (if (is-site-initialized?)
-    (println "### Site already initialised, skipping seeding")
-    (let [output "target/seeds.edn"]
-      (println "### Site missing console, running seeding process")
-      (sh/sh "mkdir" "-p" "target") ; make sure target exists
-      (with-open [zinput (-> site-seed-zip io/input-stream java.util.zip.ZipInputStream.)]
-        (.getNextEntry zinput)
-        (io/copy zinput (io/file output)))
-      (import-resources {:filename output
-                         :uri-mapping {"http://localhost:2021" site-endpoint}}))))
+  (some? (e "/_site/graphql")))
 
 (defn init!
-  ([] (init! "admin" "admin"))
-  ([username password]
-   (let [xt-node (xt-node)
-         config (config)]
-     (ensure-init!)
-     (put-site-api!)
-     (put-auth-resources!)
-     (put-superuser-role!)
-     (put-superuser! username "Administrator" password)
-     (init/put-graphql-operations! xt-node config)
-     (init/put-graphql-schema-endpoint! xt-node config)
-     (init/put-request-template! xt-node config))))
+  []
+  (let [xt-node (xt-node)
+        config (config)]
+     ;(ensure-init!)
+    (put-site-api!)
+    (init/put-graphql-operations! xt-node config)
+    (init/put-graphql-schema-endpoint! xt-node config)
+    (init/put-request-template! xt-node config)))

@@ -7,11 +7,11 @@
    [juxt.site.alpha.debug :as debug]
    [juxt.site.alpha.static :as static]
    [juxt.site.alpha.cache :as cache]
-   [xtdb.api :as x]))
+   [xtdb.api :as x]
 
-(alias 'site (create-ns 'juxt.site.alpha))
-(alias 'http (create-ns 'juxt.http.alpha))
-(alias 'pass (create-ns 'juxt.pass.alpha))
+   [juxt.site.alpha :as-alias site]
+   [juxt.http.alpha :as-alias http]
+   [juxt.pass.alpha :as-alias pass]))
 
 (defn locate-with-locators [db req]
   (let [uri (::site/uri req)]
@@ -22,7 +22,7 @@
                               grps]
 
                        :where [(or [r ::site/type "ResourceLocator"]
-                                   [r ::site/type "AppRoutes"] )
+                                   [r ::site/type "AppRoutes"])
                                [r ::site/pattern p]
                                [(first grps) grp0]
                                [(some? grp0)]
@@ -58,7 +58,6 @@
                  ::locator-fn locator-fn
                  ::site/request-context (assoc req :ring.response/status 500)})))
 
-
             (log/debug "Requiring resolve of" locator-fn)
             (let [f (requiring-resolve locator-fn)]
               (log/debugf "Calling locator-fn %s: %s" locator-fn description)
@@ -81,7 +80,7 @@
 (defn locate-resource
   "Call each locate-resource defmethod, in a particular order, ending
   in :default."
-  [{::site/keys [db uri base-uri] :as req}]
+  [{::site/keys [db uri] :as req}]
   (or
    ;; We call OpenAPI location here, because a resource can be defined in
    ;; OpenAPI, and exist in Xtdb, simultaneously.
@@ -97,20 +96,6 @@
 
    ;; Is it found by any resource locators registered in the database?
    (locate-with-locators db req)
-
-   ;; Is it a redirect?
-   (when-let [[r loc] (first
-                       (x/q db '{:find [r loc]
-                                 :where [[r ::site/resource uri]
-                                         [r ::site/location loc]
-                                         [r ::site/type "Redirect"]]
-                                 :in [uri]}
-                            uri))]
-     {::site/uri uri
-      ::http/methods #{:get :head :options}
-      ::site/resource-provider r
-      ::http/redirect (cond-> loc (.startsWith loc base-uri)
-                              (subs (count base-uri)))})
 
    ;; Return a back-stop resource
    {::site/resource-provider ::default-empty-resource
