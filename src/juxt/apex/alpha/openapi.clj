@@ -493,7 +493,7 @@
                 #(every? ::jinx/valid?
                          (vals (get % ::apex/openapi-path-params)))
                 matches)]
-           (if (= (count resources) 1)
+           (if (pos? (count resources))
              (first resources)
              ;; TODO: There is the information in each path-param's validation
              ;; to construct a much more helpful error message.
