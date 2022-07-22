@@ -5,6 +5,8 @@
    [aero.core :as aero]
    [clojure.java.io :as io]
    [clojure.tools.logging :as log]
+   [juxt.site.alpha.init :as init]
+   [xtdb.api :as xt]
    [integrant.core :as ig]))
 
 (def system nil)
@@ -50,8 +52,12 @@
 (defn -main [& _]
   (log/info "Starting system")
   (let [system-config (system-config)
-        sys (ig/init system-config)]
+        sys (ig/init system-config)
+        node (:juxt.site.alpha.db/xt-node sys)]
     (log/infof "Configuration: %s" (pr-str system-config))
+
+    (when-not (xt/entity (xt/db node) "/_site/graphql")
+      (init/insert-base-resources! node config))
 
     (log/info "System started and ready...")
     (log/trace "TRACE on")
@@ -66,4 +72,5 @@
       (fn []
         (ig/halt! sys))))
     (alter-var-root #'system (constantly sys)))
+
   @(promise))

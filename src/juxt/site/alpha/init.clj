@@ -172,3 +172,10 @@
            (p/sequence-group
             (p/pattern-parser #"(?<scheme>https?)://" {:group {:juxt.reap.alpha.rfc7230/scheme "scheme"}})
             host-parser))))
+
+(defn insert-base-resources!
+  [xt-node config]
+  (put-site-api! xt-node config)
+  (put-graphql-operations! xt-node config)
+  (put-graphql-schema-endpoint! xt-node config)
+  (put-request-template! xt-node config))
