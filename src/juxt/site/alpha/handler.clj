@@ -8,12 +8,10 @@
    [clojure.tools.logging :as log]
    [xtdb.api :as xt]
    [crypto.password.bcrypt :as password]
-   [juxt.apex.alpha.openapi :as openapi]
    [juxt.dave.alpha :as dave]
    [juxt.dave.alpha.methods :as dave.methods]
    [juxt.jinx.alpha.vocabularies.transformation :refer [transform-value]]
    [juxt.pass.alpha.authentication :as authn]
-   [juxt.pass.alpha.pdp :as pdp]
    [juxt.pick.alpha.core :refer [rate-representation]]
    [juxt.pick.alpha.ring :refer [decode-maybe]]
    [juxt.reap.alpha.decoders.rfc7230 :as rfc7230.decoders]
@@ -26,11 +24,8 @@
    [juxt.site.alpha.locator :as locator]
    [juxt.site.alpha.util :as util]
    [juxt.site.alpha.response :as response]
-   [juxt.site.alpha.triggers :as triggers]
-   [juxt.site.alpha.rules :as rules]
 
    [juxt.site.alpha :as-alias site]
-   [juxt.apex.alpha :as-alias apex]
    [juxt.http.alpha :as-alias http]
    [juxt.pass.alpha :as-alias pass])
 
@@ -431,49 +426,8 @@
 
 (defn wrap-authenticate [h]
   (fn [{:ring.request/keys [method] :as req}]
-    (let [sub (when-not (= method :options) (authn/authenticate req))]
-      (h (assoc req ::pass/subject sub)))))
-
-(defn wrap-authorize
-  ;; Do authorization as late as possible (in order to have as much data
-  ;; as possible to base the authorization decision on. However, note
-  ;; Section 8.5, RFC 4918 states "the server MUST do authorization checks
-  ;; before checking any HTTP conditional header.".
-  [h]
-  (fn [{:ring.request/keys [method] ::site/keys [db resource] ::pass/keys [subject] :as req}]
-    (let [request-context
-          {'subject subject
-           'resource (dissoc resource ::http/body ::http/content)
-           'request (select-keys
-                     req
-                     [:ring.request/headers :ring.request/method :ring.request/path
-                      :ring.request/query :ring.request/protocol :ring.request/remote-addr
-                      :ring.request/scheme :ring.request/server-name :ring.request/server-post
-                      :ring.request/ssl-client-cert
-                      ::site/uri])
-           'representation (dissoc resource ::http/body ::http/content)
-           'environment {}}
-
-          authz (when (not= method :options)
-                  (pdp/authorization db request-context))
-
-          req (cond-> req
-                true (assoc ::pass/request-context request-context)
-                authz (assoc ::pass/authorization authz)
-                ;; If the max-content-length has been modified, update that in the
-                ;; resource
-                (::http/max-content-length authz)
-                (update ::site/resource
-                        assoc ::http/max-content-length (::http/max-content-length authz)))]
-
-      (when (and (not= method :options)
-                 (not= (::pass/access authz) ::pass/approved))
-        (let [status (if-not (::pass/user subject) 401 403)]
-          (throw
-           (ex-info
-            (case status 401  "Unauthorized" 403 "Forbidden")
-            {::site/request-context (assoc req :ring.response/status status)}))))
-      (h req))))
+    (let [subject (when-not (= method :options) (authn/authenticate req))]
+      (h (assoc req ::pass/subject subject)))))
 
 (defn wrap-method-not-allowed? [h]
   (fn [{::site/keys [resource] :ring.request/keys [method] :as req}]
@@ -504,46 +458,6 @@
          :options (OPTIONS req)
          :propfind (PROPFIND req)
          :mkcol (MKCOL req)))))
-
-(defn wrap-triggers [h]
-  ;; Site-specific step: Check for any observers and 'run' them TODO:
-  ;; Perhaps effects need to run against happy and sad paths - i.e. errors
-  ;; - this should really be in a 'finally' block.
-  (fn [{::site/keys [xt-node] ::pass/keys [subject] :as req}]
-
-    (let [db (xt/db xt-node) ; latest post-method db
-          result (h req)
-
-          triggers
-          (map first
-               (xt/q db '{:find [rule]
-                          :where [[rule ::site/type "Trigger"]]}))
-
-          request-context
-          {'subject subject
-           'request (select-keys
-                     req
-                     [:ring.request/headers :ring.request/method :ring.request/path
-                      :ring.request/query :ring.request/protocol :ring.request/remote-addr
-                      :ring.request/scheme :ring.request/server-name :ring.request/server-post
-                      :ring.request/ssl-client-cert
-                      ::site/uri])
-           'environment {}}]
-
-      (try
-        ;; TODO: Can we use the new refreshed db here to save another call to xt/db?
-        (let [actions (rules/eval-triggers (xt/db xt-node) triggers request-context)]
-          (when (seq actions)
-            (log/tracef "Triggered actions are %s" (pr-str actions)))
-          (doseq [action actions]
-            (log/tracef "Running action: %s" (get-in action [:trigger ::site/action]))
-            (triggers/run-action! req action)))
-        (catch clojure.lang.ExceptionInfo e
-          (log/error e (format "Failed to run trigger/action: %s" (pr-str (ex-data e)))))
-        (catch Exception e
-          (log/error e "Failed to run trigger/action")))
-
-      result)))
 
 (defn wrap-security-headers [h]
   (fn [req]
@@ -1151,9 +1065,6 @@
 
    ;; 405
    wrap-method-not-allowed?
-
-   ;; Custom middleware for Site
-   #_wrap-triggers
 
    ;; Create initial response
    wrap-initialize-response

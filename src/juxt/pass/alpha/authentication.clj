@@ -22,13 +22,14 @@
           (reap/authorization authorization-header)]
       (case (.toLowerCase auth-scheme)
         "bearer"
-        (when-let [jwt (bean (JWT/decode token68))]
-          (log/debug "Valid JWT found" jwt)
-          (->
-           jwt
-           (assoc ::pass/auth-scheme "Bearer"
-                  ::pass/subject (:subject jwt)
-                  ::pass/session-expiry (:expiresAt jwt))))
+        (when-let [claims (into {}
+                                (for [[k v] (.getClaims (JWT/decode token68))]
+                                  [k (case k
+                                       "email_verified" (.asBoolean v)
+                                       ("iat" "exp" "nbf") (.asDate v)
+                                       (.asString v))]))]
+          (log/debug "Valid JWT found" claims)
+          {::pass/claims claims})
 
         (throw
          (ex-info
